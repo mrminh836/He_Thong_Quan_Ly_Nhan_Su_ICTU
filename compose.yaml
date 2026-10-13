@@ -28,7 +28,6 @@ services:
       # Tự động thực thi kịch bản DDL khi khởi tạo database lần đầu
       - ./database:/docker-entrypoint-initdb.d:ro
     ports:
-      # Publish port ra host để kiểm thử qua DBeaver/Navicat/phpMyAdmin nếu cần
       - "${DB_PORT:-3306}:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-RootPassword@2026}"]
@@ -44,7 +43,7 @@ services:
   # ----------------------------------------------------------------------------
   backend:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     container_name: hrm-backend
     restart: unless-stopped
