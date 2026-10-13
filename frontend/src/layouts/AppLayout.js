@@ -2,6 +2,8 @@ import { renderSidebar } from '../components/Sidebar.js';
 import { renderHeader } from '../components/Header.js';
 import { qs } from '../utils/dom.js';
 import { showToast } from '../components/Toast.js';
+import { authService } from '../services/authService.js';
+import { navigateTo } from '../router/router.js';
 
 /**
  * Layout Quản trị chính (AppLayout)
@@ -81,6 +83,17 @@ export function initAppLayoutEvents() {
   if (notificationsBtn) {
     notificationsBtn.addEventListener('click', () => {
       showToast('Trung tâm thông báo đang được phát triển.', 'info');
+    });
+  }
+
+  // 5. Xử lý Đăng xuất (Logout)
+  const logoutBtn = qs('#logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      authService.logout();
+      showToast('Đã đăng xuất khỏi hệ thống thành công.', 'info');
+      navigateTo('/login');
     });
   }
 }

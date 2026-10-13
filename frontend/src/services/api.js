@@ -1,12 +1,15 @@
 /**
  * Tầng giao tiếp Backend API (HTTP Client Service)
+ * Tự động gắn JWT Bearer Token và xử lý mã lỗi xác thực 401
  */
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3005/api';
+const BASE_URL =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  'http://localhost:3005/api';
 
 /**
  * Thực hiện yêu cầu HTTP Fetch tổng quát
- * @param {string} endpoint - Đường dẫn con (vd: '/health' hoặc '/departments')
+ * @param {string} endpoint - Đường dẫn con (vd: '/health', '/auth/login', '/departments')
  * @param {RequestInit} options - Tùy chọn fetch
  * @returns {Promise<any>}
  */
@@ -17,6 +20,12 @@ export async function request(endpoint, options = {}) {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   };
+
+  // 1. Tự động gắn JWT Token từ localStorage nếu người dùng đã đăng nhập
+  const token = localStorage.getItem('accessToken');
+  if (token) {
+    defaultHeaders['Authorization'] = `Bearer ${token}`;
+  }
 
   const config = {
     ...options,
@@ -35,9 +44,23 @@ export async function request(endpoint, options = {}) {
     const data = isJson ? await response.json() : await response.text();
 
     if (!response.ok) {
+      // 2. Tự động xử lý khi Token hết hạn hoặc không hợp lệ (401 Unauthorized)
+      // Chỉ kích hoạt tự động logout nếu không phải request đang đăng nhập (/auth/login)
+      if (response.status === 401 && !endpoint.includes('/auth/login')) {
+        console.warn('[API Auth] Phiên làm việc đã hết hạn hoặc token không hợp lệ (401). Đang xóa token...');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('user');
+
+        // Chuyển hướng về trang đăng nhập nếu đang ở các trang quản trị
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+      }
+
       const errorMessage =
         (typeof data === 'object' && data.message) ||
         `Lỗi HTTP ${response.status}: ${response.statusText}`;
+
       const error = new Error(errorMessage);
       error.status = response.status;
       error.data = data;
@@ -49,7 +72,7 @@ export async function request(endpoint, options = {}) {
     // Xử lý lỗi mất kết nối mạng hoặc server không phản hồi
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
       console.error('[API Network Error]: Không thể kết nối tới máy chủ Backend tại', BASE_URL);
-      const netError = new Error('Không thể kết nối tới máy chủ Backend. Vui lòng kiểm tra Docker hoặc cổng API.');
+      const netError = new Error('Không thể kết nối tới máy chủ Backend (cổng 3005). Vui lòng kiểm tra Docker hoặc kết nối mạng.');
       netError.isNetworkError = true;
       throw netError;
     }

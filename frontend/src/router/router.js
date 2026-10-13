@@ -1,5 +1,6 @@
 import { routes } from './routes.js';
 import { qs, qsa } from '../utils/dom.js';
+import { isAuthenticated } from '../services/authService.js';
 
 let currentLayoutType = null;
 
@@ -41,6 +42,23 @@ export async function handleRouteChange() {
   // Xử lý chuyển hướng (Redirect)
   if (route.redirect) {
     navigateTo(route.redirect);
+    return;
+  }
+
+  // ---------------------------------------------------------------------------
+  // ROUTE GUARD: Kiểm tra quyền truy cập theo trạng thái đăng nhập
+  // ---------------------------------------------------------------------------
+  const authenticated = isAuthenticated();
+
+  // 1. Đã đăng nhập nhưng truy cập lại trang /login -> Chuyển về Dashboard
+  if (authenticated && (route.path === '/login' || pathName === '/login')) {
+    navigateTo('/dashboard');
+    return;
+  }
+
+  // 2. Chưa đăng nhập mà truy cập các trang quản trị (layout 'app') -> Chuyển về /login
+  if (!authenticated && route.layout === 'app' && route.path !== '/login') {
+    navigateTo('/login');
     return;
   }
 

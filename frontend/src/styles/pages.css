@@ -241,11 +241,133 @@
   color: var(--color-danger);
 }
 
+/* Alert thông báo lỗi đăng nhập chung */
+.auth-alert {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+  font-size: var(--font-size-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.auth-alert-icon {
+  width: 18px;
+  height: 18px;
+  stroke: #dc2626;
+  flex-shrink: 0;
+}
+
+.auth-alert-text {
+  flex: 1;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.auth-alert-close {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: #991b1b;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity var(--transition-fast);
+}
+
+.auth-alert-close:hover {
+  opacity: 1;
+}
+
+/* Input có Icon phụ trợ */
+.input-icon-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 12px;
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.form-input.has-icon {
+  padding-left: 38px;
+}
+
+.form-input.input-error {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+/* Checkbox Remember Me */
+.form-group-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.form-checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+/* Spinner trên nút bấm */
+.spinner-sm {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .btn-block {
   width: 100%;
   padding: 0.75rem;
   font-size: var(--font-size-sm);
   margin-top: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.btn-block:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
 }
 
 .demo-credentials-box {
@@ -269,9 +391,21 @@
 .demo-credentials-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
   color: var(--color-text-muted);
   font-size: 11px;
+}
+
+.demo-user-item {
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.demo-user-item:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
 }
 
 /* ------------------------------------------------------------------------------
