@@ -3,9 +3,18 @@ import dotenv from 'dotenv';
 // Tải biến môi trường từ file .env
 dotenv.config();
 
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const isProduction = NODE_ENV === 'production';
+
+// Kiểm tra bảo mật JWT Secret khi chạy trên Production
+const jwtSecret = process.env.JWT_SECRET || 'ICTU_HRM_JWT_SECRET_KEY_2026_SUPER_SECURE';
+if (isProduction && (!process.env.JWT_SECRET || process.env.JWT_SECRET.includes('SUPER_SECURE'))) {
+  console.warn('⚠️ [CẢNH BÁO BẢO MẬT]: Ứng dụng đang chạy ở chế độ PRODUCTION nhưng chưa cấu hình JWT_SECRET ngẫu nhiên mạnh mẽ trong .env!');
+}
+
 export const env = {
-  NODE_ENV: process.env.NODE_ENV || 'development',
-  PORT: Number(process.env.PORT) || 3000,
+  NODE_ENV,
+  PORT: Number(process.env.PORT) || 3005,
   CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
 
   // Database settings
@@ -19,10 +28,13 @@ export const env = {
     queueLimit: Number(process.env.DB_QUEUE_LIMIT) || 0,
   },
 
-  // Security
+  // Security & Authentication
   aesSecretKey: process.env.DB_AES_SECRET_KEY || 'ICTU_HRM_SECRET_KEY_2026_AES256',
-  jwtSecret: process.env.JWT_SECRET || 'ICTU_HRM_JWT_SECRET_KEY_2026_SUPER_SECURE',
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
+  jwtSecret,
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
+  bcryptSaltRounds: Number(process.env.BCRYPT_SALT_ROUNDS) || 10,
 
-  isProduction: process.env.NODE_ENV === 'production',
+  isProduction,
 };
+
+export default env;

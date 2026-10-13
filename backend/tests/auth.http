@@ -1,0 +1,54 @@
+### ==============================================================================
+### BỘ KIỂM THỬ REST CLIENT - AUTHENTICATION & JWT (HRM ICTU)
+### Extension khuyến nghị: REST Client (Huachao Mao) trên VS Code
+### ==============================================================================
+
+@baseUrl = http://localhost:3005/api
+@contentType = application/json
+
+### 1. Đăng nhập thành công với tài khoản Quản trị viên (Admin)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "admin",
+  "password": "AdminPassword2026!"
+}
+
+### 2. Trích xuất Token từ kết quả đăng nhập phía trên
+@authToken = {{loginAdmin.response.body.data.accessToken}}
+
+### 3. Lấy thông tin hồ sơ người dùng (Cần Bearer Token)
+GET {{baseUrl}}/auth/profile
+Authorization: Bearer {{authToken}}
+
+### 4. Đăng nhập thất bại: Sai mật khẩu
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "admin",
+  "password": "WrongPassword999!"
+}
+
+### 5. Đăng nhập thất bại: Tài khoản không tồn tại
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "user_khong_ton_tai",
+  "password": "SomePassword123!"
+}
+
+### 6. Đăng nhập thất bại: Thiếu trường bắt buộc (400 Bad Request)
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": ""
+}
+
+### 7. Thử truy cập Profile với Token giả mạo hoặc sai định dạng (401 Unauthorized)
+GET {{baseUrl}}/auth/profile
+Authorization: Bearer TokenGiaMaoKhongHopLe123456789
