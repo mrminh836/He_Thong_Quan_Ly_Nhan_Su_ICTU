@@ -1,6 +1,7 @@
 # ==============================================================================
-# HỆ THỐNG QUẢN LÝ NHÂN SỰ (HRM) - DOCKER COMPOSE ORCHESTRATION
+# HỆ THỐNG QUẢN LÝ NHÂN SỰ (HRM - ICTU) - DOCKER COMPOSE ORCHESTRATION
 # Dịch vụ: MySQL 8.0 (db) + Express Backend (backend)
+# Cấu hình cổng: Backend = 3005, MySQL = 3308 (Tránh xung đột cổng 3000 & 3306/3307)
 # ==============================================================================
 
 services:
@@ -9,7 +10,7 @@ services:
   # ----------------------------------------------------------------------------
   db:
     image: mysql:8.0
-    container_name: hrm-mysql
+    container_name: hrm-ictu-mysql
     restart: unless-stopped
     command: >
       --default-authentication-plugin=mysql_native_password
@@ -23,12 +24,13 @@ services:
       MYSQL_USER: ${DB_USER:-app_user}
       MYSQL_PASSWORD: ${DB_PASSWORD:-AppUser@Pass2026}
     volumes:
-      # Named volume lưu trữ dữ liệu bền vững (Persistence)
+      # Named volume lưu trữ dữ liệu bền vững
       - mysql_data:/var/lib/mysql
       # Tự động thực thi kịch bản DDL khi khởi tạo database lần đầu
       - ./database:/docker-entrypoint-initdb.d:ro
     ports:
-      - "${DB_PORT:-3306}:3306"
+      # Cổng 3308 trên máy host -> 3306 trong container
+      - "${DB_PORT:-3308}:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-RootPassword@2026}"]
       interval: 5s
@@ -45,15 +47,16 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: hrm-backend
+    container_name: hrm-ictu-backend
     restart: unless-stopped
     ports:
-      - "${PORT:-3000}:${PORT:-3000}"
+      # Cổng 3005 trên máy host -> 3005 trong container
+      - "${PORT:-3005}:${PORT:-3005}"
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      PORT: ${PORT:-3000}
+      PORT: ${PORT:-3005}
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
-      # Kết nối bằng service name 'db' trong mạng nội bộ Docker
+      # Kết nối nội bộ qua service name 'db' cổng 3306
       DB_HOST: db
       DB_PORT: 3306
       DB_NAME: ${DB_NAME:-hrm_db}
@@ -64,7 +67,6 @@ services:
       JWT_SECRET: ${JWT_SECRET:-ICTU_HRM_JWT_SECRET_KEY_2026_SUPER_SECURE}
     depends_on:
       db:
-        # Chỉ khởi động khi MySQL hoàn tất khởi tạo và đạt trạng thái Healthy
         condition: service_healthy
     networks:
       - hrm-network
@@ -74,9 +76,9 @@ services:
 # ------------------------------------------------------------------------------
 volumes:
   mysql_data:
-    name: hrm_mysql_data
+    name: hrm_ictu_mysql_data
 
 networks:
   hrm-network:
-    name: hrm-network
+    name: hrm-ictu-network
     driver: bridge

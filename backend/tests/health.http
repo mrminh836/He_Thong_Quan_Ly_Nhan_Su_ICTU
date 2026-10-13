@@ -1,9 +1,9 @@
 ### ==============================================================================
-### HỆ THỐNG QUẢN LÝ NHÂN SỰ (HRM) - TEST SUITE KIỂM THỬ HEALTHCHECK
+### HỆ THỐNG QUẢN LÝ NHÂN SỰ (HRM - ICTU) - TEST SUITE KIỂM THỬ HEALTHCHECK
 ### Dùng với extension REST Client trên VS Code hoặc nhập vào Postman
 ### ==============================================================================
 
-@baseUrl = http://localhost:3000/api
+@baseUrl = http://localhost:3005/api
 
 ### 1. Kiểm tra API Root
 GET {{baseUrl}}/
