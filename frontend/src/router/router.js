@@ -1,6 +1,7 @@
 import { routes } from './routes.js';
 import { qs, qsa } from '../utils/dom.js';
-import { isAuthenticated } from '../services/authService.js';
+import { isAuthenticated, getCurrentUserRole } from '../services/authService.js';
+import { showToast } from '../components/Toast.js';
 
 let currentLayoutType = null;
 
@@ -46,7 +47,7 @@ export async function handleRouteChange() {
   }
 
   // ---------------------------------------------------------------------------
-  // ROUTE GUARD: Kiểm tra quyền truy cập theo trạng thái đăng nhập
+  // ROUTE GUARD: Kiểm tra quyền truy cập theo trạng thái đăng nhập & RBAC
   // ---------------------------------------------------------------------------
   const authenticated = isAuthenticated();
 
@@ -60,6 +61,16 @@ export async function handleRouteChange() {
   if (!authenticated && route.layout === 'app' && route.path !== '/login') {
     navigateTo('/login');
     return;
+  }
+
+  // 3. Phân quyền RBAC: Đã đăng nhập nhưng vai trò không có quyền truy cập route này
+  if (authenticated && Array.isArray(route.allowedRoles) && route.allowedRoles.length > 0) {
+    const userRole = getCurrentUserRole();
+    if (!route.allowedRoles.includes(userRole)) {
+      showToast('Bạn không có quyền truy cập vào chức năng này.', 'warning');
+      navigateTo('/dashboard');
+      return;
+    }
   }
 
   // Cập nhật tiêu đề trang

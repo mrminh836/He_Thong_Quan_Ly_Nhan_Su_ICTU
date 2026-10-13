@@ -1,4 +1,5 @@
 import { api } from './api.js';
+import { normalizeRole } from '../utils/rbac.js';
 
 /**
  * Hằng số khóa lưu trữ an toàn trong Web Storage
@@ -51,6 +52,46 @@ export function getCurrentUser() {
     console.error('[AuthService] Lỗi khi giải mã thông tin người dùng từ localStorage:', error);
     return null;
   }
+}
+
+/**
+ * Lấy vai trò chuẩn hóa của người dùng hiện tại (ADMIN, HR_MANAGER, EMPLOYEE)
+ * @returns {string}
+ */
+export function getCurrentUserRole() {
+  const user = getCurrentUser();
+  return normalizeRole(user?.role);
+}
+
+/**
+ * Bí danh lấy vai trò người dùng hiện tại tuân thủ yêu cầu đề bài
+ */
+export const getCurrentRole = getCurrentUserRole;
+
+/**
+ * Lấy thông tin hồ sơ tài khoản trực tiếp từ API Backend (GET /api/auth/profile)
+ * Giúp đồng bộ chính xác quyền hạn được Backend phê duyệt thay vì chỉ dựa vào client
+ * @returns {Promise<object|null>}
+ */
+export async function fetchUserProfile() {
+  if (!isAuthenticated()) return null;
+
+  try {
+    const response = await api.get('/auth/profile');
+    const payload = response.data || response;
+    if (payload) {
+      setCurrentUser(payload);
+      return payload;
+    }
+  } catch (error) {
+    console.warn('[AuthService] Không thể đồng bộ hồ sơ từ Backend:', error?.message);
+    // Nếu token hết hạn hoặc 401 Unauthorized, đăng xuất an toàn
+    if (error?.statusCode === 401 || error?.status === 401) {
+      logout();
+    }
+  }
+
+  return getCurrentUser();
 }
 
 /**
@@ -143,6 +184,9 @@ export const authService = {
   getAccessToken,
   setAccessToken,
   getCurrentUser,
+  getCurrentUserRole,
+  getCurrentRole,
+  fetchUserProfile,
   setCurrentUser,
   isAuthenticated,
   handleRememberUsername,

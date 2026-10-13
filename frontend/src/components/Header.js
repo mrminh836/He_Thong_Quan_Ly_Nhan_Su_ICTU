@@ -1,4 +1,5 @@
-import { getCurrentUser } from '../services/authService.js';
+import { getCurrentUser, getCurrentUserRole } from '../services/authService.js';
+import { getRoleBadgeInfo, hasAccessToRoute } from '../utils/rbac.js';
 
 /**
  * Component Header thanh điều khiển trên cùng
@@ -7,26 +8,20 @@ import { getCurrentUser } from '../services/authService.js';
  */
 export function renderHeader() {
   const currentUser = getCurrentUser();
+  const userRole = getCurrentUserRole();
+  const badgeInfo = getRoleBadgeInfo(userRole);
 
   // Dữ liệu hiển thị an toàn
   const fullName = currentUser?.fullName || currentUser?.username || 'Người dùng HRM';
   const username = currentUser?.username || 'user';
   const email = currentUser?.email || `${username}@hrm.local`;
 
-  // Vai trò hiển thị
-  let displayRole = 'Nhân viên';
-  const roleUpper = String(currentUser?.role || '').toUpperCase();
-  if (roleUpper === 'ADMIN') {
-    displayRole = 'Quản trị viên (Admin)';
-  } else if (roleUpper === 'HR_MANAGER' || roleUpper === 'HR') {
-    displayRole = 'Quản lý Nhân sự (HR)';
-  }
-
   // Khởi tạo Initials cho Avatar
   const nameParts = fullName.trim().split(' ');
   const initials = nameParts.length >= 2
     ? `${nameParts[nameParts.length - 2][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
     : fullName.slice(0, 2).toUpperCase();
+
 
   return `
     <header class="header">
@@ -54,7 +49,7 @@ export function renderHeader() {
             <div class="user-avatar">${initials}</div>
             <div class="user-meta">
               <span class="user-name">${fullName}</span>
-              <span class="user-role">${displayRole}</span>
+              <span class="user-role ${badgeInfo.badgeClass}">${badgeInfo.shortLabel}</span>
             </div>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
           </button>
@@ -63,12 +58,22 @@ export function renderHeader() {
           <div class="user-dropdown" id="user-dropdown">
             <div style="padding: 6px 12px; border-bottom: 1px solid #f1f5f9; margin-bottom: 4px;">
               <div style="font-weight: 600; font-size: 12px; color: #0f172a;">${fullName}</div>
-              <div style="font-size: 11px; color: #64748b;">${email}</div>
+              <div style="font-size: 11px; color: #64748b; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px;">
+                <span>${email}</span>
+                <span class="badge ${badgeInfo.badgeClass}" style="font-size: 10px; padding: 1px 6px;">${badgeInfo.shortLabel}</span>
+              </div>
             </div>
-            <a href="/employees" class="dropdown-item" data-link>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg>
-              <span>Hồ sơ nhân sự</span>
-            </a>
+            ${hasAccessToRoute('/employees', userRole) ? `
+              <a href="/employees" class="dropdown-item" data-link>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg>
+                <span>Quản lý nhân sự</span>
+              </a>
+            ` : `
+              <a href="/attendances" class="dropdown-item" data-link>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="m9 16 2 2 4-4"/></svg>
+                <span>Chấm công của tôi</span>
+              </a>
+            `}
             <div class="dropdown-divider"></div>
             <button type="button" class="dropdown-item text-danger" id="logout-btn" style="width: 100%; border: none; background: transparent; cursor: pointer; text-align: left;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
