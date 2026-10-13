@@ -1,0 +1,25 @@
+### ==============================================================================
+### HỆ THỐNG QUẢN LÝ NHÂN SỰ (HRM) - TEST SUITE KIỂM THỬ HEALTHCHECK
+### Dùng với extension REST Client trên VS Code hoặc nhập vào Postman
+### ==============================================================================
+
+@baseUrl = http://localhost:3000/api
+
+### 1. Kiểm tra API Root
+GET {{baseUrl}}/
+Accept: application/json
+
+### 2. Kiểm tra Healthcheck Ứng dụng Backend
+# Mong đợi: HTTP 200 OK, status: "UP"
+GET {{baseUrl}}/health
+Accept: application/json
+
+### 3. Kiểm tra Healthcheck Kết nối CSDL MySQL 8.0
+# Mong đợi: HTTP 200 OK, databaseStatus: "HEALTHY", danh sách các bảng đã tạo
+GET {{baseUrl}}/health/db
+Accept: application/json
+
+### 4. Kiểm tra Route không tồn tại (Xác thực Middleware 404)
+# Mong đợi: HTTP 404 Not Found, errorCode: "ROUTE_NOT_FOUND"
+GET {{baseUrl}}/not-found-endpoint
+Accept: application/json

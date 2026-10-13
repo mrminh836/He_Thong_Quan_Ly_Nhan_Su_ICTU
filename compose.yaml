@@ -1,0 +1,83 @@
+# ==============================================================================
+# HỆ THỐNG QUẢN LÝ NHÂN SỰ (HRM) - DOCKER COMPOSE ORCHESTRATION
+# Dịch vụ: MySQL 8.0 (db) + Express Backend (backend)
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # SERVICE 1: MySQL 8.0 Database
+  # ----------------------------------------------------------------------------
+  db:
+    image: mysql:8.0
+    container_name: hrm-mysql
+    restart: unless-stopped
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --general_log=1
+      --general_log_file=/var/lib/mysql/mysql_general.log
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-RootPassword@2026}
+      MYSQL_DATABASE: ${DB_NAME:-hrm_db}
+      MYSQL_USER: ${DB_USER:-app_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-AppUser@Pass2026}
+    volumes:
+      # Named volume lưu trữ dữ liệu bền vững (Persistence)
+      - mysql_data:/var/lib/mysql
+      # Tự động thực thi kịch bản DDL khi khởi tạo database lần đầu
+      - ./database:/docker-entrypoint-initdb.d:ro
+    ports:
+      # Publish port ra host để kiểm thử qua DBeaver/Navicat/phpMyAdmin nếu cần
+      - "${DB_PORT:-3306}:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-RootPassword@2026}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - hrm-network
+
+  # ----------------------------------------------------------------------------
+  # SERVICE 2: Node.js Express Backend API
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hrm-backend
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:${PORT:-3000}"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${PORT:-3000}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      # Kết nối bằng service name 'db' trong mạng nội bộ Docker
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-hrm_db}
+      DB_USER: ${DB_USER:-app_user}
+      DB_PASSWORD: ${DB_PASSWORD:-AppUser@Pass2026}
+      DB_CONNECTION_LIMIT: ${DB_CONNECTION_LIMIT:-10}
+      DB_AES_SECRET_KEY: ${DB_AES_SECRET_KEY:-ICTU_HRM_SECRET_KEY_2026_AES256}
+      JWT_SECRET: ${JWT_SECRET:-ICTU_HRM_JWT_SECRET_KEY_2026_SUPER_SECURE}
+    depends_on:
+      db:
+        # Chỉ khởi động khi MySQL hoàn tất khởi tạo và đạt trạng thái Healthy
+        condition: service_healthy
+    networks:
+      - hrm-network
+
+# ------------------------------------------------------------------------------
+# VOLUMES & NETWORKS
+# ------------------------------------------------------------------------------
+volumes:
+  mysql_data:
+    name: hrm_mysql_data
+
+networks:
+  hrm-network:
+    name: hrm-network
+    driver: bridge
