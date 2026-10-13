@@ -145,7 +145,7 @@ Bạn có thể kiểm tra trực tiếp qua trình duyệt web, PowerShell `cur
   ```
 
 ### 3. Kiểm tra Kết nối CSDL MySQL 8.0
-- **URL:** `http://localhost:3000/api/health/db`
+- **URL:** `http://localhost:3005/api/health/db`
 - **Method:** `GET`
 - **Phản hồi mẫu:**
   ```json
