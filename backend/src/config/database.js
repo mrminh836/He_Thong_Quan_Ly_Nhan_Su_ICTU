@@ -21,7 +21,7 @@ export function getPool() {
       enableKeepAlive: true,
       keepAliveInitialDelay: 10000,
       timezone: '+07:00', // Đảm bảo khớp múi giờ Việt Nam (ICT)
-      charset: 'utf8mb4_unicode_ci',
+      charset: 'utf8mb4',
     });
 
     pool.on('error', (err) => {

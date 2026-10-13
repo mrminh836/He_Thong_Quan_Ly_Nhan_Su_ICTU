@@ -116,14 +116,14 @@ export function renderLoginPage() {
           <span>Tài khoản kiểm thử sẵn sàng trong CSDL (Click để điền nhanh):</span>
         </div>
         <div class="demo-credentials-list">
-          <div class="demo-user-item" data-user="admin" data-pass="AdminPassword2026!">
-            • <strong>Admin:</strong> <code>admin</code> (Mật khẩu: <code>AdminPassword2026!</code>)
+          <div class="demo-user-item" data-user="admin" data-pass="Admin@123">
+            • <strong>Admin:</strong> <code>admin</code> (Mật khẩu: <code>Admin@123</code>)
           </div>
-          <div class="demo-user-item" data-user="hr" data-pass="HrPassword2026!">
-            • <strong>HR Manager:</strong> <code>hr</code> (Mật khẩu: <code>HrPassword2026!</code>)
+          <div class="demo-user-item" data-user="hr" data-pass="Hr@123">
+            • <strong>HR Manager:</strong> <code>hr</code> (Mật khẩu: <code>Hr@123</code>)
           </div>
-          <div class="demo-user-item" data-user="emp1" data-pass="EmpPassword2026!">
-            • <strong>Nhân viên:</strong> <code>emp1</code> (Mật khẩu: <code>EmpPassword2026!</code>)
+          <div class="demo-user-item" data-user="emp1" data-pass="Emp@123">
+            • <strong>Nhân viên:</strong> <code>emp1</code> (Mật khẩu: <code>Emp@123</code>)
           </div>
         </div>
         <div style="margin-top: 8px; font-size: 11px; color: #64748b;">

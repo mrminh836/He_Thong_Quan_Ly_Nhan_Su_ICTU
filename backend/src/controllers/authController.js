@@ -59,7 +59,7 @@ export async function login(req, res, next) {
  */
 export async function getProfile(req, res, next) {
   try {
-    const userId = req.user?.sub;
+    const userId = req.user?.id || req.user?.userId || req.user?.sub;
     const profile = await authService.getProfile(userId);
 
     return successResponse(res, {

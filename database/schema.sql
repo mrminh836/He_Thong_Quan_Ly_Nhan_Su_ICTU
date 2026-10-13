@@ -4,6 +4,10 @@
 -- Hệ quản trị CSDL: MySQL 8.0+ | Engine: InnoDB | Charset: utf8mb4_unicode_ci
 -- ==============================================================================
 
+-- Thiết lập chuẩn bộ mã UTF-8 Client Connection chống lỗi Mojibake
+SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
+
 -- 1. KHỞI TẠO CƠ SỞ DỮ LIỆU
 CREATE DATABASE IF NOT EXISTS `hrm_db`
     CHARACTER SET utf8mb4
