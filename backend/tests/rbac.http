@@ -1,0 +1,104 @@
+### ==============================================================================
+### BỘ KIỂM THỬ REST CLIENT - ROLE-BASED ACCESS CONTROL (RBAC) (HRM ICTU)
+### Extension khuyến nghị: REST Client (Huachao Mao) trên VS Code
+### ==============================================================================
+
+@baseUrl = http://localhost:3005/api
+@contentType = application/json
+
+### ------------------------------------------------------------------------------
+### 1. ĐĂNG NHẬP LẤY ACCESS TOKEN CỦA 3 VAI TRÒ
+### ------------------------------------------------------------------------------
+
+### 1.1 Đăng nhập vai trò ADMIN
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "admin",
+  "password": "AdminPassword2026!"
+}
+
+### 1.2 Đăng nhập vai trò HR_MANAGER
+# @name loginHr
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "hr",
+  "password": "HrPassword2026!"
+}
+
+### 1.3 Đăng nhập vai trò EMPLOYEE (Nhân viên mã NV003, ID 3)
+# @name loginEmp
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "emp1",
+  "password": "EmpPassword2026!"
+}
+
+### Trích xuất Token
+@adminToken = {{loginAdmin.response.body.data.accessToken}}
+@hrToken = {{loginHr.response.body.data.accessToken}}
+@empToken = {{loginEmp.response.body.data.accessToken}}
+
+### ------------------------------------------------------------------------------
+### 2. KIỂM THỬ ENDPOINT QUẢN TRỊ ADMIN (/api/rbac/admin/users)
+### Yêu cầu quyền: ADMIN
+### ------------------------------------------------------------------------------
+
+### 2.1 Admin truy cập -> KỲ VỌNG: HTTP 200 OK
+GET {{baseUrl}}/rbac/admin/users
+Authorization: Bearer {{adminToken}}
+
+### 2.2 HR Manager cố truy cập -> KỲ VỌNG: HTTP 403 Forbidden
+GET {{baseUrl}}/rbac/admin/users
+Authorization: Bearer {{hrToken}}
+
+### 2.3 Employee cố truy cập -> KỲ VỌNG: HTTP 403 Forbidden
+GET {{baseUrl}}/rbac/admin/users
+Authorization: Bearer {{empToken}}
+
+### 2.4 Truy cập không có Token -> KỲ VỌNG: HTTP 401 Unauthorized
+GET {{baseUrl}}/rbac/admin/users
+
+### ------------------------------------------------------------------------------
+### 3. KIỂM THỬ ENDPOINT NHÂN SỰ (/api/rbac/hr/employees)
+### Yêu cầu quyền: ADMIN hoặc HR_MANAGER
+### ------------------------------------------------------------------------------
+
+### 3.1 Admin truy cập -> KỲ VỌNG: HTTP 200 OK
+GET {{baseUrl}}/rbac/hr/employees
+Authorization: Bearer {{adminToken}}
+
+### 3.2 HR Manager truy cập -> KỲ VỌNG: HTTP 200 OK
+GET {{baseUrl}}/rbac/hr/employees
+Authorization: Bearer {{hrToken}}
+
+### 3.3 Employee cố truy cập -> KỲ VỌNG: HTTP 403 Forbidden
+GET {{baseUrl}}/rbac/hr/employees
+Authorization: Bearer {{empToken}}
+
+### ------------------------------------------------------------------------------
+### 4. KIỂM THỬ QUYỀN SỞ HỮU DỮ LIỆU CÁ NHÂN (/api/rbac/employees/:id/attendances)
+### Yêu cầu quyền: Admin/HR (xem tất cả) hoặc Employee (chỉ xem chính mình)
+### ------------------------------------------------------------------------------
+
+### 4.1 Employee xem chấm công của chính mình (ID = 3) -> KỲ VỌNG: HTTP 200 OK
+GET {{baseUrl}}/rbac/employees/3/attendances
+Authorization: Bearer {{empToken}}
+
+### 4.2 Employee cố xem trộm chấm công của đồng nghiệp khác (ID = 1) -> KỲ VỌNG: HTTP 403 Forbidden
+GET {{baseUrl}}/rbac/employees/1/attendances
+Authorization: Bearer {{empToken}}
+
+### 4.3 HR Manager xem chấm công của nhân viên bất kỳ (ID = 3) -> KỲ VỌNG: HTTP 200 OK (Bypass)
+GET {{baseUrl}}/rbac/employees/3/attendances
+Authorization: Bearer {{hrToken}}
+
+### 4.4 Admin xem chấm công của nhân viên bất kỳ (ID = 3) -> KỲ VỌNG: HTTP 200 OK (Bypass)
+GET {{baseUrl}}/rbac/employees/3/attendances
+Authorization: Bearer {{adminToken}}

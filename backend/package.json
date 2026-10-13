@@ -7,9 +7,10 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "npm run test:syntax && npm run test:auth",
-    "test:syntax": "node --check src/server.js && node --check src/app.js && node --check src/config/database.js && node --check src/config/env.js && node --check src/utils/password.js && node --check src/utils/jwt.js && node --check src/services/authService.js && node --check src/controllers/authController.js && node --check src/routes/authRoutes.js && node --check src/repositories/userRepository.js",
+    "test": "npm run test:syntax && npm run test:auth && npm run test:rbac",
+    "test:syntax": "node --check src/server.js && node --check src/app.js && node --check src/config/database.js && node --check src/config/env.js && node --check src/constants/roles.js && node --check src/utils/password.js && node --check src/utils/jwt.js && node --check src/services/authService.js && node --check src/controllers/authController.js && node --check src/routes/authRoutes.js && node --check src/routes/rbacDemoRoutes.js && node --check src/middlewares/auth.js && node --check src/middlewares/role.js && node --check src/middlewares/ownership.js && node --check src/repositories/userRepository.js",
     "test:auth": "node tests/auth.test.js",
+    "test:rbac": "node tests/rbac.test.js",
     "hash:password": "node src/scripts/hashGenerator.js"
   },
   "keywords": [
@@ -19,7 +20,8 @@
     "docker",
     "enterprise",
     "bcrypt",
-    "jwt"
+    "jwt",
+    "rbac"
   ],
   "author": "Do Quang Minh",
   "license": "ISC",

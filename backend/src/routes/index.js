@@ -1,12 +1,14 @@
 import { Router } from 'express';
 import healthRoutes from './healthRoutes.js';
 import authRoutes from './authRoutes.js';
+import rbacDemoRoutes from './rbacDemoRoutes.js';
 
 const router = Router();
 
 // Gắn các nhóm routes
 router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
+router.use('/rbac', rbacDemoRoutes);
 
 // Thông tin API Root
 router.get('/', (req, res) => {
@@ -19,6 +21,9 @@ router.get('/', (req, res) => {
       dbHealth: '/api/health/db',
       authLogin: '/api/auth/login',
       authProfile: '/api/auth/profile',
+      rbacAdminUsers: '/api/rbac/admin/users',
+      rbacHrEmployees: '/api/rbac/hr/employees',
+      rbacEmployeeAttendance: '/api/rbac/employees/:id/attendances',
     },
     status: 'ONLINE',
   });
