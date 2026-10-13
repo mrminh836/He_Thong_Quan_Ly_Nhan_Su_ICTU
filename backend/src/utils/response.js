@@ -1,5 +1,8 @@
 /**
  * Tiện ích chuẩn hóa cấu trúc phản hồi JSON (Response Standardizer)
+ * Tương thích đồng thời chuẩn Enterprise Envelope:
+ * - status: 'success' | 'error'
+ * - success: true | false
  */
 
 export function successResponse(res, {
@@ -9,6 +12,7 @@ export function successResponse(res, {
   meta = null,
 } = {}) {
   const payload = {
+    success: true,
     status: 'success',
     statusCode,
     message,
@@ -30,6 +34,7 @@ export function errorResponse(res, {
   details = null,
 } = {}) {
   const payload = {
+    success: false,
     status: 'error',
     statusCode,
     errorCode,
