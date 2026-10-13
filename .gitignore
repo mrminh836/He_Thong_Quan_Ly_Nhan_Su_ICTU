@@ -1,28 +1,60 @@
-# Dependencies & Builds
+# ==============================================================================
+# GITIGNORE - DỰ ÁN HỆ THỐNG QUẢN LÝ NHÂN SỰ (HRM - ICTU)
+# ==============================================================================
+
+# Dependencies
 node_modules/
-dist/
-
-# Environment variables
-.env
-*.env.local
-
-# Logs
-logs/
-*.log
+*/node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
-# Docker & Temp
+# Build outputs
+dist/
+*/dist/
+build/
+*/build/
+
+# Environment configurations (CHỨA MẬT KHẨU / BÍ MẬT - TUYỆT ĐỐI KHÔNG COMMIT)
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+!*/.env.example
+
+# Database dump / Backup logs
+*.sql.bak
+dump.sql
+*.sql.gz
+mysql_data/
+*/mysql_data/
+
+# Application Logs
+logs/
+*/logs/
+*.log
+
+# Test & Coverage
+coverage/
+*/coverage/
+.nyc_output/
+
+# IDE & Editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Docker / Temporary
 .docker/
 tmp/
 temp/
-
-# SSL Certificates (Keys should not be committed)
-nginx/ssl/*.key
-nginx/ssl/*.crt
-!nginx/ssl/.gitkeep
-
-# OS generated files
-.DS_Store
-Thumbs.db

@@ -1,210 +1,183 @@
-# 🏢 HỆ THỐNG QUẢN LÝ NHÂN SỰ (HRM) — DỰ ÁN TỔNG THỂ
-
-> **Học phần:** Triển khai và Quản trị Hệ thống Phần mềm (TKQT HTPM K23)  
-> **Đề tài:** Đề 10 - Hệ thống Quản lý Nhân sự (HRM - ICTU)  
-> **Kiến trúc:** Microservices / Multi-service Monorepo (`backend/`, `database/`, `docs/`)  
-> **Công nghệ:** Node.js (Express ES Modules) | MySQL 8.0 | Docker Compose  
-> **Nhánh Git:** `feature/backend-docker-init`
+# 🏢 HỆ THỐNG QUẢN LÝ NHÂN SỰ (HRM - ICTU)
+### DỰ ÁN BÀI TẬP LỚN / ĐỒ ÁN MÔN HỌC: TRIỂN KHAI VÀ QUẢN TRỊ HỆ THỐNG PHẦN MỀM (K23)
+**Khoa Công nghệ Thông tin — Trường Đại học Công nghệ Thông tin & Truyền thông (ICTU)**
 
 ---
 
-## 📁 1. CẤU TRÚC THƯ MỤC DỰ ÁN
+## 📌 1. TỔNG QUAN DỰ ÁN
 
-Toàn bộ mã nguồn Backend đã được gom gọn vào thư mục `backend/`:
+Hệ thống Quản lý Nhân sự (**HRM - Human Resource Management**) là giải pháp phần mềm cấp doanh nghiệp được thiết kế theo kiến trúc **Monorepo** hiện đại, kết hợp chặt chẽ giữa **Frontend Single Page Application (SPA)**, **Backend RESTful API** và **Cơ sở dữ liệu quan hệ MySQL 8.0**.
+
+### Các thực thể nghiệp vụ cốt lõi:
+- 🏛️ **Departments**: Quản lý phòng ban, cơ cấu tổ chức và ngân sách.
+- 👨‍💼 **Employees**: Quản lý hồ sơ nhân viên, mã nhân viên, chức vụ, mức lương và thông tin Căn cước công dân (mã hóa an toàn bằng chuẩn **AES-256**).
+- 📅 **Attendances**: Quản lý chấm công, giờ vào/ra, tính toán thời gian làm việc thực tế và trạng thái điểm danh.
+- 👤 **Users**: Quản lý tài khoản người dùng, phân quyền truy cập (Admin, HR Manager, Employee) và xác thực qua **JSON Web Token (JWT)**.
+
+---
+
+## 📁 2. CẤU TRÚC THƯ MỤC DỰ ÁN (MONOREPO)
 
 ```text
 QLNS_QLTKPM/
-├── compose.yaml              # Cấu hình Docker Compose điều phối (MySQL 8.0 + Backend)
-├── .gitignore                # Danh sách loại trừ khi commit Git
-├── README.md                 # Hướng dẫn chi tiết cài đặt và vận hành hệ thống
+├── .github/                             # Cấu hình GitHub Workflows & Templates
+│   ├── workflows/
+│   │   └── ci.yml                       # Pipeline CI tự động kiểm tra cú pháp, build & config
+│   └── pull_request_template.md         # Mẫu Pull Request chuẩn mực cho cả nhóm
 │
-├── backend/                  # 🟢 TOÀN BỘ MÃ NGUỒN VÀ DỊCH VỤ BACKEND API
-│   ├── .env.example          # Mẫu cấu hình biến môi trường Backend
-│   ├── .env                  # Cấu hình môi trường thực tế (được .gitignore bảo vệ)
-│   ├── .dockerignore         # Danh sách loại trừ khi build Docker image Backend
-│   ├── Dockerfile            # Dockerfile cho Backend (Node 22-alpine, non-root user)
-│   ├── package.json          # Khai báo dependencies (express, mysql2, dotenv, cors)
-│   ├── package-lock.json     # Khóa chính xác phiên bản thư viện
-│   │
-│   ├── src/                  # Mã nguồn chính Express API
-│   │   ├── config/
-│   │   │   ├── env.js        # Module tải và xác thực biến môi trường tập trung
-│   │   │   └── database.js   # Module Connection Pool mysql2/promise, đo độ trễ
-│   │   ├── controllers/
-│   │   │   └── healthController.js # Controller kiểm tra sức khỏe hệ thống và CSDL
-│   │   ├── middlewares/
-│   │   │   ├── logger.js     # Ghi nhật ký yêu cầu HTTP tối giản
-│   │   │   ├── errorHandler.js # Xử lý lỗi tập trung toàn hệ thống
-│   │   │   └── notFoundHandler.js # Bắt lỗi đường dẫn không tồn tại (404)
-│   │   ├── routes/
-│   │   │   ├── healthRoutes.js # Tuyến đường /api/health và /api/health/db
-│   │   │   └── index.js      # Router tổng hợp toàn bộ API
-│   │   ├── utils/
-│   │   │   └── response.js   # Chuẩn hóa định dạng JSON phản hồi (Standard Envelope)
-│   │   ├── app.js            # Thiết lập Express App, CORS, Body parser, Middleware
-│   │   └── server.js         # Khởi động máy chủ HTTP và Graceful Shutdown
-│   │
-│   └── tests/
-│       └── health.http       # Bộ kiểm thử REST Client trên VS Code
+├── compose.yaml                         # Cấu hình Docker Compose hợp nhất (db + backend + frontend)
+├── .env.example                         # Mẫu biến môi trường dùng chung toàn hệ thống
+├── .gitignore                           # Quy tắc loại trừ tệp rác và bảo vệ bí mật
+├── README.md                            # Tài liệu tổng quan và hướng dẫn dự án
 │
-├── database/                 # 🔵 THƯ MỤC LƯU TRỮ KỊCH BẢN CƠ SỞ DỮ LIỆU
-│   ├── schema.sql            # Kịch bản DDL chuẩn 4 bảng, Least Privilege & Seed data
-│   └── init.sql              # Kịch bản DDL sao lưu bổ trợ
+├── backend/                             # 🟢 DỊCH VỤ BACKEND RESTful API (Express ES Modules)
+│   ├── .dockerignore                    # Danh sách loại trừ khi build Docker Backend
+│   ├── Dockerfile                       # Dockerfile Node 22-alpine, non-root user 'node'
+│   ├── package.json                     # Quản lý thư viện: express, mysql2, dotenv, cors
+│   ├── package-lock.json                # Khóa phiên bản thư viện
+│   └── src/
+│       ├── config/                      # Kết nối MySQL Pool, biến môi trường tập trung
+│       ├── controllers/                 # Bộ điều khiển xử lý nghiệp vụ (Health, API)
+│       ├── middlewares/                 # Logger, ErrorHandler, 404 Handler
+│       ├── routes/                      # Định tuyến API (/api/health, /api/health/db)
+│       ├── utils/                       # Response chuẩn hóa, mã hóa
+│       ├── app.js                       # Cấu hình Express App & Middlewares
+│       └── server.js                    # Khởi chạy HTTP Server & Graceful Shutdown
 │
-└── docs/                     # 📚 THƯ MỤC TÀI LIỆU DỰ ÁN
-    ├── ERD_DATABASE_DESIGN.md# Đặc tả chi tiết ERD và từ điển dữ liệu 3NF
-    ├── PRODUCT_BACKLOG.md    # Product Backlog chi tiết
-    └── SPRINT_1_BACKLOG.md   # Kế hoạch chi tiết Sprint 1
+├── frontend/                            # 🔵 DỊCH VỤ FRONTEND SPA (Vanilla JS + Vite + Nginx)
+│   ├── .dockerignore                    # Danh sách loại trừ khi build Docker Frontend
+│   ├── Dockerfile                       # Multi-stage Dockerfile (Node builder -> Nginx Alpine)
+│   ├── nginx.conf                       # Cấu hình Nginx Web Server, SPA fallback & Reverse Proxy
+│   ├── package.json                     # Cấu hình Vite & dependencies
+│   ├── package-lock.json                # Khóa phiên bản thư viện Frontend
+│   ├── vite.config.js                   # Cấu hình Vite bundler & dev server
+│   ├── index.html                       # HTML gốc của ứng dụng SPA
+│   └── src/                             # Mã nguồn giao diện SPA (Router, Views, Styles)
+│
+├── database/                            # 🗄️ CƠ SỞ DỮ LIỆU MYSQL 8.0 & KỊCH BẢN KHỞI TẠO
+│   ├── schema.sql                       # DDL chuẩn 4 bảng, Index, AES-256, User permissions
+│   └── init.sql                         # Kịch bản DDL sao lưu bổ trợ
+│
+└── docs/                                # 📚 BỘ TÀI LIỆU KỸ THUẬT & QUẢN TRỊ DỰ ÁN
+    ├── DEFINITION_OF_DONE.md            # Tiêu chí hoàn thành công việc (DoD) chuẩn mực
+    ├── GIT_WORKFLOW.md                  # Quy trình Git Flow, Branching, PR và Conventional Commits
+    ├── DOCKER_SETUP.md                  # Hướng dẫn chi tiết vận hành Docker Compose & xử lý lỗi
+    ├── ERD_DATABASE_DESIGN.md           # Thiết kế ERD, từ điển dữ liệu và chuẩn 3NF
+    ├── PRODUCT_BACKLOG.md               # Product Backlog & phân rã User Stories
+    ├── SPRINT_1_BACKLOG.md              # Kế hoạch chi tiết Sprint 1
+    ├── QA_TEST_CASES_AND_BUG_MANAGEMENT.md # 20 Test Cases chuẩn & Bảng quản lý 8 Bugs
+    └── HRM_TestCases_BugTracking.xlsx   # Sổ tay bảng tính Excel quản lý chất lượng
 ```
 
 ---
 
-## ⚙️ 2. YÊU CẦU MÔI TRƯỜNG (PREREQUISITES)
+## 🛠️ 3. KIẾN TRÚC VÀ CỔNG DỊCH VỤ (PORT MAPPING)
 
-1. **Docker Desktop:** Đã cài đặt và đang bật ([Tải Docker Desktop](https://www.docker.com/products/docker-desktop/)).
-2. **Node.js (Tùy chọn khi chạy local máy host):** Node.js $\ge$ 18.0 (Khuyến nghị Node.js v20 hoặc v22).
-3. **VS Code Extensions (Khuyến nghị):**
-   - *REST Client* (Huachao Mao) để kiểm thử file `backend/tests/health.http`.
-   - *Docker* (Microsoft).
+Để tránh xung đột với các phần mềm cài đặt sẵn trên máy tính thành viên (như MySQL cổng 3306 hoặc backend cổng 3000), hệ thống được quy hoạch cổng phân tách rõ ràng:
+
+| Dịch vụ | Tên Service trong Docker | Cổng Host | Cổng Container | Mục đích sử dụng |
+| :--- | :--- | :---: | :---: | :--- |
+| **Frontend Web App** | `frontend` | **`5173`** | `80` | Giao diện quản lý nhân sự SPA Nginx |
+| **Backend API** | `backend` | **`3005`** | `3005` | RESTful API server Express |
+| **MySQL Database** | `db` | **`3308`** | `3306` | Kết nối CSDL từ DBeaver / Navicat / Workbench |
+
+> **Lưu ý mạng nội bộ Docker:** Trong mạng `hrm-network`, các container gọi nhau qua hostname dịch vụ (ví dụ: Backend kết nối database qua `db:3306`, Frontend Nginx proxy `/api/` sang `http://backend:3005/api/`).
 
 ---
 
-## 🚀 3. HƯỚNG DẪN KHỞI CHẠY BẰNG DOCKER COMPOSE
+## 🚀 4. HƯỚNG DẪN KHỞI CHẠY BẰNG DOCKER COMPOSE
 
-Từ thư mục gốc dự án (`d:\QLNS_QLTKPM`):
+Chi tiết xem tại tài liệu: [DOCKER_SETUP.md](file:///d:/QLNS_QLTKPM/docs/DOCKER_SETUP.md)
 
-### Bước 1: Chuẩn bị file biến môi trường `.env`
-Sao chép từ tệp mẫu `backend/.env.example`:
+### 4.1. Chuẩn bị môi trường
 ```powershell
-Copy-Item backend\.env.example backend\.env
+# Sao chép tệp biến môi trường mẫu
+copy .env.example .env
 ```
 
-### Bước 2: Kiểm tra cú pháp Compose
+### 4.2. Kiểm tra tính hợp lệ của cấu hình Compose
 ```powershell
 docker compose config
 ```
 
-### Bước 3: Build và khởi động các dịch vụ ở chế độ chạy nền
+### 4.3. Build và khởi chạy toàn bộ 3 dịch vụ
 ```powershell
 docker compose up -d --build
 ```
-> **Cơ chế khởi động an toàn:** Dịch vụ `backend` được cấu hình `condition: service_healthy` phụ thuộc vào `db`. Backend sẽ kiên nhẫn chờ đến khi MySQL hoàn tất khởi tạo schema và sẵn sàng nhận kết nối mới bắt đầu khởi động.
 
-### Bước 4: Kiểm tra trạng thái các container
+### 4.4. Kiểm tra trạng thái hoạt động
 ```powershell
 docker compose ps
 ```
-*Kết quả kỳ vọng:*
-- `hrm-mysql` hiển thị trạng thái `Up (healthy)`.
-- `hrm-backend` hiển thị trạng thái `Up`.
 
-### Bước 5: Xem nhật ký hoạt động (Logs)
-- Xem log của Backend:
-  ```powershell
-  docker compose logs -f backend
-  ```
-- Xem log của MySQL:
-  ```powershell
-  docker compose logs -f db
-  ```
+### 4.5. Các đường dẫn truy cập kiểm thử
+- **Frontend SPA**: [http://localhost:5173](http://localhost:5173)
+- **Backend Healthcheck**: [http://localhost:3005/api/health](http://localhost:3005/api/health)
+- **Database Connection Health**: [http://localhost:3005/api/health/db](http://localhost:3005/api/health/db)
+
+> ⚠️ **LƯU Ý QUAN TRỌNG VỀ DỮ LIỆU:**
+> Dữ liệu MySQL được lưu trữ an toàn trên Named Volume `mysql_data`.
+> - Để dừng ứng dụng: dùng `docker compose stop` hoặc `docker compose down`.
+> - **TUYỆT ĐỐI KHÔNG** dùng `docker compose down -v` vì sẽ xóa sạch toàn bộ dữ liệu trong volume!
 
 ---
 
-## 🩺 4. KIỂM THỬ KẾT NỐI VÀ API HEALTHCHECK
+## 🌿 5. QUY TRÌNH PHÁT TRIỂN & GIT FLOW CHO NHÓM
 
-Bạn có thể kiểm tra trực tiếp qua trình duyệt web, PowerShell `curl`, hoặc mở file `backend/tests/health.http` trong VS Code:
+Chi tiết xem tại tài liệu: [GIT_WORKFLOW.md](file:///d:/QLNS_QLTKPM/docs/GIT_WORKFLOW.md)
 
-### 1. Kiểm tra API Root
-- **URL:** `http://localhost:3000/api`
-- **Method:** `GET`
-- **Phản hồi mẫu:**
-  ```json
-  {
-    "service": "HRM Backend API Service",
-    "version": "1.0.0",
-    "status": "ONLINE"
-  }
-  ```
+Nhóm áp dụng mô hình **Simplified Feature Branch Flow**:
+- `main`: Nhánh ổn định cao nhất, chỉ merge phiên bản hoàn chỉnh để nộp bài/demo.
+- `develop`: Nhánh tích hợp trung tâm của cả nhóm.
+- `feature/HRM-<task>-<mô-tả>`: Nhánh làm việc cho từng tính năng mới (tách từ `develop`).
+- `bugfix/HRM-<task>-<mô-tả>`: Nhánh sửa lỗi trong quá trình kiểm thử (tách từ `develop`).
 
-### 2. Kiểm tra Healthcheck Ứng dụng Backend
-- **URL:** `http://localhost:3000/api/health`
-- **Method:** `GET`
-- **Phản hồi mẫu:**
-  ```json
-  {
-    "status": "success",
-    "statusCode": 200,
-    "message": "Hệ thống HRM Backend API đang hoạt động bình thường.",
-    "data": {
-      "status": "UP",
-      "uptime": "42s",
-      "environment": "development",
-      "nodeVersion": "v22.23.2"
-    }
-  }
-  ```
-
-### 3. Kiểm tra Kết nối CSDL MySQL 8.0
-- **URL:** `http://localhost:3005/api/health/db`
-- **Method:** `GET`
-- **Phản hồi mẫu:**
-  ```json
-  {
-    "status": "success",
-    "statusCode": 200,
-    "message": "Kết nối cơ sở dữ liệu MySQL 8.0 thành công và ổn định.",
-    "data": {
-      "databaseStatus": "HEALTHY",
-      "databaseName": "hrm_db",
-      "latencyMs": "4ms",
-      "mysqlVersion": "8.0.41",
-      "detectedTables": [
-        { "tableName": "departments", "approximateRows": 3 },
-        { "tableName": "employees", "approximateRows": 5 },
-        { "tableName": "users", "approximateRows": 3 },
-        { "tableName": "attendances", "approximateRows": 5 }
-      ]
-    }
-  }
-  ```
-
----
-
-## 💻 5. HƯỚNG DẪN CHẠY LOCAL MÁY HOST (CHO LẬP TRÌNH VIÊN)
-
-Nếu bạn chỉ muốn chạy riêng MySQL trong Docker và chạy Backend trực tiếp trên máy host:
-
-1. **Khởi động riêng MySQL container:**
-   ```powershell
-   docker compose up -d db
-   ```
-2. **Cấu hình file `backend/.env`:**
-   ```env
-   DB_HOST=127.0.0.1
-   DB_PORT=3306
-   ```
-3. **Cài đặt thư viện và chạy Backend:**
-   ```powershell
-   cd backend
-   npm install
-   npm run dev
-   ```
-
----
-
-## 🛑 6. QUẢN LÝ VÒNG ĐỜI DỊCH VỤ & BẢO TOÀN DỮ LIỆU
-
-### Dừng dịch vụ mà KHÔNG LÀM MẤT dữ liệu
-```powershell
-docker compose stop
-# hoặc
-docker compose down
+### Quy ước Commit (Conventional Commits):
+```text
+feat(HRM-102): add employee table view and pagination
+fix(HRM-105): resolve SPA router 404 fallback on page refresh
+docs: update docker compose and architecture documentation
+refactor(backend): separate database connection pool logic
 ```
-> Dữ liệu CSDL được lưu an toàn trong named volume `hrm_mysql_data`. Khi bạn chạy lại `docker compose up -d`, toàn bộ dữ liệu vẫn được bảo toàn nguyên vẹn.
 
-### Khi nào cần xóa sạch CSDL để nạp lại script mới từ đầu?
-```powershell
-docker compose down -v
-docker compose up -d --build
-```
-*(Lệnh `-v` sẽ xóa bỏ volume `hrm_mysql_data`, chỉ sử dụng khi bạn chủ đích muốn reset CSDL).*
+### Quy tắc Pull Request:
+Mọi thay đổi đưa vào `develop` đều phải thông qua **Pull Request**, vượt qua kiểm tra **GitHub Actions CI**, điền đầy đủ mẫu [pull_request_template.md](file:///d:/QLNS_QLTKPM/.github/pull_request_template.md) và được ít nhất 01 thành viên khác review phê duyệt (Approve).
+
+---
+
+## ✅ 6. TIÊU CHÍ HOÀN THÀNH CÔNG VIỆC (DEFINITION OF DONE)
+
+Chi tiết xem tại tài liệu: [DEFINITION_OF_DONE.md](file:///d:/QLNS_QLTKPM/docs/DEFINITION_OF_DONE.md)
+
+Một công việc **chỉ được coi là DONE** khi thỏa mãn:
+1. **Scope & AC**: Đáp ứng đầy đủ tiêu chí nghiệm thu, không sửa đổi ngoài phạm vi.
+2. **Security**: Không hardcode mật khẩu, không commit `.env`, dữ liệu nhạy cảm được mã hóa.
+3. **Clean Code**: Không rác phát sinh, không còn `console.log` thừa, xử lý ngoại lệ đầy đủ.
+4. **Testing**: Kiểm thử thành công tại local, `npm run build` và `npm test` thành công.
+5. **Docker**: `docker compose config` hợp lệ, container chạy ở trạng thái healthy.
+6. **Review & CI**: GitHub Actions CI báo Xanh, được đồng đội Approve trên Pull Request.
+
+---
+
+## 🔄 7. TỰ ĐỘNG HÓA CI/CD (GITHUB ACTIONS)
+
+Hệ thống tích hợp sẵn pipeline tự động tại [.github/workflows/ci.yml](file:///d:/QLNS_QLTKPM/.github/workflows/ci.yml):
+- **Validate Compose**: Kiểm tra cú pháp Compose và tính tương thích của orchestration.
+- **Backend Check**: Cài đặt phụ thuộc, kiểm tra tính toàn vẹn cú pháp các module Express.
+- **Frontend Check**: Cài đặt phụ thuộc, kiểm tra quá trình build bundle Vite SPA.
+
+Pipeline tự động chạy mỗi khi có commit đẩy lên `main`, `develop` hoặc khi mở Pull Request vào hai nhánh này.
+
+---
+
+## 👥 8. THÀNH VIÊN DỰ ÁN VÀ PHÂN CÔNG TRÁCH NHIỆM
+
+- **Nhóm sinh viên K23** — Học phần Triển khai và Quản trị Hệ thống Phần mềm.
+- **Trưởng nhóm / Technical Lead**: Quản trị repository, phê duyệt PR chính, kiểm soát kiến trúc và bảo vệ nhánh.
+- **Frontend Engineers**: Phát triển các module SPA (Dashboard, Departments, Employees, Attendances, Users).
+- **Backend Engineers**: Phát triển RESTful API, xác thực bảo mật JWT, xử lý logic nghiệp vụ.
+- **Database / DevOps Engineers**: Thiết kế ERD, tối ưu hóa truy vấn SQL, cấu hình Docker Compose và CI/CD.
+- **QA / Software Testers**: Xây dựng kịch bản kiểm thử, ghi nhận và kiểm chứng lỗi trên Backlog/Sheets.
+
+---
+*Bản quyền tài liệu thuộc về Nhóm Phát triển Đề tài 10 (HRM - ICTU) | Lưu hành nội bộ.*
