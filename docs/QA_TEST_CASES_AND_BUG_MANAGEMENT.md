@@ -127,7 +127,7 @@ Khi tạo một Bug Ticket trên Jira hoặc nhập vào Google Sheets, Tester b
 
 ---
 
-## 🐞 6. BẢNG THEO DÕI LỖI THỰC TẾ (BUG TRACKING TABLE - 8 BUGS ĐÃ XỬ LÝ)
+## 🐞 6. BẢNG THEO DÕI LỖI THỰC TẾ (BUG TRACKING TABLE - 11 BUGS ĐÃ GHI NHẬN)
 
 *(Trích lục từ Tab `Bug_Tracking` trong file [`HRM_TestCases_BugTracking.xlsx`](file:///d:/QLNS_QLTKPM/docs/HRM_TestCases_BugTracking.xlsx))*
 
@@ -141,6 +141,9 @@ Khi tạo một Bug Ticket trên Jira hoặc nhập vào Google Sheets, Tester b
 | **BUG-06** | Thiếu thuộc tính chuẩn `background-clip` gây cảnh báo CSS | Frontend | **Minor** | **P2** | Chỉ khai báo `-webkit-background-clip` trên trình duyệt cũ | **CLOSED** |
 | **BUG-07** | Form đăng nhập chấp nhận mật khẩu quá ngắn (< 6 ký tự) | Frontend | **Minor** | **P2** | Thiếu kiểm tra điều kiện validation độ dài mật khẩu tại client | **CLOSED** |
 | **BUG-08** | Giờ chấm công bị lệch 7 tiếng do MySQL chạy múi giờ UTC | Chấm công | **Major** | **P1** | Container MySQL chạy UTC, connection pool chưa ép `timezone: '+07:00'` | **RESOLVED**|
+| **BUG-09** | Gợi ý mật khẩu mẫu trên giao diện sai lệch với mật khẩu băm trong CSDL | Frontend | **Major** | **P1** | UI điền nhanh `AdminPassword2026!` trong khi DB băm `Admin@123` | **LOGGED** |
+| **BUG-10** | API GET /api/auth/profile trả về 400 INVALID_USER_ID | Backend | **Critical** | **P0** | Controller trích xuất `req.user.sub` thay vì `req.user.id` từ Auth Middleware | **LOGGED** |
+| **BUG-11** | Bundle container Docker Nginx cũ bị lỗi ReferenceError: displayRole | Docker/FE | **Major** | **P1** | Container `hrm-ictu-frontend` chạy mã cũ chưa đồng bộ với Vite dist mới | **RESOLVED**|
 
 ---
 
