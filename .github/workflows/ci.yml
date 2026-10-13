@@ -52,8 +52,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run Syntax & Static Checks
-        run: npm run test:syntax
+      - name: Run Syntax & Authentication Unit Tests
+        run: npm test
 
   # ----------------------------------------------------------------------------
   # JOB 3: Frontend Build & Asset Verification

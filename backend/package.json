@@ -7,22 +7,28 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "npm run test:syntax",
-    "test:syntax": "node --check src/server.js && node --check src/app.js && node --check src/config/database.js"
+    "test": "npm run test:syntax && npm run test:auth",
+    "test:syntax": "node --check src/server.js && node --check src/app.js && node --check src/config/database.js && node --check src/config/env.js && node --check src/utils/password.js && node --check src/utils/jwt.js && node --check src/services/authService.js && node --check src/controllers/authController.js && node --check src/routes/authRoutes.js && node --check src/repositories/userRepository.js",
+    "test:auth": "node tests/auth.test.js",
+    "hash:password": "node src/scripts/hashGenerator.js"
   },
   "keywords": [
     "hrm",
     "express",
     "mysql2",
     "docker",
-    "enterprise"
+    "enterprise",
+    "bcrypt",
+    "jwt"
   ],
   "author": "Do Quang Minh",
   "license": "ISC",
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.12.0"
   },
   "devDependencies": {
