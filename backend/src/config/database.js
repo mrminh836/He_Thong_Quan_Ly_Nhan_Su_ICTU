@@ -87,6 +87,32 @@ export async function query(sql, params = []) {
 }
 
 /**
+ * Thực thi các thao tác cơ sở dữ liệu trong một Transaction an toàn
+ * Tự động rollback khi gặp lỗi và tự động giải phóng connection về pool
+ * @param {Function} callback - Hàm thực thi nhận connection làm tham số
+ * @returns {Promise<any>}
+ */
+export async function withTransaction(callback) {
+  const currentPool = getPool();
+  const connection = await currentPool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const result = await callback(connection);
+    await connection.commit();
+    return result;
+  } catch (error) {
+    try {
+      await connection.rollback();
+    } catch (rollbackErr) {
+      console.error('[MySQL Transaction Rollback Error]:', rollbackErr.message);
+    }
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+/**
  * Đóng an toàn Connection Pool khi dừng ứng dụng (Graceful Shutdown)
  */
 export async function closePool() {
@@ -102,5 +128,6 @@ export default {
   getPool,
   testConnection,
   query,
+  withTransaction,
   closePool,
 };

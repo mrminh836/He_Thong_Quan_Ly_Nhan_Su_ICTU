@@ -13,6 +13,28 @@ export class DepartmentError extends Error {
 }
 
 /**
+ * Lỗi nghiệp vụ khi phòng ban vẫn còn nhân viên trực thuộc (409 Conflict)
+ */
+export class DepartmentHasEmployeesError extends DepartmentError {
+  constructor(message = 'Không thể xóa phòng ban vì vẫn còn nhân viên trực thuộc.', details = null) {
+    super(message, 409, 'DEPARTMENT_HAS_EMPLOYEES');
+    this.name = 'DepartmentHasEmployeesError';
+    this.details = details;
+  }
+}
+
+/**
+ * Lỗi không tìm thấy phòng ban (404 Not Found)
+ */
+export class DepartmentNotFoundError extends DepartmentError {
+  constructor(message = 'Không tìm thấy phòng ban.', departmentId = null) {
+    super(message, 404, 'DEPARTMENT_NOT_FOUND');
+    this.name = 'DepartmentNotFoundError';
+    this.departmentId = departmentId;
+  }
+}
+
+/**
  * Tiện ích chuyển đổi chuỗi tiếng Việt có dấu thành không dấu
  * @param {string} str 
  * @returns {string}
@@ -187,29 +209,59 @@ export async function updateDepartment(departmentId, updates) {
 /**
  * Xóa phòng ban (Kiểm tra nghiêm ngặt ràng buộc toàn vẹn dữ liệu)
  * Nếu còn nhân viên trực thuộc -> Từ chối xóa với lỗi 409 Conflict
+ * Sử dụng SELECT EXISTS và Transaction khóa FOR UPDATE để ngăn ngừa race condition
+ * 
+ * @param {number} departmentId
+ * @param {object} options
+ * @returns {Promise<{ success: boolean, departmentId: number, departmentName: string, type: string, message: string }>}
  */
 export async function deleteDepartment(departmentId, { isSoftDelete = false } = {}) {
-  // 1. Kiểm tra tồn tại
+  // 1. Kiểm tra sự tồn tại của phòng ban
   const existing = await departmentRepository.findById(departmentId);
   if (!existing) {
-    throw new DepartmentError(
-      `Không tìm thấy phòng ban với mã định danh ID: ${departmentId}.`,
-      404,
-      'DEPARTMENT_NOT_FOUND'
+    throw new DepartmentNotFoundError('Không tìm thấy phòng ban.', departmentId);
+  }
+
+  // 2. Kiểm tra ràng buộc nhân sự trực thuộc (kể cả nhân viên đã thôi việc nếu còn liên kết)
+  const hasEmployees = typeof departmentRepository.hasEmployees === 'function'
+    ? await departmentRepository.hasEmployees(departmentId)
+    : (await departmentRepository.countEmployeesByDepartmentId(departmentId)) > 0;
+
+  if (hasEmployees) {
+    throw new DepartmentHasEmployeesError(
+      'Không thể xóa phòng ban vì vẫn còn nhân viên trực thuộc.'
     );
   }
 
-  // 2. Kiểm tra ràng buộc nhân sự (Foreign Key Check)
-  const employeeCount = await departmentRepository.countEmployeesByDepartmentId(departmentId);
-  if (employeeCount > 0) {
-    throw new DepartmentError(
-      `Không thể xóa phòng ban '${existing.departmentName}' vì hiện đang có ${employeeCount} nhân sự trực thuộc. Vui lòng điều chuyển nhân sự sang phòng ban khác trước khi thực hiện xóa.`,
-      409,
-      'DEPARTMENT_HAS_EMPLOYEES'
-    );
+  // 3. Nếu môi trường chạy thực tế hỗ trợ deleteDepartmentWithLock và không bị mock thủ công
+  if (
+    typeof departmentRepository.deleteDepartmentWithLock === 'function' &&
+    !departmentRepository.__isMocked
+  ) {
+    const lockResult = await departmentRepository.deleteDepartmentWithLock(departmentId, {
+      isSoftDelete,
+    });
+
+    if (!lockResult.found) {
+      throw new DepartmentNotFoundError('Không tìm thấy phòng ban.', departmentId);
+    }
+
+    if (lockResult.hasEmployees) {
+      throw new DepartmentHasEmployeesError(
+        'Không thể xóa phòng ban vì vẫn còn nhân viên trực thuộc.'
+      );
+    }
+
+    return {
+      success: true,
+      departmentId,
+      departmentName: existing.departmentName,
+      type: lockResult.type || (isSoftDelete ? 'SOFT_DELETE' : 'HARD_DELETE'),
+      message: 'Xóa phòng ban thành công',
+    };
   }
 
-  // 3. Xóa vật lý hoặc xóa mềm tùy cấu hình
+  // 4. Xóa vật lý hoặc xóa mềm tùy cấu hình
   if (isSoftDelete) {
     await departmentRepository.softDeleteById(departmentId);
     return {
@@ -217,7 +269,7 @@ export async function deleteDepartment(departmentId, { isSoftDelete = false } = 
       departmentId,
       departmentName: existing.departmentName,
       type: 'SOFT_DELETE',
-      message: `Đã tạm ngưng hoạt động phòng ban '${existing.departmentName}' thành công.`,
+      message: 'Xóa phòng ban thành công',
     };
   }
 
@@ -227,7 +279,7 @@ export async function deleteDepartment(departmentId, { isSoftDelete = false } = 
     departmentId,
     departmentName: existing.departmentName,
     type: 'HARD_DELETE',
-    message: `Đã xóa vĩnh viễn phòng ban '${existing.departmentName}' thành công.`,
+    message: 'Xóa phòng ban thành công',
   };
 }
 

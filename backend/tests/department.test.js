@@ -181,6 +181,18 @@ async function startTestSuite() {
       updated_at: new Date('2026-01-03'),
       employee_count: 0,
     },
+    {
+      department_id: 4,
+      department_code: 'PB-ARCHIVE',
+      department_name: 'Phòng Lưu trữ Hồ sơ',
+      location: 'Kho B',
+      phone: '0208-3846-004',
+      description: 'Chỉ có nhân viên đã thôi việc tham chiếu',
+      is_active: 1,
+      created_at: new Date('2026-01-04'),
+      updated_at: new Date('2026-01-04'),
+      employee_count: 0,
+    },
   ];
 
   // Danh sách nhân viên mẫu để kiểm thử thống kê nhân viên hiện tại
@@ -191,6 +203,7 @@ async function startTestSuite() {
     { employee_id: 104, department_id: 1, employment_status: 'Resigned' }, // Đã nghỉ việc -> không tính vào hiện tại
     { employee_id: 105, department_id: 2, employment_status: 'Active' },
     { employee_id: 106, department_id: null, employment_status: 'Active' }, // Chưa gán phòng ban
+    { employee_id: 107, department_id: 4, employment_status: 'Resigned' }, // Đã nghỉ việc nhưng vẫn tham chiếu PB 4
   ];
 
   // Lưu bản gốc để phục hồi
@@ -201,6 +214,9 @@ async function startTestSuite() {
   const originalFindByCode = departmentRepository.findByCode;
   const originalFindByCodeExcludingId = departmentRepository.findByCodeExcludingId;
   const originalCountEmployees = departmentRepository.countEmployeesByDepartmentId;
+  const originalHasEmployees = departmentRepository.hasEmployees;
+  const originalFindByIdForUpdate = departmentRepository.findByIdForUpdate;
+  const originalDeleteDepartmentWithLock = departmentRepository.deleteDepartmentWithLock;
   const originalGetDepartmentEmployeeStats = departmentRepository.getDepartmentEmployeeStats;
   const originalCreate = departmentRepository.create;
   const originalUpdate = departmentRepository.update;
@@ -377,6 +393,35 @@ async function startTestSuite() {
       if (idx === -1) return false;
       mockDatabase.splice(idx, 1);
       return true;
+    };
+
+    departmentRepository.hasEmployees = async (id) => {
+      const hasEmp = mockEmployees.some((e) => e.department_id === Number(id));
+      const found = mockDatabase.find((d) => d.department_id === Number(id));
+      return hasEmp || (found ? found.employee_count > 0 : false);
+    };
+
+    departmentRepository.findByIdForUpdate = async (id) => {
+      const found = mockDatabase.find((d) => d.department_id === Number(id));
+      return found ? departmentRepository.formatDepartment(found) : null;
+    };
+
+    departmentRepository.deleteDepartmentWithLock = async (id, { isSoftDelete = false } = {}) => {
+      const idx = mockDatabase.findIndex((d) => d.department_id === Number(id));
+      if (idx === -1) {
+        return { found: false, hasEmployees: false, isDeleted: false };
+      }
+      const cur = mockDatabase[idx];
+      const hasEmp = mockEmployees.some((e) => e.department_id === Number(id)) || cur.employee_count > 0;
+      if (hasEmp) {
+        return { found: true, hasEmployees: true, isDeleted: false, department: departmentRepository.formatDepartment(cur) };
+      }
+      if (isSoftDelete) {
+        cur.is_active = 0;
+        return { found: true, hasEmployees: false, isDeleted: true, type: 'SOFT_DELETE', department: departmentRepository.formatDepartment(cur) };
+      }
+      mockDatabase.splice(idx, 1);
+      return { found: true, hasEmployees: false, isDeleted: true, type: 'HARD_DELETE', department: departmentRepository.formatDepartment(cur) };
     };
   }
 
@@ -582,11 +627,11 @@ async function startTestSuite() {
     });
 
     // -------------------------------------------------------------------------
-    // TEST 12: DELETE phòng ban đang có nhân viên tham chiếu -> 409 Conflict
+    // TEST 12.1: DELETE phòng ban có nhiều nhân viên -> 409 Conflict
     // -------------------------------------------------------------------------
-    await runAsyncTest('Test 12: DELETE phòng ban đang có nhân sự -> Bị từ chối với 409 Conflict', async () => {
+    await runAsyncTest('Test 12.1: DELETE phòng ban có nhiều nhân viên (ID 1 có 3 NV) -> Bị từ chối với 409 Conflict', async () => {
       const { req, res, next } = createMockHttp({
-        params: { id: '1' }, // employee_count = 3
+        params: { id: '1' },
       });
 
       await deleteDepartment(req, res, next);
@@ -594,7 +639,150 @@ async function startTestSuite() {
       assert.strictEqual(res.statusCode, 409);
       assert.strictEqual(res.responseBody.success, false);
       assert.strictEqual(res.responseBody.errorCode, 'DEPARTMENT_HAS_EMPLOYEES');
-      assert.ok(res.responseBody.message.includes('nhân sự trực thuộc'));
+      assert.strictEqual(res.responseBody.code, 'DEPARTMENT_HAS_EMPLOYEES');
+      assert.strictEqual(res.responseBody.message, 'Không thể xóa phòng ban vì vẫn còn nhân viên trực thuộc.');
+      const stillExists = mockDatabase.find((d) => d.department_id === 1);
+      assert.ok(stillExists, 'Phòng ban 1 không được phép bị xóa');
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 12.2: DELETE phòng ban có đúng 1 nhân viên -> 409 Conflict
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 12.2: DELETE phòng ban có đúng 1 nhân viên (ID 2 có 1 NV) -> Bị từ chối với 409 Conflict', async () => {
+      const { req, res, next } = createMockHttp({
+        params: { id: '2' },
+      });
+
+      await deleteDepartment(req, res, next);
+
+      assert.strictEqual(res.statusCode, 409);
+      assert.strictEqual(res.responseBody.success, false);
+      assert.strictEqual(res.responseBody.errorCode, 'DEPARTMENT_HAS_EMPLOYEES');
+      assert.strictEqual(res.responseBody.code, 'DEPARTMENT_HAS_EMPLOYEES');
+      assert.strictEqual(res.responseBody.message, 'Không thể xóa phòng ban vì vẫn còn nhân viên trực thuộc.');
+      const stillExists = mockDatabase.find((d) => d.department_id === 2);
+      assert.ok(stillExists, 'Phòng ban 2 không được phép bị xóa');
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 12.3: DELETE phòng ban chỉ có nhân viên đã nghỉ việc (Resigned) -> 409 Conflict
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 12.3: DELETE phòng ban chỉ có nhân viên đã thôi việc (Resigned) vẫn tham chiếu -> Bị từ chối với 409 Conflict', async () => {
+      const { req, res, next } = createMockHttp({
+        params: { id: '4' },
+      });
+
+      await deleteDepartment(req, res, next);
+
+      assert.strictEqual(res.statusCode, 409);
+      assert.strictEqual(res.responseBody.success, false);
+      assert.strictEqual(res.responseBody.errorCode, 'DEPARTMENT_HAS_EMPLOYEES');
+      assert.strictEqual(res.responseBody.code, 'DEPARTMENT_HAS_EMPLOYEES');
+      assert.strictEqual(res.responseBody.message, 'Không thể xóa phòng ban vì vẫn còn nhân viên trực thuộc.');
+      const stillExists = mockDatabase.find((d) => d.department_id === 4);
+      assert.ok(stillExists, 'Phòng ban 4 không được phép bị xóa');
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 12.4: DELETE phòng ban không tồn tại -> 404 Not Found
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 12.4: DELETE phòng ban không tồn tại (ID 99999) -> 404 Not Found', async () => {
+      const { req, res, next } = createMockHttp({
+        params: { id: '99999' },
+      });
+
+      await deleteDepartment(req, res, next);
+
+      assert.strictEqual(res.statusCode, 404);
+      assert.strictEqual(res.responseBody.success, false);
+      assert.strictEqual(res.responseBody.errorCode, 'DEPARTMENT_NOT_FOUND');
+      assert.strictEqual(res.responseBody.code, 'DEPARTMENT_NOT_FOUND');
+      assert.strictEqual(res.responseBody.message, 'Không tìm thấy phòng ban.');
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 12.5: DELETE ID sai định dạng -> 400 Bad Request
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 12.5: DELETE ID sai định dạng (chuỗi / số âm) -> 400 Bad Request', async () => {
+      const { req, res, next } = createMockHttp({
+        params: { id: 'invalid-id' },
+      });
+
+      await deleteDepartment(req, res, next);
+
+      assert.strictEqual(res.statusCode, 400);
+      assert.strictEqual(res.responseBody.success, false);
+      assert.strictEqual(res.responseBody.errorCode, 'INVALID_ID');
+      assert.strictEqual(res.responseBody.code, 'INVALID_ID');
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 12.6: Cơ sở dữ liệu phát sinh lỗi khóa ngoại (ER_ROW_IS_REFERENCED_2 / 1451) -> 409 an toàn
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 12.6: Cơ sở dữ liệu phát sinh lỗi khóa ngoại (1451) -> Chuẩn hóa 409 DEPARTMENT_HAS_EMPLOYEES, không lộ stack trace', async () => {
+      const tempDeleteById = departmentRepository.deleteById;
+      const tempHasEmployees = departmentRepository.hasEmployees;
+      try {
+        departmentRepository.hasEmployees = async () => false; // Giả lập race condition vượt qua app check
+        departmentRepository.deleteById = async () => {
+          const fkErr = new Error('Cannot delete or update a parent row: a foreign key constraint fails (`hrm_db`.`employees`, CONSTRAINT `fk_employees_department` FOREIGN KEY (`department_id`) REFERENCES `departments` (`department_id`))');
+          fkErr.code = 'ER_ROW_IS_REFERENCED_2';
+          fkErr.errno = 1451;
+          throw fkErr;
+        };
+
+        const { req, res, next } = createMockHttp({
+          params: { id: '1' },
+        });
+
+        await deleteDepartment(req, res, next);
+
+        assert.strictEqual(res.statusCode, 409);
+        assert.strictEqual(res.responseBody.success, false);
+        assert.strictEqual(res.responseBody.errorCode, 'DEPARTMENT_HAS_EMPLOYEES');
+        assert.strictEqual(res.responseBody.code, 'DEPARTMENT_HAS_EMPLOYEES');
+        assert.strictEqual(res.responseBody.message, 'Không thể xóa phòng ban vì vẫn còn nhân viên trực thuộc.');
+        assert.strictEqual(res.responseBody.stack, undefined);
+        assert.strictEqual(JSON.stringify(res.responseBody).includes('CONSTRAINT `fk_employees_department`'), false);
+      } finally {
+        departmentRepository.deleteById = tempDeleteById;
+        departmentRepository.hasEmployees = tempHasEmployees;
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 12.7: Request xóa và request gán nhân viên đồng thời -> Transaction có khóa FOR UPDATE
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 12.7: Cơ chế khóa bi quan FOR UPDATE và Transaction bảo đảm không phát sinh tham chiếu mồ côi khi có request đồng thời', async () => {
+      assert.strictEqual(typeof departmentRepository.deleteDepartmentWithLock, 'function');
+      const lockRes = await departmentRepository.deleteDepartmentWithLock(1);
+      assert.strictEqual(lockRes.found, true);
+      assert.strictEqual(lockRes.hasEmployees, true);
+      assert.strictEqual(lockRes.isDeleted, false);
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 12.8: Khi xóa bị từ chối -> phòng ban và toàn bộ nhân viên được giữ nguyên vẹn
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 12.8: Khi thao tác xóa bị từ chối -> Cả phòng ban và toàn bộ nhân sự đều được giữ nguyên vẹn', async () => {
+      const initialDepts = mockDatabase.map((d) => ({ ...d }));
+      const initialEmps = mockEmployees.map((e) => ({ ...e }));
+
+      // Thử xóa phòng ban 1 (có nhân viên)
+      const { req: r1, res: s1, next: n1 } = createMockHttp({ params: { id: '1' } });
+      await deleteDepartment(r1, s1, n1);
+      assert.strictEqual(s1.statusCode, 409);
+
+      // Thử xóa phòng ban 4 (có nhân viên đã nghỉ việc)
+      const { req: r4, res: s4, next: n4 } = createMockHttp({ params: { id: '4' } });
+      await deleteDepartment(r4, s4, n4);
+      assert.strictEqual(s4.statusCode, 409);
+
+      // Kiểm tra dữ liệu không bị biến động
+      assert.strictEqual(mockDatabase.length, initialDepts.length);
+      assert.strictEqual(mockEmployees.length, initialEmps.length);
+      assert.ok(mockDatabase.some((d) => d.department_id === 1));
+      assert.ok(mockDatabase.some((d) => d.department_id === 4));
     });
 
     // -------------------------------------------------------------------------
@@ -878,6 +1066,9 @@ async function startTestSuite() {
     departmentRepository.findByCode = originalFindByCode;
     departmentRepository.findByCodeExcludingId = originalFindByCodeExcludingId;
     departmentRepository.countEmployeesByDepartmentId = originalCountEmployees;
+    departmentRepository.hasEmployees = originalHasEmployees;
+    departmentRepository.findByIdForUpdate = originalFindByIdForUpdate;
+    departmentRepository.deleteDepartmentWithLock = originalDeleteDepartmentWithLock;
     departmentRepository.getDepartmentEmployeeStats = originalGetDepartmentEmployeeStats;
     departmentRepository.create = originalCreate;
     departmentRepository.update = originalUpdate;
