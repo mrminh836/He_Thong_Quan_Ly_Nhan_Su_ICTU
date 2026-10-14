@@ -322,42 +322,86 @@ npm run migrate:status
 
 ### 4.6. `DELETE /api/departments/:id` — Xóa phòng ban
 
-- **Mô tả:** Xóa phòng ban khỏi hệ thống khi đã thỏa mãn ràng buộc toàn vẹn dữ liệu.
-- **Quyền:** `ADMIN`
-- **Quy tắc kiểm soát nghiệp vụ:**
-  - Nếu phòng ban có `employeeCount > 0`: **Từ chối xóa**, trả về `409 Conflict` với mã lỗi `DEPARTMENT_HAS_EMPLOYEES`.
-  - Hỗ trợ xóa mềm (Soft-delete) nếu truyền query param `?soft=true`.
-- **Response thành công `200 OK`:**
+- **Mô tả:** Xóa phòng ban khỏi hệ thống khi đã thỏa mãn nghiêm ngặt ràng buộc toàn vẹn dữ liệu.
+- **Quyền:** `ADMIN` (Role `HR_MANAGER` và `EMPLOYEE` bị từ chối với `403 Forbidden`).
+- **Luồng xử lý bắt buộc & Ràng buộc nghiệp vụ:**
+  1. Xác thực JWT Token và RBAC: Kiểm tra quyền quản trị tối cao (`ADMIN`).
+  2. Kiểm tra `id` là số nguyên dương hợp lệ (`400 Bad Request` nếu sai định dạng).
+  3. Kiểm tra phòng ban có tồn tại trong CSDL hay không (`404 Not Found` nếu không tìm thấy).
+  4. Kiểm tra sự tồn tại của nhân viên tham chiếu (`SELECT EXISTS (SELECT 1 FROM employees WHERE department_id = ?)`):
+     - Bao gồm tất cả nhân viên (kể cả nhân viên đã nghỉ việc `Resigned` nếu vẫn còn liên kết trong bảng `employees`).
+     - Nếu có nhân viên: Dừng thao tác ngay lập tức và trả về `409 Conflict`. Tuyệt đối không tự động chuyển hoặc xóa nhân viên.
+  5. Bảo đảm an toàn dữ liệu khi có request đồng thời (Concurrency Safety):
+     - Sử dụng Transaction và khóa bi quan hàng: `SELECT * FROM departments WHERE department_id = ? FOR UPDATE`.
+     - Giữ nguyên ràng buộc khóa ngoại CSDL InnoDB: `CONSTRAINT fk_employees_department FOREIGN KEY (department_id) REFERENCES departments(department_id) ON DELETE RESTRICT`.
+     - Nếu phát sinh lỗi vi phạm khóa ngoại CSDL (`ER_ROW_IS_REFERENCED_2` / Error 1451), hệ thống tự động rollback và chuẩn hóa về response `409 Conflict`, không để lộ stack trace hoặc cấu trúc SQL ra bên ngoài.
+
+#### Response trường hợp 1: Xóa thành công `200 OK`
 
 ```json
 {
   "success": true,
   "status": "success",
   "statusCode": 200,
-  "message": "Đã xóa vĩnh viễn phòng ban 'Phòng Dự án Thử nghiệm' thành công.",
+  "message": "Xóa phòng ban thành công",
   "data": {
     "success": true,
     "departmentId": 3,
     "departmentName": "Phòng Dự án Thử nghiệm",
     "type": "HARD_DELETE",
-    "message": "Đã xóa vĩnh viễn phòng ban 'Phòng Dự án Thử nghiệm' thành công."
+    "message": "Xóa phòng ban thành công"
   },
   "timestamp": "2026-10-14T11:52:00.000Z"
 }
 ```
 
-- **Response từ chối khi có nhân sự trực thuộc `409 Conflict`:**
+#### Response trường hợp 2: Phòng ban đang có nhân viên trực thuộc `409 Conflict`
 
 ```json
 {
   "success": false,
   "status": "error",
   "statusCode": 409,
+  "code": "DEPARTMENT_HAS_EMPLOYEES",
   "errorCode": "DEPARTMENT_HAS_EMPLOYEES",
-  "message": "Không thể xóa phòng ban 'Phòng Kỹ thuật & Công nghệ' vì hiện đang có 3 nhân sự trực thuộc. Vui lòng điều chuyển nhân sự sang phòng ban khác trước khi thực hiện xóa.",
+  "message": "Không thể xóa phòng ban vì vẫn còn nhân viên trực thuộc.",
   "timestamp": "2026-10-14T11:52:00.000Z"
 }
 ```
+
+#### Response trường hợp 3: Không tìm thấy phòng ban `404 Not Found`
+
+```json
+{
+  "success": false,
+  "status": "error",
+  "statusCode": 404,
+  "code": "DEPARTMENT_NOT_FOUND",
+  "errorCode": "DEPARTMENT_NOT_FOUND",
+  "message": "Không tìm thấy phòng ban.",
+  "timestamp": "2026-10-14T11:52:00.000Z"
+}
+```
+
+#### Response trường hợp 4: ID sai định dạng `400 Bad Request`
+
+```json
+{
+  "success": false,
+  "status": "error",
+  "statusCode": 400,
+  "code": "INVALID_ID",
+  "errorCode": "INVALID_ID",
+  "message": "ID phòng ban không hợp lệ. ID phải là số nguyên dương lớn hơn 0.",
+  "timestamp": "2026-10-14T11:52:00.000Z"
+}
+```
+
+#### Response trường hợp 5: Phân quyền & Xác thực
+
+- `401 Unauthorized`: Thiếu Authorization Header hoặc Token không hợp lệ (`errorCode: "TOKEN_REQUIRED"` hoặc `"INVALID_TOKEN"`).
+- `403 Forbidden`: Người dùng đã đăng nhập nhưng không có vai trò `ADMIN` (`errorCode: "FORBIDDEN"`).
+
 
 ---
 

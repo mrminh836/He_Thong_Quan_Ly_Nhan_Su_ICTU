@@ -1,4 +1,4 @@
-import { query } from '../config/database.js';
+import { query, withTransaction } from '../config/database.js';
 
 /**
  * Ánh xạ các cột được phép sắp xếp để chống SQL Injection
@@ -218,18 +218,76 @@ export async function findByCodeExcludingId(code, excludeId) {
 /**
  * Đếm số lượng nhân viên trực thuộc phòng ban (kiểm tra toàn vẹn khóa ngoại)
  * @param {number} departmentId
+ * @param {object|null} connection
  * @returns {Promise<number>}
  */
-export async function countEmployeesByDepartmentId(departmentId) {
+export async function countEmployeesByDepartmentId(departmentId, connection = null) {
   if (!departmentId || isNaN(departmentId)) return 0;
 
   const sql = `
     SELECT COUNT(*) AS total
     FROM \`employees\`
-    WHERE department_id = ?
+    WHERE \`department_id\` = ?
   `;
+  if (connection) {
+    const [rows] = await connection.execute(sql, [departmentId]);
+    return Number(rows[0]?.total || 0);
+  }
   const rows = await query(sql, [departmentId]);
   return Number(rows[0]?.total || 0);
+}
+
+/**
+ * Kiểm tra xem có bất kỳ nhân viên nào đang tham chiếu tới phòng ban hay không
+ * Bao gồm tất cả nhân viên (kể cả nhân viên đã nghỉ việc 'Resigned' nếu còn liên kết)
+ * Sử dụng truy vấn SELECT EXISTS có tham số, chống SQL Injection
+ * @param {number} departmentId
+ * @param {object|null} connection
+ * @returns {Promise<boolean>}
+ */
+export async function hasEmployees(departmentId, connection = null) {
+  if (!departmentId || isNaN(departmentId)) return false;
+
+  const sql = `
+    SELECT EXISTS (
+      SELECT 1
+      FROM \`employees\`
+      WHERE \`department_id\` = ?
+    ) AS has_employees
+  `;
+
+  if (connection) {
+    const [rows] = await connection.execute(sql, [departmentId]);
+    return Boolean(rows[0]?.has_employees);
+  }
+
+  const rows = await query(sql, [departmentId]);
+  return Boolean(rows[0]?.has_employees);
+}
+
+/**
+ * Tìm phòng ban theo ID và khóa hàng bi quan (SELECT ... FOR UPDATE)
+ * Sử dụng trong transaction để ngăn ngừa race condition khi cập nhật / xóa đồng thời
+ * @param {number} departmentId
+ * @param {object|null} connection
+ * @returns {Promise<object|null>}
+ */
+export async function findByIdForUpdate(departmentId, connection = null) {
+  if (!departmentId || isNaN(departmentId)) return null;
+
+  const sql = `
+    SELECT * FROM \`departments\`
+    WHERE \`department_id\` = ?
+    FOR UPDATE
+  `;
+
+  if (connection) {
+    const [rows] = await connection.execute(sql, [departmentId]);
+    return rows.length > 0 ? formatDepartment(rows[0]) : null;
+  }
+
+  const rows = await query(sql, [departmentId]);
+  return rows.length > 0 ? formatDepartment(rows[0]) : null;
 }
 
 /**
@@ -330,12 +388,17 @@ export async function update(departmentId, updates = {}) {
 /**
  * Xóa vật lý phòng ban (khi không còn nhân sự trực thuộc)
  * @param {number} departmentId
+ * @param {object|null} connection
  * @returns {Promise<boolean>}
  */
-export async function deleteById(departmentId) {
+export async function deleteById(departmentId, connection = null) {
   if (!departmentId || isNaN(departmentId)) return false;
 
   const sql = 'DELETE FROM `departments` WHERE `department_id` = ?';
+  if (connection) {
+    const [result] = await connection.execute(sql, [departmentId]);
+    return result.affectedRows > 0;
+  }
   const result = await query(sql, [departmentId]);
   return result.affectedRows > 0;
 }
@@ -343,9 +406,10 @@ export async function deleteById(departmentId) {
 /**
  * Xóa mềm phòng ban (Soft delete)
  * @param {number} departmentId
+ * @param {object|null} connection
  * @returns {Promise<boolean>}
  */
-export async function softDeleteById(departmentId) {
+export async function softDeleteById(departmentId, connection = null) {
   if (!departmentId || isNaN(departmentId)) return false;
 
   const sql = `
@@ -353,8 +417,75 @@ export async function softDeleteById(departmentId) {
     SET \`is_active\` = 0, \`updated_at\` = CURRENT_TIMESTAMP
     WHERE \`department_id\` = ?
   `;
+  if (connection) {
+    const [result] = await connection.execute(sql, [departmentId]);
+    return result.affectedRows > 0;
+  }
   const result = await query(sql, [departmentId]);
   return result.affectedRows > 0;
+}
+
+/**
+ * Xóa phòng ban trong một MySQL Transaction với khóa dòng FOR UPDATE
+ * Ngăn chặn xung đột dữ liệu (race condition) khi có request đồng thời
+ * @param {number} departmentId
+ * @param {object} options
+ * @returns {Promise<{ found: boolean, hasEmployees: boolean, isDeleted?: boolean, type?: string, department?: object }>}
+ */
+export async function deleteDepartmentWithLock(departmentId, { isSoftDelete = false } = {}) {
+  return await withTransaction(async (conn) => {
+    // 1. Khóa bi quan bản ghi phòng ban cần xóa (FOR UPDATE)
+    const [deptRows] = await conn.execute(
+      'SELECT * FROM `departments` WHERE `department_id` = ? FOR UPDATE',
+      [departmentId]
+    );
+
+    if (deptRows.length === 0) {
+      return { found: false, hasEmployees: false, isDeleted: false };
+    }
+
+    const department = formatDepartment(deptRows[0]);
+
+    // 2. Kiểm tra tồn tại nhân viên tham chiếu đến phòng ban
+    const [existsRows] = await conn.execute(
+      'SELECT EXISTS (SELECT 1 FROM `employees` WHERE `department_id` = ?) AS has_employees',
+      [departmentId]
+    );
+
+    const hasEmp = Boolean(existsRows[0]?.has_employees);
+    if (hasEmp) {
+      return {
+        found: true,
+        hasEmployees: true,
+        isDeleted: false,
+        department,
+      };
+    }
+
+    // 3. Thực hiện xóa khi không còn nhân sự trực thuộc
+    if (isSoftDelete) {
+      await conn.execute(
+        'UPDATE `departments` SET `is_active` = 0, `updated_at` = CURRENT_TIMESTAMP WHERE `department_id` = ?',
+        [departmentId]
+      );
+      return {
+        found: true,
+        hasEmployees: false,
+        isDeleted: true,
+        type: 'SOFT_DELETE',
+        department,
+      };
+    }
+
+    await conn.execute('DELETE FROM `departments` WHERE `department_id` = ?', [departmentId]);
+    return {
+      found: true,
+      hasEmployees: false,
+      isDeleted: true,
+      type: 'HARD_DELETE',
+      department,
+    };
+  });
 }
 
 /**
@@ -446,10 +577,14 @@ export default {
   findByCode,
   findByCodeExcludingId,
   countEmployeesByDepartmentId,
+  hasEmployees,
+  findByIdForUpdate,
   getDepartmentEmployeeStats,
   create,
   update,
   deleteById,
   softDeleteById,
+  deleteDepartmentWithLock,
   formatDepartment,
 };
+

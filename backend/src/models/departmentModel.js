@@ -12,6 +12,10 @@ export const update = departmentRepository.update;
 export const deleteById = departmentRepository.deleteById;
 export const softDeleteById = departmentRepository.softDeleteById;
 export const countEmployeesByDepartmentId = departmentRepository.countEmployeesByDepartmentId;
+export const hasEmployees = departmentRepository.hasEmployees;
+export const findByIdForUpdate = departmentRepository.findByIdForUpdate;
+export const deleteDepartmentWithLock = departmentRepository.deleteDepartmentWithLock;
 export const getDepartmentEmployeeStats = departmentRepository.getDepartmentEmployeeStats;
 
 export default departmentRepository;
+

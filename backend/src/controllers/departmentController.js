@@ -206,12 +206,12 @@ export async function deleteDepartment(req, res, next) {
       });
     }
 
-    // Xử lý mã lỗi ràng buộc khóa ngoại MySQL
+    // Xử lý mã lỗi ràng buộc khóa ngoại MySQL (InnoDB ON DELETE RESTRICT)
     if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.errno === 1451) {
       return errorResponse(res, {
         statusCode: 409,
-        errorCode: 'FOREIGN_KEY_RESTRICTION',
-        message: 'Không thể xóa phòng ban đang có nhân viên trực thuộc trong hệ thống.',
+        errorCode: 'DEPARTMENT_HAS_EMPLOYEES',
+        message: 'Không thể xóa phòng ban vì vẫn còn nhân viên trực thuộc.',
       });
     }
 

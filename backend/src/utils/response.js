@@ -38,6 +38,7 @@ export function errorResponse(res, {
     status: 'error',
     statusCode,
     errorCode,
+    code: errorCode,
     message,
     timestamp: new Date().toISOString(),
   };
