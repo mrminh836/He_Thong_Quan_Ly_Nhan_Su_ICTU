@@ -42,15 +42,15 @@ export function renderDepartmentsPage() {
     breadcrumbs: [{ label: 'Trang chủ', path: '/dashboard' }, { label: 'Quản lý phòng ban' }],
     actions: `
       <button class="btn btn-secondary" id="btn-refresh-dept" title="Tải lại dữ liệu mới nhất">
-        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
         <span>Làm mới</span>
       </button>
       ${
         canCreate
           ? `
         <button class="btn btn-primary" id="btn-add-dept" title="Thêm phòng ban mới">
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span>+ Thêm phòng ban</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>Thêm phòng ban</span>
         </button>
       `
           : ''
@@ -62,70 +62,75 @@ export function renderDepartmentsPage() {
     ${headerHtml}
 
     <!-- 1. KHU VỰC CÁC THẺ THỐNG KÊ TỔNG QUAN (3 THẺ CHỈ SỐ) -->
-    <div class="dept-stats-grid" id="dept-stats-container">
+    <div class="stats-grid" id="dept-stats-container">
       <!-- Thẻ 1: Tổng số phòng ban -->
-      <div class="dept-stat-card">
-        <div class="dept-stat-info">
-          <span class="dept-stat-label">Tổng số phòng ban</span>
-          <div class="dept-stat-value" id="stat-total-depts">--</div>
-          <div class="dept-stat-subtext">Đơn vị cơ cấu tổ chức</div>
+      <div class="stat-card">
+        <div class="stat-info">
+          <span class="stat-label">Tổng số phòng ban</span>
+          <span class="stat-value" id="stat-total-depts">--</span>
+          <span class="stat-meta">
+            <span class="badge badge-blue">Cơ cấu tổ chức</span>
+          </span>
         </div>
-        <div class="dept-stat-icon icon-blue-gradient">
-          <svg viewBox="0 0 24 24"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/></svg>
+        <div class="stat-icon icon-blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/></svg>
         </div>
       </div>
 
       <!-- Thẻ 2: Tổng nhân sự hiện tại -->
-      <div class="dept-stat-card">
-        <div class="dept-stat-info">
-          <span class="dept-stat-label">Tổng nhân sự hiện tại</span>
-          <div class="dept-stat-value" id="stat-total-employees">--</div>
-          <div class="dept-stat-subtext">Đang làm việc (Active / OnLeave)</div>
+      <div class="stat-card">
+        <div class="stat-info">
+          <span class="stat-label">Tổng nhân sự hiện tại</span>
+          <span class="stat-value" id="stat-total-employees">--</span>
+          <span class="stat-meta">
+            <span class="badge badge-success">Đang làm việc (Active / OnLeave)</span>
+          </span>
         </div>
-        <div class="dept-stat-icon icon-purple-gradient">
-          <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <div class="stat-icon icon-purple">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
       </div>
 
       <!-- Thẻ 3: Phòng ban chưa có nhân sự -->
-      <div class="dept-stat-card">
-        <div class="dept-stat-info">
-          <span class="dept-stat-label">Phòng ban chưa có nhân sự</span>
-          <div class="dept-stat-value" id="stat-empty-depts">--</div>
-          <div class="dept-stat-subtext">Cần phân bổ hoặc tuyển dụng</div>
+      <div class="stat-card">
+        <div class="stat-info">
+          <span class="stat-label">Phòng ban chưa có nhân sự</span>
+          <span class="stat-value" id="stat-empty-depts">--</span>
+          <span class="stat-meta">
+            <span class="badge badge-warning">Cần phân bổ hoặc tuyển dụng</span>
+          </span>
         </div>
-        <div class="dept-stat-icon icon-amber-gradient">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div class="stat-icon icon-orange">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         </div>
       </div>
     </div>
 
     <!-- 2. THANH CÔNG CỤ TÌM KIẾM VÀ LỌC -->
-    <div class="dept-toolbar">
-      <div class="dept-search-wrapper">
-        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+    <div class="toolbar">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         <input 
           type="text" 
           id="dept-search-input" 
-          class="dept-search-input" 
           placeholder="Tìm theo tên hoặc mã phòng ban..." 
           autocomplete="off"
         />
         <button type="button" id="dept-search-clear" class="dept-search-clear" title="Xóa tìm kiếm">
-          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
 
-      <div class="dept-filter-controls">
+      <div class="filter-group">
         <select class="select-input" id="dept-filter-select">
           <option value="all">Tất cả phòng ban</option>
-          <option value="with_employees">Có nhân sự (> 0)</option>
+          <option value="with_employees">Có nhân sự (&gt; 0)</option>
           <option value="no_employees">Chưa có nhân sự (0 NV)</option>
           <option value="active">Đang hoạt động</option>
           <option value="inactive">Tạm ngưng hoạt động</option>
         </select>
 
-        <span class="dept-results-count" id="dept-results-count">Đang tải...</span>
+        <span class="badge badge-mock" id="dept-results-count">Đang tải...</span>
       </div>
     </div>
 
@@ -145,12 +150,13 @@ export function renderDepartmentsPage() {
       <table class="data-table">
         <thead>
           <tr>
-            <th style="width: 60px; text-align: center;">STT</th>
-            <th style="min-width: 220px;">Tên phòng ban</th>
-            <th style="min-width: 200px;">Mô tả</th>
-            <th style="width: 170px;">Số lượng nhân sự</th>
-            <th style="width: 150px;">Ngày tạo</th>
-            <th style="width: 130px; text-align: right;">Thao tác</th>
+            <th style="width: 50px; text-align: center;">STT</th>
+            <th style="min-width: 200px;">Tên phòng ban</th>
+            <th style="min-width: 180px;">Mô tả chức năng</th>
+            <th style="width: 160px; text-align: center;">Số lượng nhân sự</th>
+            <th style="width: 120px; text-align: center;">Trạng thái</th>
+            <th style="width: 110px;">Ngày tạo</th>
+            <th style="width: 190px; text-align: right;">Thao tác</th>
           </tr>
         </thead>
         <tbody id="dept-table-body">
@@ -397,10 +403,10 @@ function renderTableBody() {
 
     tableBody.innerHTML = `
       <tr>
-        <td colspan="6">
+        <td colspan="7">
           <div class="empty-state">
             <div class="empty-state-icon">
-              <svg viewBox="0 0 24 24"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/></svg>
             </div>
             <div class="empty-state-title">Chưa có phòng ban nào trong hệ thống</div>
             <div class="empty-state-desc">Hãy khởi tạo cơ cấu phòng ban đầu tiên để bắt đầu phân bổ nhân sự và quản lý tổ chức.</div>
@@ -408,7 +414,7 @@ function renderTableBody() {
               canCreate
                 ? `
               <button class="btn btn-primary" id="btn-add-first-dept">
-                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 <span>Thêm phòng ban đầu tiên</span>
               </button>
             `
@@ -433,10 +439,10 @@ function renderTableBody() {
   if (pageState.filteredDepartments.length === 0) {
     tableBody.innerHTML = `
       <tr>
-        <td colspan="6">
+        <td colspan="7">
           <div class="empty-state" style="padding: 40px 16px;">
             <div class="empty-state-icon" style="background-color: #f1f5f9; color: #64748b;">
-              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             </div>
             <div class="empty-state-title">Không tìm thấy phòng ban nào phù hợp</div>
             <div class="empty-state-desc">
@@ -479,8 +485,8 @@ function renderTableBody() {
 
     // Huy hiệu số lượng nhân sự
     const countBadge = employeeCount > 0
-      ? `<span class="badge-count-active" title="Gồm ${dept.activeCount || employeeCount} nhân viên làm việc">
-           <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      ? `<span class="badge-count-active" title="Gồm ${dept.activeCount || employeeCount} nhân sự đang làm việc">
+           <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
            <span>${employeeCount} nhân sự</span>
          </span>`
       : `<span class="badge-count-zero" title="Phòng ban hiện chưa có nhân sự trực thuộc">
@@ -492,13 +498,13 @@ function renderTableBody() {
 
     return `
       <tr data-id="${deptId}">
-        <td style="text-align: center; color: #64748b; font-weight: 500;">${stt}</td>
+        <td style="text-align: center; color: var(--color-text-muted); font-weight: 600;">${stt}</td>
         <td>
           <div class="dept-name-cell">
             <span class="dept-name-title">${escapeHtml(dept.departmentName)}</span>
-            <div style="display: flex; gap: 6px; align-items: center; margin-top: 2px;">
-              <span class="dept-code-tag">${escapeHtml(dept.departmentCode || 'N/A')}</span>
-              ${!dept.isActive ? `<span class="badge badge-gray" style="font-size: 10px;">Tạm ngưng</span>` : ''}
+            <div style="display: flex; gap: 6px; align-items: center; margin-top: 3px;">
+              <span class="badge badge-blue" style="font-family: monospace; font-size: 11px; padding: 1px 7px;">${escapeHtml(dept.departmentCode || 'N/A')}</span>
+              ${dept.location ? `<span style="font-size: 11px; color: var(--color-text-muted);">📍 ${escapeHtml(dept.location)}</span>` : ''}
             </div>
           </div>
         </td>
@@ -507,22 +513,30 @@ function renderTableBody() {
             ${escapeHtml(dept.description || 'Chưa có mô tả')}
           </div>
         </td>
-        <td>
+        <td style="text-align: center;">
           ${countBadge}
         </td>
-        <td style="color: #64748b; font-size: 12px;">
+        <td style="text-align: center;">
+          ${
+            dept.isActive !== false
+              ? `<span class="badge badge-success"><span style="width: 6px; height: 6px; border-radius: 50%; background-color: var(--color-success); display: inline-block;"></span> Hoạt động</span>`
+              : `<span class="badge badge-gray"><span style="width: 6px; height: 6px; border-radius: 50%; background-color: #94a3b8; display: inline-block;"></span> Tạm ngưng</span>`
+          }
+        </td>
+        <td style="color: var(--color-text-muted); font-size: 12px; white-space: nowrap;">
           ${formattedDate}
         </td>
         <td style="text-align: right;">
           <div class="dept-actions-group">
             <button 
               type="button" 
-              class="dept-action-icon-btn btn-view" 
+              class="dept-btn-action btn-view" 
               data-action="view" 
               data-id="${deptId}" 
               title="Xem chi tiết phòng ban"
             >
-              <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              <span>Xem</span>
             </button>
 
             ${
@@ -530,12 +544,13 @@ function renderTableBody() {
                 ? `
               <button 
                 type="button" 
-                class="dept-action-icon-btn btn-edit" 
+                class="dept-btn-action btn-edit" 
                 data-action="edit" 
                 data-id="${deptId}" 
                 title="Chỉnh sửa thông tin phòng ban"
               >
-                <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                <span>Sửa</span>
               </button>
             `
                 : ''
@@ -546,12 +561,13 @@ function renderTableBody() {
                 ? `
               <button 
                 type="button" 
-                class="dept-action-icon-btn btn-delete" 
+                class="dept-btn-action btn-delete" 
                 data-action="delete" 
                 data-id="${deptId}" 
                 title="Xóa phòng ban khỏi hệ thống"
               >
-                <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                <span>Xóa</span>
               </button>
             `
                 : ''
@@ -569,7 +585,7 @@ function renderTableBody() {
  * Xử lý các sự kiện click trên các nút Thao tác (Xem chi tiết, Sửa, Xóa)
  */
 async function handleTableActionClick(e) {
-  const btn = e.target.closest('.dept-action-icon-btn');
+  const btn = e.target.closest('.dept-btn-action') || e.target.closest('.dept-action-icon-btn');
   if (!btn) return;
 
   const action = btn.dataset.action;
@@ -622,7 +638,7 @@ function renderLoadingState() {
   if (tableBody) {
     tableBody.innerHTML = `
       <tr>
-        <td colspan="6">
+        <td colspan="7">
           <div class="loading-container">
             <div class="spinner"></div>
             <span>Đang tải danh sách phòng ban từ máy chủ...</span>

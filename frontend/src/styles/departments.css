@@ -82,7 +82,10 @@
 .dept-stat-icon svg {
   width: 24px;
   height: 24px;
+  stroke: currentColor;
   stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
   fill: none;
 }
 
@@ -157,7 +160,8 @@
   outline: none;
 }
 
-.dept-search-clear {
+.dept-search-clear,
+.search-box .dept-search-clear {
   position: absolute;
   right: 10px;
   background: none;
@@ -171,12 +175,14 @@
   border-radius: 50%;
 }
 
-.dept-search-clear:hover {
+.dept-search-clear:hover,
+.search-box .dept-search-clear:hover {
   background-color: #e2e8f0;
   color: var(--color-text-main);
 }
 
-.dept-search-clear.visible {
+.dept-search-clear.visible,
+.search-box .dept-search-clear.visible {
   display: flex;
 }
 
@@ -258,10 +264,72 @@
 }
 
 .dept-actions-group {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--space-1);
+  gap: 6px;
+}
+
+.dept-btn-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text-main);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.dept-btn-action svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+  stroke: currentColor;
+  fill: none;
+  flex-shrink: 0;
+}
+
+.dept-btn-action.btn-view {
+  color: var(--color-primary);
+  border-color: #bfdbfe;
+  background-color: #eff6ff;
+}
+
+.dept-btn-action.btn-view:hover {
+  background-color: #dbeafe;
+  border-color: #93c5fd;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.15);
+}
+
+.dept-btn-action.btn-edit {
+  color: #b45309;
+  border-color: #fde68a;
+  background-color: #fffbeb;
+}
+
+.dept-btn-action.btn-edit:hover {
+  background-color: #fef3c7;
+  border-color: #fcd34d;
+  box-shadow: 0 1px 3px rgba(217, 119, 6, 0.15);
+}
+
+.dept-btn-action.btn-delete {
+  color: #dc2626;
+  border-color: #fecaca;
+  background-color: #fef2f2;
+}
+
+.dept-btn-action.btn-delete:hover {
+  background-color: #fee2e2;
+  border-color: #fca5a5;
+  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.15);
 }
 
 .dept-action-icon-btn {
@@ -302,7 +370,8 @@
   border-color: #fecaca;
 }
 
-.dept-action-icon-btn:disabled {
+.dept-action-icon-btn:disabled,
+.dept-btn-action:disabled {
   opacity: 0.4;
   cursor: not-allowed;
   pointer-events: none;
