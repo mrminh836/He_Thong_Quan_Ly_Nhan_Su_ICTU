@@ -315,6 +315,8 @@
   width: 16px;
   height: 16px;
   stroke: var(--color-text-muted);
+  stroke-width: 2;
+  fill: none;
   pointer-events: none;
 }
 
