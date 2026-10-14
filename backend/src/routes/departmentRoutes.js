@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getDepartments,
   getDepartmentById,
+  getDepartmentStatistics,
   createDepartment,
   updateDepartment,
   deleteDepartment,
@@ -28,7 +29,18 @@ router.get(
 );
 
 /**
- * 2. GET /api/departments/:id - Lấy chi tiết phòng ban theo ID
+ * 2. GET /api/departments/statistics - Thống kê số lượng nhân viên hiện tại theo từng phòng ban
+ * Đặt trước /:id để tránh Express Router nhận nhầm 'statistics' là tham số :id
+ * Quyền: ADMIN, HR_MANAGER
+ */
+router.get(
+  '/statistics',
+  requireRole(ROLES.ADMIN, ROLES.HR_MANAGER),
+  getDepartmentStatistics
+);
+
+/**
+ * 3. GET /api/departments/:id - Lấy chi tiết phòng ban theo ID
  * Quyền: ADMIN, HR_MANAGER, EMPLOYEE
  */
 router.get(

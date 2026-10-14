@@ -357,6 +357,87 @@ export async function softDeleteById(departmentId) {
   return result.affectedRows > 0;
 }
 
+/**
+ * Thống kê số lượng nhân viên hiện tại theo từng phòng ban
+ * Sử dụng LEFT JOIN để bảo đảm phòng ban có 0 nhân viên vẫn xuất hiện với employeeCount = 0
+ * Lọc chính xác nhân viên hiện tại (Active, OnLeave) và loại trừ nhân viên đã thôi việc (Resigned)
+ * 100% Parameterized query, chống SQL Injection
+ * 
+ * @param {object} options
+ * @param {string} [options.departmentStatus='all'] 'all' | 'active' | 'inactive'
+ * @param {string} [options.sortBy='employee_count'] 'employee_count' | 'department_name' | 'department_code'
+ * @param {string} [options.sortOrder='DESC'] 'ASC' | 'DESC'
+ * @returns {Promise<Array<{ departmentId: number, departmentCode: string, departmentName: string, isActive: boolean, employeeCount: number, activeCount: number, onLeaveCount: number, resignedCount: number }>>}
+ */
+export async function getDepartmentEmployeeStats({
+  departmentStatus = 'all',
+  sortBy = 'employee_count',
+  sortOrder = 'DESC',
+} = {}) {
+  const whereClauses = [];
+  const params = [];
+
+  if (departmentStatus === 'active') {
+    whereClauses.push('d.is_active = 1');
+  } else if (departmentStatus === 'inactive') {
+    whereClauses.push('d.is_active = 0');
+  }
+
+  const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+  const ALLOWED_STATS_SORT = {
+    employee_count: 'employee_count',
+    employeeCount: 'employee_count',
+    count: 'employee_count',
+    department_name: 'd.department_name',
+    departmentName: 'd.department_name',
+    name: 'd.department_name',
+    department_code: 'd.department_code',
+    departmentCode: 'd.department_code',
+    code: 'd.department_code',
+    department_id: 'd.department_id',
+    departmentId: 'd.department_id',
+    id: 'd.department_id',
+  };
+
+  const sortColumn = ALLOWED_STATS_SORT[sortBy] || 'employee_count';
+  const sortDirection = String(sortOrder).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+  const sql = `
+    SELECT 
+      d.department_id,
+      d.department_code,
+      d.department_name,
+      d.is_active,
+      COUNT(CASE WHEN e.employment_status IN ('Active', 'OnLeave') THEN e.employee_id END) AS employee_count,
+      COUNT(CASE WHEN e.employment_status = 'Active' THEN e.employee_id END) AS active_count,
+      COUNT(CASE WHEN e.employment_status = 'OnLeave' THEN e.employee_id END) AS on_leave_count,
+      COUNT(CASE WHEN e.employment_status = 'Resigned' THEN e.employee_id END) AS resigned_count
+    FROM \`departments\` d
+    LEFT JOIN \`employees\` e ON d.department_id = e.department_id
+    ${whereSql}
+    GROUP BY 
+      d.department_id,
+      d.department_code,
+      d.department_name,
+      d.is_active
+    ORDER BY ${sortColumn} ${sortDirection}, d.department_id ASC
+  `;
+
+  const rows = await query(sql, params);
+
+  return rows.map((row) => ({
+    departmentId: row.department_id,
+    departmentCode: row.department_code,
+    departmentName: row.department_name,
+    isActive: Boolean(row.is_active),
+    employeeCount: Number(row.employee_count || 0),
+    activeCount: Number(row.active_count || 0),
+    onLeaveCount: Number(row.on_leave_count || 0),
+    resignedCount: Number(row.resigned_count || 0),
+  }));
+}
+
 export default {
   findAll,
   findById,
@@ -365,6 +446,7 @@ export default {
   findByCode,
   findByCodeExcludingId,
   countEmployeesByDepartmentId,
+  getDepartmentEmployeeStats,
   create,
   update,
   deleteById,

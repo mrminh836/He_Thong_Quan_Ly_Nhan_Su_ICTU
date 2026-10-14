@@ -28,6 +28,7 @@ import departmentService, { DepartmentError } from '../src/services/departmentSe
 import {
   getDepartments,
   getDepartmentById,
+  getDepartmentStatistics,
   createDepartment,
   updateDepartment,
   deleteDepartment,
@@ -182,6 +183,16 @@ async function startTestSuite() {
     },
   ];
 
+  // Danh sách nhân viên mẫu để kiểm thử thống kê nhân viên hiện tại
+  const mockEmployees = [
+    { employee_id: 101, department_id: 1, employment_status: 'Active' },
+    { employee_id: 102, department_id: 1, employment_status: 'Active' },
+    { employee_id: 103, department_id: 1, employment_status: 'OnLeave' },
+    { employee_id: 104, department_id: 1, employment_status: 'Resigned' }, // Đã nghỉ việc -> không tính vào hiện tại
+    { employee_id: 105, department_id: 2, employment_status: 'Active' },
+    { employee_id: 106, department_id: null, employment_status: 'Active' }, // Chưa gán phòng ban
+  ];
+
   // Lưu bản gốc để phục hồi
   const originalFindById = departmentRepository.findById;
   const originalFindAll = departmentRepository.findAll;
@@ -190,6 +201,7 @@ async function startTestSuite() {
   const originalFindByCode = departmentRepository.findByCode;
   const originalFindByCodeExcludingId = departmentRepository.findByCodeExcludingId;
   const originalCountEmployees = departmentRepository.countEmployeesByDepartmentId;
+  const originalGetDepartmentEmployeeStats = departmentRepository.getDepartmentEmployeeStats;
   const originalCreate = departmentRepository.create;
   const originalUpdate = departmentRepository.update;
   const originalDeleteById = departmentRepository.deleteById;
@@ -202,6 +214,54 @@ async function startTestSuite() {
       if (id === 2) return mockHrUser;
       if (id === 3) return mockEmpUser;
       return null;
+    };
+
+    departmentRepository.getDepartmentEmployeeStats = async ({
+      departmentStatus = 'all',
+      sortBy = 'employee_count',
+      sortOrder = 'DESC',
+    } = {}) => {
+      let depts = [...mockDatabase];
+      if (departmentStatus === 'active') {
+        depts = depts.filter((d) => Boolean(d.is_active));
+      } else if (departmentStatus === 'inactive') {
+        depts = depts.filter((d) => !d.is_active);
+      }
+
+      const result = depts.map((d) => {
+        const empInDept = mockEmployees.filter((e) => e.department_id === d.department_id);
+        const activeCount = empInDept.filter((e) => e.employment_status === 'Active').length;
+        const onLeaveCount = empInDept.filter((e) => e.employment_status === 'OnLeave').length;
+        const resignedCount = empInDept.filter((e) => e.employment_status === 'Resigned').length;
+        const employeeCount = activeCount + onLeaveCount;
+
+        return {
+          departmentId: d.department_id,
+          departmentCode: d.department_code,
+          departmentName: d.department_name,
+          isActive: Boolean(d.is_active),
+          employeeCount,
+          activeCount,
+          onLeaveCount,
+          resignedCount,
+        };
+      });
+
+      if (sortBy === 'department_name') {
+        result.sort((a, b) =>
+          sortOrder === 'ASC'
+            ? a.departmentName.localeCompare(b.departmentName)
+            : b.departmentName.localeCompare(a.departmentName)
+        );
+      } else {
+        result.sort((a, b) =>
+          sortOrder === 'ASC'
+            ? a.employeeCount - b.employeeCount
+            : b.employeeCount - a.employeeCount
+        );
+      }
+
+      return result;
     };
 
     departmentRepository.findById = async (id) => {
@@ -641,8 +701,173 @@ async function startTestSuite() {
       // Không in hoặc gửi chuỗi kết nối nhạy cảm ra ngoài
     });
 
+    // -------------------------------------------------------------------------
+    // TEST 17: GET /api/departments/statistics - Thống kê số lượng nhân viên hiện tại
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 17: GET /api/departments/statistics -> 200 OK với số lượng nhân viên chính xác', async () => {
+      const { req, res, next } = createMockHttp({});
+
+      await getDepartmentStatistics(req, res, next);
+
+      assert.strictEqual(res.statusCode, 200);
+      assert.strictEqual(res.responseBody.success, true);
+      assert.ok(Array.isArray(res.responseBody.data));
+      assert.strictEqual(res.responseBody.data.length, mockDatabase.length);
+
+      const dept1 = res.responseBody.data.find((d) => d.departmentId === 1);
+      assert.ok(dept1);
+      // Phòng ban 1 có: 2 Active + 1 OnLeave = 3 nhân viên hiện tại
+      assert.strictEqual(dept1.employeeCount, 3);
+      assert.strictEqual(dept1.activeCount, 2);
+      assert.strictEqual(dept1.onLeaveCount, 1);
+      assert.strictEqual(dept1.resignedCount, 1);
+
+      // Meta tổng hợp
+      assert.strictEqual(res.responseBody.meta.totalDepartments, mockDatabase.length);
+      const expectedTotalEmployees = mockEmployees.filter(
+        (e) => e.department_id !== null && ['Active', 'OnLeave'].includes(e.employment_status)
+      ).length;
+      assert.strictEqual(res.responseBody.meta.totalEmployees, expectedTotalEmployees); // 3 (PB1) + 1 (PB2) = 4
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 18: Thống kê loại trừ nhân viên đã nghỉ việc (Resigned)
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 18: Nhân viên đã nghỉ việc (Resigned / Soft-delete) không được tính vào employeeCount', async () => {
+      const { req, res, next } = createMockHttp({});
+
+      await getDepartmentStatistics(req, res, next);
+
+      const dept1 = res.responseBody.data.find((d) => d.departmentId === 1);
+      // Nếu đếm cả Resigned thì sẽ là 4, nhưng quy tắc chuẩn chỉ là 3
+      assert.strictEqual(dept1.employeeCount, 3);
+      assert.strictEqual(dept1.resignedCount, 1);
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 19: Phòng ban rỗng (0 nhân sự) vẫn xuất hiện trong kết quả với employeeCount = 0
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 19: Phòng ban có 0 nhân sự vẫn hiển thị đầy đủ với employeeCount = 0 (LEFT JOIN)', async () => {
+      const { req, res, next } = createMockHttp({});
+
+      await getDepartmentStatistics(req, res, next);
+
+      // Tìm phòng ban có 0 nhân viên trong kết quả trả về
+      const deptEmpty = res.responseBody.data.find((d) => d.employeeCount === 0);
+      assert.ok(deptEmpty, 'Phòng ban trống bắt buộc phải có mặt trong danh sách thống kê');
+      assert.strictEqual(deptEmpty.employeeCount, 0);
+      assert.strictEqual(deptEmpty.activeCount, 0);
+      assert.strictEqual(deptEmpty.onLeaveCount, 0);
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 20: Nhân viên chưa gán phòng ban (department_id = null) không bị tính nhầm
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 20: Nhân viên chưa gán phòng ban không bị tính nhầm vào bất kỳ phòng ban nào', async () => {
+      const { req, res, next } = createMockHttp({});
+
+      await getDepartmentStatistics(req, res, next);
+
+      const sumEmployeeCount = res.responseBody.data.reduce((sum, d) => sum + d.employeeCount, 0);
+      // Tổng nhân viên thuộc các phòng ban = 4 (nhân viên 106 có department_id = null không được cộng vào)
+      const expectedSum = mockEmployees
+        .filter((e) => e.department_id !== null && ['Active', 'OnLeave'].includes(e.employment_status))
+        .length;
+      assert.strictEqual(sumEmployeeCount, expectedSum);
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 21: Sắp xếp kết quả thống kê theo tham số sortBy và sortOrder
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 21: Sắp xếp thống kê theo sortBy=department_name và sortBy=employee_count', async () => {
+      // 21.1 Theo tên phòng ban ASC
+      const { req: reqName, res: resName, next: nextName } = createMockHttp({
+        query: { sortBy: 'department_name', sortOrder: 'ASC' },
+      });
+      await getDepartmentStatistics(reqName, resName, nextName);
+      assert.strictEqual(resName.statusCode, 200);
+      for (let i = 0; i < resName.responseBody.data.length - 1; i++) {
+        assert.ok(
+          resName.responseBody.data[i].departmentName.localeCompare(
+            resName.responseBody.data[i + 1].departmentName
+          ) <= 0,
+          'Danh sách phải được sắp xếp theo tên phòng ban A-Z'
+        );
+      }
+
+      // 21.2 Theo số lượng nhân viên DESC (mặc định)
+      const { req: reqCount, res: resCount, next: nextCount } = createMockHttp({
+        query: { sortBy: 'employee_count', sortOrder: 'DESC' },
+      });
+      await getDepartmentStatistics(reqCount, resCount, nextCount);
+      assert.strictEqual(resCount.statusCode, 200);
+      for (let i = 0; i < resCount.responseBody.data.length - 1; i++) {
+        assert.ok(
+          resCount.responseBody.data[i].employeeCount >=
+            resCount.responseBody.data[i + 1].employeeCount,
+          'Danh sách phải được sắp xếp theo số lượng nhân viên giảm dần'
+        );
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 22: Role EMPLOYEE gọi GET /api/departments/statistics -> 403 FORBIDDEN
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 22: Role EMPLOYEE gọi API thống kê phòng ban -> 403 FORBIDDEN', async () => {
+      const statsGuard = requireRole(ROLES.ADMIN, ROLES.HR_MANAGER);
+      const { req, res, next, getNextCalled } = createMockHttp({
+        user: { role: ROLES.EMPLOYEE },
+      });
+
+      statsGuard(req, res, next);
+
+      assert.strictEqual(getNextCalled(), false);
+      assert.strictEqual(res.statusCode, 403);
+      assert.strictEqual(res.responseBody.errorCode, 'FORBIDDEN');
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 23: Role HR_MANAGER và ADMIN gọi GET /api/departments/statistics -> Cho phép
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 23: Role HR_MANAGER và ADMIN gọi API thống kê phòng ban -> Quyền hợp lệ', async () => {
+      const statsGuard = requireRole(ROLES.ADMIN, ROLES.HR_MANAGER);
+
+      // HR Manager
+      const { req: reqHr, res: resHr, next: nextHr, getNextCalled: calledHr } = createMockHttp({
+        user: { role: ROLES.HR_MANAGER },
+      });
+      statsGuard(reqHr, resHr, nextHr);
+      assert.strictEqual(calledHr(), true);
+
+      // Admin
+      const { req: reqAdmin, res: resAdmin, next: nextAdmin, getNextCalled: calledAdmin } = createMockHttp({
+        user: { role: ROLES.ADMIN },
+      });
+      statsGuard(reqAdmin, resAdmin, nextAdmin);
+      assert.strictEqual(calledAdmin(), true);
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 24: Database gặp sự cố khi query thống kê -> Chuyển tiếp next(error) an toàn
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 24: Database gặp sự cố khi thống kê -> Chuyển tiếp next(error) an toàn không lộ thông tin', async () => {
+      departmentRepository.getDepartmentEmployeeStats = async () => {
+        const dbErr = new Error('Database pool connection timed out');
+        dbErr.code = 'ETIMEDOUT';
+        throw dbErr;
+      };
+
+      const { req, res, next, getNextCalled, getNextError } = createMockHttp({});
+
+      await getDepartmentStatistics(req, res, next);
+
+      assert.strictEqual(getNextCalled(), true);
+      assert.ok(getNextError());
+      assert.strictEqual(getNextError().code, 'ETIMEDOUT');
+    });
+
     console.log('\n============================================================');
-    console.log(`🎉 KẾT QUẢ: ĐÃ VƯỢT QUA ${passedTests}/${totalTests} BÀI KIỂM THỬ CRUD DEPARTMENT!`);
+    console.log(`🎉 KẾT QUẢ: ĐÃ VƯỢT QUA ${passedTests}/${totalTests} BÀI KIỂM THỬ CRUD & STATS DEPARTMENT!`);
     console.log('============================================================\n');
   } finally {
     // Khôi phục stub
@@ -653,6 +878,7 @@ async function startTestSuite() {
     departmentRepository.findByCode = originalFindByCode;
     departmentRepository.findByCodeExcludingId = originalFindByCodeExcludingId;
     departmentRepository.countEmployeesByDepartmentId = originalCountEmployees;
+    departmentRepository.getDepartmentEmployeeStats = originalGetDepartmentEmployeeStats;
     departmentRepository.create = originalCreate;
     departmentRepository.update = originalUpdate;
     departmentRepository.deleteById = originalDeleteById;

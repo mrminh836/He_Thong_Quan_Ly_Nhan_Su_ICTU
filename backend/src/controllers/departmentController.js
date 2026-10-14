@@ -219,9 +219,41 @@ export async function deleteDepartment(req, res, next) {
   }
 }
 
+/**
+ * Controller thống kê số lượng nhân viên hiện tại theo từng phòng ban
+ * Endpoint: GET /api/departments/statistics
+ */
+export async function getDepartmentStatistics(req, res, next) {
+  try {
+    const { status, sortBy, sortOrder } = req.query || {};
+    const result = await departmentService.getDepartmentStatistics({
+      departmentStatus: status,
+      sortBy,
+      sortOrder,
+    });
+
+    return successResponse(res, {
+      statusCode: 200,
+      message: 'Lấy thống kê số lượng nhân viên theo phòng ban thành công',
+      data: result.departments,
+      meta: result.summary,
+    });
+  } catch (error) {
+    if (error instanceof DepartmentError) {
+      return errorResponse(res, {
+        statusCode: error.statusCode,
+        errorCode: error.errorCode,
+        message: error.message,
+      });
+    }
+    next(error);
+  }
+}
+
 export default {
   getDepartments,
   getDepartmentById,
+  getDepartmentStatistics,
   createDepartment,
   updateDepartment,
   deleteDepartment,
