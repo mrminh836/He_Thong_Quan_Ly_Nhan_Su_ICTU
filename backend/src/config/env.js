@@ -30,6 +30,8 @@ export const env = {
 
   // Security & Authentication
   aesSecretKey: process.env.DB_AES_SECRET_KEY || 'ICTU_HRM_SECRET_KEY_2026_AES256',
+  cccdEncryptionKey: process.env.CCCD_ENCRYPTION_KEY || process.env.DB_AES_SECRET_KEY || (isProduction ? '' : 'ICTU_HRM_SECRET_KEY_2026_AES256'),
+  cccdHmacSecret: process.env.CCCD_HMAC_SECRET || (isProduction ? '' : 'ICTU_HRM_CCCD_HMAC_SECRET_2026_KEY'),
   jwtSecret,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
   bcryptSaltRounds: Number(process.env.BCRYPT_SALT_ROUNDS) || 10,

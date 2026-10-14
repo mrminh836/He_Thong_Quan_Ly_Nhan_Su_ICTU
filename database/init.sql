@@ -68,12 +68,14 @@ CREATE TABLE `employees` (
     `employee_id` INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Khóa chính định danh nhân sự',
     `employee_code` VARCHAR(20) NOT NULL COMMENT 'Mã định danh nhân viên (vd: NV001, NV002)',
     `full_name` VARCHAR(100) NOT NULL COMMENT 'Họ và tên đầy đủ',
-    `email` VARCHAR(100) NOT NULL COMMENT 'Địa chỉ email công vụ/cá nhân',
+    `email` VARCHAR(100) NULL COMMENT 'Địa chỉ email công vụ/cá nhân',
     `phone` VARCHAR(20) NULL COMMENT 'Số điện thoại liên lạc cá nhân',
+    `address` VARCHAR(255) NULL COMMENT 'Địa chỉ liên lạc / thường trú của nhân viên',
     `gender` ENUM('Male', 'Female', 'Other') NOT NULL DEFAULT 'Male' COMMENT 'Giới tính',
     `date_of_birth` DATE NULL COMMENT 'Ngày tháng năm sinh',
     `ssn_encrypted` VARBINARY(255) NOT NULL COMMENT 'Số CCCD/CMND được mã hóa bằng AES_ENCRYPT (Tiêu chuẩn Lab 6)',
     `ssn_masked` VARCHAR(20) NULL COMMENT 'Số CCCD che mờ ký tự hiển thị an toàn (vd: 0380******12)',
+    `ssn_hash` VARCHAR(64) NULL COMMENT 'Mã băm HMAC-SHA-256 bảo vệ tính duy nhất của số CCCD/CMND',
     `department_id` INT NOT NULL COMMENT 'Khóa ngoại trỏ tới departments(department_id)',
     `position` VARCHAR(50) NOT NULL DEFAULT 'Nhân viên' COMMENT 'Vị trí / Chức danh công tác',
     `base_salary` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT 'Mức lương cơ bản thỏa thuận (VNĐ)',
@@ -85,6 +87,7 @@ CREATE TABLE `employees` (
     -- Ràng buộc duy nhất
     CONSTRAINT `uk_employees_code` UNIQUE (`employee_code`),
     CONSTRAINT `uk_employees_email` UNIQUE (`email`),
+    CONSTRAINT `uk_employees_ssn_hash` UNIQUE (`ssn_hash`),
 
     -- Ràng buộc kiểm tra tính hợp lệ dữ liệu (CHECK Constraints)
     CONSTRAINT `chk_employees_salary` CHECK (`base_salary` >= 0),
@@ -97,7 +100,8 @@ CREATE TABLE `employees` (
     -- Chỉ mục tối ưu truy vấn
     INDEX `idx_employees_dept` (`department_id`),
     INDEX `idx_employees_status` (`employment_status`),
-    INDEX `idx_employees_name` (`full_name`)
+    INDEX `idx_employees_name` (`full_name`),
+    INDEX `idx_employees_ssn_hash` (`ssn_hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Bảng lưu trữ thông tin hồ sơ nhân sự';
 
 -- ==============================================================================

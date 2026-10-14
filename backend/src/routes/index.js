@@ -3,6 +3,7 @@ import healthRoutes from './healthRoutes.js';
 import authRoutes from './authRoutes.js';
 import rbacDemoRoutes from './rbacDemoRoutes.js';
 import departmentRoutes from './departmentRoutes.js';
+import employeeRoutes from './employeeRoutes.js';
 
 const router = Router();
 
@@ -11,6 +12,7 @@ router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
 router.use('/rbac', rbacDemoRoutes);
 router.use('/departments', departmentRoutes);
+router.use('/employees', employeeRoutes);
 
 // Thông tin API Root
 router.get('/', (req, res) => {
@@ -25,6 +27,7 @@ router.get('/', (req, res) => {
       authProfile: '/api/auth/profile',
       departments: '/api/departments',
       departmentStatistics: '/api/departments/statistics',
+      employees: '/api/employees',
       rbacAdminUsers: '/api/rbac/admin/users',
       rbacHrEmployees: '/api/rbac/hr/employees',
       rbacEmployeeAttendance: '/api/rbac/employees/:id/attendances',

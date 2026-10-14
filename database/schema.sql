@@ -56,12 +56,14 @@ CREATE TABLE `employees` (
     `employee_id` INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Khóa chính nhân viên',
     `employee_code` VARCHAR(20) NOT NULL COMMENT 'Mã nhân viên công ty (vd: NV001, NV002)',
     `full_name` VARCHAR(100) NOT NULL COMMENT 'Họ và tên đầy đủ',
-    `email` VARCHAR(100) NOT NULL COMMENT 'Email công vụ/cá nhân',
+    `email` VARCHAR(100) NULL COMMENT 'Email công vụ/cá nhân',
     `phone` VARCHAR(20) NULL COMMENT 'Số điện thoại di động',
+    `address` VARCHAR(255) NULL COMMENT 'Địa chỉ liên lạc / thường trú',
     `gender` ENUM('Male', 'Female', 'Other') NOT NULL DEFAULT 'Male' COMMENT 'Giới tính',
     `date_of_birth` DATE NULL COMMENT 'Ngày sinh',
     `ssn_encrypted` VARBINARY(255) NOT NULL COMMENT 'Số CCCD/CMND mã hóa bằng AES_ENCRYPT (Tiêu chuẩn Lab 6)',
     `ssn_masked` VARCHAR(20) NULL COMMENT 'Số CCCD che mờ hiển thị an toàn (vd: 0380******12)',
+    `ssn_hash` VARCHAR(64) NULL COMMENT 'Mã băm HMAC-SHA-256 bảo vệ tính duy nhất của số CCCD/CMND',
     `department_id` INT NOT NULL COMMENT 'Khóa ngoại trỏ tới departments',
     `position` VARCHAR(50) NOT NULL DEFAULT 'Nhân viên' COMMENT 'Chức vụ công tác',
     `base_salary` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT 'Mức lương cơ bản (VNĐ)',
@@ -72,6 +74,7 @@ CREATE TABLE `employees` (
 
     CONSTRAINT `uk_employees_code` UNIQUE (`employee_code`),
     CONSTRAINT `uk_employees_email` UNIQUE (`email`),
+    CONSTRAINT `uk_employees_ssn_hash` UNIQUE (`ssn_hash`),
     CONSTRAINT `chk_employees_salary` CHECK (`base_salary` >= 0),
     CONSTRAINT `fk_employees_department`
         FOREIGN KEY (`department_id`) REFERENCES `departments` (`department_id`)
@@ -79,7 +82,8 @@ CREATE TABLE `employees` (
 
     INDEX `idx_employees_dept` (`department_id`),
     INDEX `idx_employees_status` (`employment_status`),
-    INDEX `idx_employees_name` (`full_name`)
+    INDEX `idx_employees_name` (`full_name`),
+    INDEX `idx_employees_ssn_hash` (`ssn_hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Bảng hồ sơ nhân sự';
 
 -- ------------------------------------------------------------------------------

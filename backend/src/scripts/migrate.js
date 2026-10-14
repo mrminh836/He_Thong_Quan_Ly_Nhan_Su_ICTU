@@ -14,11 +14,14 @@ const MIGRATIONS_DIR = path.resolve(__dirname, '../../../database/migrations');
  * Tạo kết nối MySQL có bật `multipleStatements` để thực thi file script SQL
  */
 async function createMigrationConnection() {
+  const user = process.env.DB_MIGRATE_USER || (process.env.DB_ROOT_PASSWORD ? 'root' : env.db.user);
+  const password = process.env.DB_MIGRATE_PASSWORD || process.env.DB_ROOT_PASSWORD || env.db.password;
+
   return await mysql.createConnection({
     host: env.db.host,
     port: env.db.port,
-    user: env.db.user,
-    password: env.db.password,
+    user,
+    password,
     database: env.db.name,
     multipleStatements: true,
     timezone: '+07:00',
