@@ -4,6 +4,7 @@ import './styles/reset.css';
 import './styles/layout.css';
 import './styles/components.css';
 import './styles/pages.css';
+import './styles/departments.css';
 
 import { initApp } from './app.js';
 
