@@ -1,4 +1,5 @@
 import { qs } from '../utils/dom.js';
+import { openDepartmentFormModal, closeDepartmentFormModal } from './DepartmentFormModal.js';
 
 /**
  * Component Modal Quản lý Phòng ban (Thêm, Sửa, Xem chi tiết, Xác nhận xóa)
@@ -10,6 +11,8 @@ let activeModalOverlay = null;
  * Đóng modal hiện tại và dọn dẹp khỏi DOM
  */
 export function closeModal() {
+  closeDepartmentFormModal();
+
   if (activeModalOverlay) {
     activeModalOverlay.classList.remove('active');
     setTimeout(() => {
@@ -87,303 +90,33 @@ function createModalFrame(title, bodyHtml, footerHtml, maxWidth = 540) {
 }
 
 /**
- * Mở modal Thêm phòng ban mới
- * @param {object} param0
- * @param {Function} param0.onSubmit - Hàm xử lý gọi API tạo phòng ban
+ * Mở modal Thêm phòng ban mới (Ủy quyền cho DepartmentFormModal dùng chung)
+ * @param {object} [options]
+ * @param {Function} [options.onSubmit] - Hàm tùy biến gọi API tạo phòng ban
+ * @param {Function} [options.onSuccess] - Callback khi tạo thành công
  */
-export function openAddDepartmentModal({ onSubmit }) {
-  const bodyHtml = `
-    <div class="form-banner-error" id="modal-error-banner">
-      <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <span id="modal-error-text"></span>
-    </div>
-
-    <form id="add-dept-form">
-      <div class="form-group">
-        <label class="form-label" for="add-dept-name">
-          Tên phòng ban <span class="required">*</span>
-        </label>
-        <input 
-          type="text" 
-          id="add-dept-name" 
-          class="form-input" 
-          placeholder="Nhập tên phòng ban (vd: Phòng Kỹ thuật & Công nghệ)" 
-          autocomplete="off"
-          required 
-        />
-        <div class="form-error-msg" id="name-error-msg">Vui lòng nhập tên phòng ban.</div>
-      </div>
-
-      <div class="form-group form-group-spaced">
-        <label class="form-label" for="add-dept-code">
-          Mã phòng ban (Tùy chọn)
-        </label>
-        <input 
-          type="text" 
-          id="add-dept-code" 
-          class="form-input" 
-          placeholder="Tự động sinh nếu để trống (vd: PB-CNTT)" 
-          maxlength="20"
-          autocomplete="off"
-        />
-        <span class="form-hint">Nếu để trống, hệ thống sẽ tự động viết tắt từ tên phòng ban.</span>
-      </div>
-
-      <div class="form-row-2col">
-        <div class="form-group">
-          <label class="form-label" for="add-dept-location">Địa điểm / Tầng</label>
-          <input 
-            type="text" 
-            id="add-dept-location" 
-            class="form-input" 
-            placeholder="Tầng 4 - Tòa nhà A" 
-          />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="add-dept-phone">Điện thoại bàn</label>
-          <input 
-            type="tel" 
-            id="add-dept-phone" 
-            class="form-input" 
-            placeholder="0208-3846-xxx" 
-          />
-        </div>
-      </div>
-
-      <div class="form-group form-group-spaced">
-        <label class="form-label" for="add-dept-desc">Mô tả chức năng & nhiệm vụ</label>
-        <textarea 
-          id="add-dept-desc" 
-          class="form-textarea" 
-          placeholder="Mô tả chức năng nhiệm vụ chính của phòng ban..."
-        ></textarea>
-      </div>
-
-      <div class="form-group form-checkbox-group">
-        <input type="checkbox" id="add-dept-active" checked class="form-checkbox" />
-        <label for="add-dept-active" class="form-checkbox-label">
-          Kích hoạt hoạt động ngay sau khi tạo
-        </label>
-      </div>
-    </form>
-  `;
-
-  const footerHtml = `
-    <button type="button" class="btn btn-secondary" id="modal-cancel-btn">Hủy bỏ</button>
-    <button type="button" class="btn btn-primary" id="modal-submit-btn">
-      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      <span>Tạo phòng ban</span>
-    </button>
-  `;
-
-  const overlay = createModalFrame('Thêm phòng ban mới', bodyHtml, footerHtml);
-
-  const nameInput = overlay.querySelector('#add-dept-name');
-  const codeInput = overlay.querySelector('#add-dept-code');
-  const locationInput = overlay.querySelector('#add-dept-location');
-  const phoneInput = overlay.querySelector('#add-dept-phone');
-  const descInput = overlay.querySelector('#add-dept-desc');
-  const activeInput = overlay.querySelector('#add-dept-active');
-
-  const cancelBtn = overlay.querySelector('#modal-cancel-btn');
-  const submitBtn = overlay.querySelector('#modal-submit-btn');
-  const nameError = overlay.querySelector('#name-error-msg');
-  const errorBanner = overlay.querySelector('#modal-error-banner');
-  const errorText = overlay.querySelector('#modal-error-text');
-
-  cancelBtn.addEventListener('click', closeModal);
-
-  // Focus vào trường tên khi mở
-  setTimeout(() => nameInput?.focus(), 150);
-
-  // Xử lý gửi form
-  submitBtn.addEventListener('click', async () => {
-    const departmentName = nameInput.value.trim();
-    if (!departmentName) {
-      nameError.classList.add('visible');
-      nameInput.focus();
-      return;
-    }
-    nameError.classList.remove('visible');
-    errorBanner.classList.remove('visible');
-
-    const payload = {
-      departmentName,
-      departmentCode: codeInput.value.trim() || undefined,
-      location: locationInput.value.trim() || null,
-      phone: phoneInput.value.trim() || null,
-      description: descInput.value.trim() || null,
-      isActive: activeInput.checked,
-    };
-
-    // Vô hiệu hóa nút trong khi gửi request
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = `
-      <div class="spinner btn-spinner"></div>
-      <span>Đang lưu...</span>
-    `;
-
-    try {
-      await onSubmit(payload);
-      closeModal();
-    } catch (err) {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = `
-        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        <span>Tạo phòng ban</span>
-      `;
-      errorText.textContent = err.data?.message || err.message || 'Không thể tạo phòng ban. Vui lòng kiểm tra lại.';
-      errorBanner.classList.add('visible');
-    }
+export function openAddDepartmentModal({ onSubmit, onSuccess } = {}) {
+  return openDepartmentFormModal({
+    mode: 'create',
+    onSubmit,
+    onSuccess,
   });
 }
 
 /**
- * Mở modal Chỉnh sửa phòng ban
+ * Mở modal Chỉnh sửa phòng ban (Ủy quyền cho DepartmentFormModal dùng chung)
  * @param {object} department - Dữ liệu phòng ban hiện tại
- * @param {object} param1
- * @param {Function} param1.onSubmit - Hàm xử lý gọi API cập nhật
+ * @param {object} [options]
+ * @param {Function} [options.onSubmit] - Hàm tùy biến gọi API cập nhật
+ * @param {Function} [options.onSuccess] - Callback khi cập nhật thành công
  */
-export function openEditDepartmentModal(department, { onSubmit }) {
-  const bodyHtml = `
-    <div class="form-banner-error" id="modal-error-banner">
-      <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <span id="modal-error-text"></span>
-    </div>
-
-    <form id="edit-dept-form">
-      <div class="form-group">
-        <label class="form-label" for="edit-dept-name">
-          Tên phòng ban <span class="required">*</span>
-        </label>
-        <input 
-          type="text" 
-          id="edit-dept-name" 
-          class="form-input" 
-          value="${department.departmentName || ''}" 
-          required 
-        />
-        <div class="form-error-msg" id="name-error-msg">Vui lòng nhập tên phòng ban.</div>
-      </div>
-
-      <div class="form-group form-group-spaced">
-        <label class="form-label" for="edit-dept-code">
-          Mã phòng ban
-        </label>
-        <input 
-          type="text" 
-          id="edit-dept-code" 
-          class="form-input" 
-          value="${department.departmentCode || ''}" 
-          maxlength="20"
-        />
-      </div>
-
-      <div class="form-row-2col">
-        <div class="form-group">
-          <label class="form-label" for="edit-dept-location">Địa điểm / Tầng</label>
-          <input 
-            type="text" 
-            id="edit-dept-location" 
-            class="form-input" 
-            value="${department.location || ''}" 
-          />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="edit-dept-phone">Điện thoại bàn</label>
-          <input 
-            type="tel" 
-            id="edit-dept-phone" 
-            class="form-input" 
-            value="${department.phone || ''}" 
-          />
-        </div>
-      </div>
-
-      <div class="form-group form-group-spaced">
-        <label class="form-label" for="edit-dept-desc">Mô tả chức năng & nhiệm vụ</label>
-        <textarea 
-          id="edit-dept-desc" 
-          class="form-textarea"
-        >${department.description || ''}</textarea>
-      </div>
-
-      <div class="form-group form-checkbox-group">
-        <input 
-          type="checkbox" 
-          id="edit-dept-active" 
-          ${department.isActive ? 'checked' : ''} 
-          class="form-checkbox" 
-        />
-        <label for="edit-dept-active" class="form-checkbox-label">
-          Trạng thái đang hoạt động
-        </label>
-      </div>
-    </form>
-  `;
-
-  const footerHtml = `
-    <button type="button" class="btn btn-secondary" id="modal-cancel-btn">Hủy bỏ</button>
-    <button type="button" class="btn btn-primary" id="modal-submit-btn">
-      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-      <span>Lưu thay đổi</span>
-    </button>
-  `;
-
-  const overlay = createModalFrame(`Chỉnh sửa: ${department.departmentName}`, bodyHtml, footerHtml);
-
-  const nameInput = overlay.querySelector('#edit-dept-name');
-  const codeInput = overlay.querySelector('#edit-dept-code');
-  const locationInput = overlay.querySelector('#edit-dept-location');
-  const phoneInput = overlay.querySelector('#edit-dept-phone');
-  const descInput = overlay.querySelector('#edit-dept-desc');
-  const activeInput = overlay.querySelector('#edit-dept-active');
-
-  const cancelBtn = overlay.querySelector('#modal-cancel-btn');
-  const submitBtn = overlay.querySelector('#modal-submit-btn');
-  const nameError = overlay.querySelector('#name-error-msg');
-  const errorBanner = overlay.querySelector('#modal-error-banner');
-  const errorText = overlay.querySelector('#modal-error-text');
-
-  cancelBtn.addEventListener('click', closeModal);
-
-  submitBtn.addEventListener('click', async () => {
-    const departmentName = nameInput.value.trim();
-    if (!departmentName) {
-      nameError.classList.add('visible');
-      nameInput.focus();
-      return;
-    }
-    nameError.classList.remove('visible');
-    errorBanner.classList.remove('visible');
-
-    const updates = {
-      departmentName,
-      departmentCode: codeInput.value.trim(),
-      location: locationInput.value.trim() || null,
-      phone: phoneInput.value.trim() || null,
-      description: descInput.value.trim() || null,
-      isActive: activeInput.checked,
-    };
-
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = `
-      <div class="spinner btn-spinner"></div>
-      <span>Đang lưu...</span>
-    `;
-
-    try {
-      await onSubmit(department.departmentId || department.id, updates);
-      closeModal();
-    } catch (err) {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = `
-        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-        <span>Lưu thay đổi</span>
-      `;
-      errorText.textContent = err.data?.message || err.message || 'Không thể cập nhật phòng ban.';
-      errorBanner.classList.add('visible');
-    }
+export function openEditDepartmentModal(department, { onSubmit, onSuccess } = {}) {
+  return openDepartmentFormModal({
+    mode: 'edit',
+    department,
+    departmentId: department?.id || department?.departmentId,
+    onSubmit,
+    onSuccess,
   });
 }
 

@@ -10,6 +10,7 @@ import {
   openViewDepartmentModal,
   openDeleteDepartmentModal,
 } from '../components/DepartmentModal.js';
+import { openDepartmentFormModal } from '../components/DepartmentFormModal.js';
 
 // State nội bộ của trang DepartmentsPage
 let pageState = {
@@ -196,10 +197,9 @@ export function initDepartmentsPageEvents() {
   const addBtn = qs('#btn-add-dept');
   if (addBtn) {
     addBtn.addEventListener('click', () => {
-      openAddDepartmentModal({
-        onSubmit: async (payload) => {
-          await departmentService.createDepartment(payload);
-          showToast(`Đã thêm phòng ban '${payload.departmentName}' thành công.`, 'success');
+      openDepartmentFormModal({
+        mode: 'create',
+        onSuccess: async () => {
           await loadDepartmentData();
         },
       });
@@ -605,10 +605,11 @@ async function handleTableActionClick(e) {
 
   // 2. Chỉnh sửa
   if (action === 'edit') {
-    openEditDepartmentModal(department, {
-      onSubmit: async (id, updates) => {
-        await departmentService.updateDepartment(id, updates);
-        showToast(`Đã cập nhật phòng ban '${updates.departmentName}' thành công.`, 'success');
+    openDepartmentFormModal({
+      mode: 'edit',
+      department,
+      departmentId: deptId,
+      onSuccess: async () => {
         await loadDepartmentData();
       },
     });
