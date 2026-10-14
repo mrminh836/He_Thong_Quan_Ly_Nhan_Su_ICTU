@@ -139,7 +139,7 @@ export function renderDepartmentsPage() {
       <svg viewBox="0 0 24 24" width="32" height="32" stroke="#ef4444" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       <div class="dept-error-title">Không thể tải dữ liệu phòng ban</div>
       <div class="dept-error-desc" id="dept-error-desc-text">Đã có lỗi xảy ra khi kết nối máy chủ. Vui lòng thử lại.</div>
-      <button class="btn btn-secondary btn-sm" id="btn-retry-fetch" style="margin-top: 8px;">
+      <button class="btn btn-secondary btn-sm btn-retry-fetch" id="btn-retry-fetch">
         <svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
         <span>Thử lại ngay</span>
       </button>
@@ -150,13 +150,13 @@ export function renderDepartmentsPage() {
       <table class="data-table">
         <thead>
           <tr>
-            <th style="width: 50px; text-align: center;">STT</th>
-            <th style="min-width: 200px;">Tên phòng ban</th>
-            <th style="min-width: 180px;">Mô tả chức năng</th>
-            <th style="width: 160px; text-align: center;">Số lượng nhân sự</th>
-            <th style="width: 120px; text-align: center;">Trạng thái</th>
-            <th style="width: 110px;">Ngày tạo</th>
-            <th style="width: 190px; text-align: right;">Thao tác</th>
+            <th class="col-stt">STT</th>
+            <th class="col-dept-name">Tên phòng ban</th>
+            <th class="col-dept-desc">Mô tả chức năng</th>
+            <th class="col-dept-count">Số lượng nhân sự</th>
+            <th class="col-dept-status">Trạng thái</th>
+            <th class="col-dept-date">Ngày tạo</th>
+            <th class="col-dept-actions">Thao tác</th>
           </tr>
         </thead>
         <tbody id="dept-table-body">
@@ -167,10 +167,10 @@ export function renderDepartmentsPage() {
 
     <!-- 5. PHÂN TRANG -->
     <div class="dept-pagination-wrapper" id="dept-pagination" style="display: none;">
-      <div style="font-size: 12px; color: #64748b;" id="pagination-info">
+      <div class="dept-pagination-info" id="pagination-info">
         Hiển thị 1 - 10 trên tổng số 10 phòng ban
       </div>
-      <div style="display: flex; gap: 6px;" id="pagination-controls">
+      <div class="dept-pagination-controls" id="pagination-controls">
         <!-- Nút phân trang -->
       </div>
     </div>
@@ -440,15 +440,15 @@ function renderTableBody() {
     tableBody.innerHTML = `
       <tr>
         <td colspan="7">
-          <div class="empty-state" style="padding: 40px 16px;">
-            <div class="empty-state-icon" style="background-color: #f1f5f9; color: #64748b;">
+          <div class="empty-state empty-state-search">
+            <div class="empty-state-icon empty-state-icon-neutral">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             </div>
             <div class="empty-state-title">Không tìm thấy phòng ban nào phù hợp</div>
             <div class="empty-state-desc">
               Không có kết quả nào khớp với từ khóa "<strong>${escapeHtml(pageState.searchQuery)}</strong>" hoặc bộ lọc hiện tại.
             </div>
-            <button class="btn btn-secondary btn-sm" id="btn-reset-search" style="margin-top: 8px;">
+            <button class="btn btn-secondary btn-sm btn-reset-search" id="btn-reset-search">
               <span>Xóa bộ lọc tìm kiếm</span>
             </button>
           </div>
@@ -498,13 +498,13 @@ function renderTableBody() {
 
     return `
       <tr data-id="${deptId}">
-        <td style="text-align: center; color: var(--color-text-muted); font-weight: 600;">${stt}</td>
+        <td class="cell-center text-muted font-semibold">${stt}</td>
         <td>
           <div class="dept-name-cell">
             <span class="dept-name-title">${escapeHtml(dept.departmentName)}</span>
-            <div style="display: flex; gap: 6px; align-items: center; margin-top: 3px;">
-              <span class="badge badge-blue" style="font-family: monospace; font-size: 11px; padding: 1px 7px;">${escapeHtml(dept.departmentCode || 'N/A')}</span>
-              ${dept.location ? `<span style="font-size: 11px; color: var(--color-text-muted);">📍 ${escapeHtml(dept.location)}</span>` : ''}
+            <div class="dept-meta-row">
+              <span class="badge badge-blue dept-code-badge">${escapeHtml(dept.departmentCode || 'N/A')}</span>
+              ${dept.location ? `<span class="dept-location-text">📍 ${escapeHtml(dept.location)}</span>` : ''}
             </div>
           </div>
         </td>
@@ -513,20 +513,20 @@ function renderTableBody() {
             ${escapeHtml(dept.description || 'Chưa có mô tả')}
           </div>
         </td>
-        <td style="text-align: center;">
+        <td class="cell-center">
           ${countBadge}
         </td>
-        <td style="text-align: center;">
+        <td class="cell-center">
           ${
             dept.isActive !== false
-              ? `<span class="badge badge-success"><span style="width: 6px; height: 6px; border-radius: 50%; background-color: var(--color-success); display: inline-block;"></span> Hoạt động</span>`
-              : `<span class="badge badge-gray"><span style="width: 6px; height: 6px; border-radius: 50%; background-color: #94a3b8; display: inline-block;"></span> Tạm ngưng</span>`
+              ? `<span class="badge badge-success"><span class="status-dot dot-success"></span> Hoạt động</span>`
+              : `<span class="badge badge-gray"><span class="status-dot dot-gray"></span> Tạm ngưng</span>`
           }
         </td>
-        <td style="color: var(--color-text-muted); font-size: 12px; white-space: nowrap;">
+        <td class="dept-date-cell">
           ${formattedDate}
         </td>
-        <td style="text-align: right;">
+        <td class="cell-right">
           <div class="dept-actions-group">
             <button 
               type="button" 
@@ -669,9 +669,9 @@ function renderErrorState(errorMsg) {
   if (tableBody) {
     tableBody.innerHTML = `
       <tr>
-        <td colspan="6">
-          <div class="empty-state" style="color: #ef4444;">
-            <div class="empty-state-title" style="color: #991b1b;">Không thể tải dữ liệu</div>
+        <td colspan="7">
+          <div class="empty-state empty-state-error">
+            <div class="empty-state-title">Không thể tải dữ liệu</div>
             <div class="empty-state-desc">${escapeHtml(errorMsg)}</div>
           </div>
         </td>

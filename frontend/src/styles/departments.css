@@ -675,3 +675,154 @@
   color: var(--color-text-inverse);
   border-color: var(--color-primary);
 }
+
+/* ------------------------------------------------------------------------------
+   7. SEPARATION OF CONCERNS - TABLE & COMPONENT UTILITY CLASSES
+   Loại bỏ 100% inline styles để tách biệt hoàn toàn HTML / CSS / JS
+   ------------------------------------------------------------------------------ */
+
+/* Column widths and text alignment */
+.data-table .col-stt { width: 50px; text-align: center; }
+.data-table .col-dept-name { min-width: 200px; }
+.data-table .col-dept-desc { min-width: 180px; }
+.data-table .col-dept-count { width: 160px; text-align: center; }
+.data-table .col-dept-status { width: 120px; text-align: center; }
+.data-table .col-dept-date { width: 110px; }
+.data-table .col-dept-actions { width: 190px; text-align: right; }
+
+.cell-center { text-align: center; }
+.cell-right { text-align: right; }
+.dept-date-cell { color: var(--color-text-muted); font-size: 12px; white-space: nowrap; }
+
+/* Department row metadata */
+.dept-meta-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 3px;
+}
+
+.dept-code-badge {
+  font-family: monospace;
+  font-size: 11px;
+  padding: 1px 7px;
+}
+
+.dept-location-text {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+/* Status dots */
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 4px;
+}
+.status-dot.dot-success { background-color: var(--color-success); }
+.status-dot.dot-gray { background-color: #94a3b8; }
+
+/* Empty state variations */
+.empty-state-search { padding: 40px 16px; }
+.empty-state-icon-neutral { background-color: #f1f5f9; color: #64748b; }
+.empty-state-error { color: #ef4444; }
+.empty-state-error .empty-state-title { color: #991b1b; }
+.btn-reset-search,
+.btn-retry-fetch { margin-top: 8px; }
+
+/* Pagination details */
+.dept-pagination-info { font-size: 12px; color: #64748b; }
+.dept-pagination-controls { display: flex; gap: 6px; }
+
+/* Modal form utilities */
+.form-group-spaced { margin-top: 12px; }
+.form-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+.form-checkbox-group {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.form-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+.form-checkbox-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e293b;
+  cursor: pointer;
+}
+
+/* Modal view detail styling */
+.modal-dept-overview-banner {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-dept-title {
+  margin: 4px 0 0 0;
+  font-size: 16px;
+  color: #0f172a;
+  font-weight: 700;
+}
+.detail-item-col-2 {
+  grid-column: span 2;
+}
+.dept-detail-desc-box {
+  font-weight: 400;
+  line-height: 1.6;
+  color: #475569;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px;
+}
+.dept-detail-date {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* Delete confirmation modal styling */
+.modal-delete-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #334155;
+  margin: 0;
+}
+.modal-delete-notice {
+  font-size: 12px;
+  color: #ef4444;
+  margin: 0;
+  font-weight: 500;
+}
+.btn-delete-confirm {
+  background-color: #ef4444;
+  color: #ffffff;
+  border: 1px solid #dc2626;
+}
+.btn-delete-confirm:hover {
+  background-color: #dc2626;
+}
+.alert-warning-subtext {
+  margin-top: 4px;
+  font-size: 11px;
+}
+.btn-spinner {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+}

@@ -114,7 +114,7 @@ export function openAddDepartmentModal({ onSubmit }) {
         <div class="form-error-msg" id="name-error-msg">Vui lòng nhập tên phòng ban.</div>
       </div>
 
-      <div class="form-group" style="margin-top: 12px;">
+      <div class="form-group form-group-spaced">
         <label class="form-label" for="add-dept-code">
           Mã phòng ban (Tùy chọn)
         </label>
@@ -129,7 +129,7 @@ export function openAddDepartmentModal({ onSubmit }) {
         <span class="form-hint">Nếu để trống, hệ thống sẽ tự động viết tắt từ tên phòng ban.</span>
       </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+      <div class="form-row-2col">
         <div class="form-group">
           <label class="form-label" for="add-dept-location">Địa điểm / Tầng</label>
           <input 
@@ -150,7 +150,7 @@ export function openAddDepartmentModal({ onSubmit }) {
         </div>
       </div>
 
-      <div class="form-group" style="margin-top: 12px;">
+      <div class="form-group form-group-spaced">
         <label class="form-label" for="add-dept-desc">Mô tả chức năng & nhiệm vụ</label>
         <textarea 
           id="add-dept-desc" 
@@ -159,9 +159,9 @@ export function openAddDepartmentModal({ onSubmit }) {
         ></textarea>
       </div>
 
-      <div class="form-group" style="margin-top: 12px; display: flex; flex-direction: row; align-items: center; gap: 8px;">
-        <input type="checkbox" id="add-dept-active" checked style="width: 16px; height: 16px; cursor: pointer;" />
-        <label for="add-dept-active" style="font-size: 13px; font-weight: 500; color: #1e293b; cursor: pointer;">
+      <div class="form-group form-checkbox-group">
+        <input type="checkbox" id="add-dept-active" checked class="form-checkbox" />
+        <label for="add-dept-active" class="form-checkbox-label">
           Kích hoạt hoạt động ngay sau khi tạo
         </label>
       </div>
@@ -219,7 +219,7 @@ export function openAddDepartmentModal({ onSubmit }) {
     // Vô hiệu hóa nút trong khi gửi request
     submitBtn.disabled = true;
     submitBtn.innerHTML = `
-      <div class="spinner" style="width: 14px; height: 14px; border-width: 2px;"></div>
+      <div class="spinner btn-spinner"></div>
       <span>Đang lưu...</span>
     `;
 
@@ -266,7 +266,7 @@ export function openEditDepartmentModal(department, { onSubmit }) {
         <div class="form-error-msg" id="name-error-msg">Vui lòng nhập tên phòng ban.</div>
       </div>
 
-      <div class="form-group" style="margin-top: 12px;">
+      <div class="form-group form-group-spaced">
         <label class="form-label" for="edit-dept-code">
           Mã phòng ban
         </label>
@@ -279,7 +279,7 @@ export function openEditDepartmentModal(department, { onSubmit }) {
         />
       </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+      <div class="form-row-2col">
         <div class="form-group">
           <label class="form-label" for="edit-dept-location">Địa điểm / Tầng</label>
           <input 
@@ -300,7 +300,7 @@ export function openEditDepartmentModal(department, { onSubmit }) {
         </div>
       </div>
 
-      <div class="form-group" style="margin-top: 12px;">
+      <div class="form-group form-group-spaced">
         <label class="form-label" for="edit-dept-desc">Mô tả chức năng & nhiệm vụ</label>
         <textarea 
           id="edit-dept-desc" 
@@ -308,14 +308,14 @@ export function openEditDepartmentModal(department, { onSubmit }) {
         >${department.description || ''}</textarea>
       </div>
 
-      <div class="form-group" style="margin-top: 12px; display: flex; flex-direction: row; align-items: center; gap: 8px;">
+      <div class="form-group form-checkbox-group">
         <input 
           type="checkbox" 
           id="edit-dept-active" 
           ${department.isActive ? 'checked' : ''} 
-          style="width: 16px; height: 16px; cursor: pointer;" 
+          class="form-checkbox" 
         />
-        <label for="edit-dept-active" style="font-size: 13px; font-weight: 500; color: #1e293b; cursor: pointer;">
+        <label for="edit-dept-active" class="form-checkbox-label">
           Trạng thái đang hoạt động
         </label>
       </div>
@@ -368,7 +368,7 @@ export function openEditDepartmentModal(department, { onSubmit }) {
 
     submitBtn.disabled = true;
     submitBtn.innerHTML = `
-      <div class="spinner" style="width: 14px; height: 14px; border-width: 2px;"></div>
+      <div class="spinner btn-spinner"></div>
       <span>Đang lưu...</span>
     `;
 
@@ -418,15 +418,15 @@ export function openViewDepartmentModal(dept) {
     : `<span class="badge badge-danger">Tạm ngưng</span>`;
 
   const bodyHtml = `
-    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;">
+    <div class="modal-dept-overview-banner">
       <div>
         <span class="dept-code-tag">${dept.departmentCode || 'N/A'}</span>
-        <h3 style="margin: 4px 0 0 0; font-size: 16px; color: #0f172a; font-weight: 700;">${dept.departmentName || 'Không có tên'}</h3>
+        <h3 class="modal-dept-title">${dept.departmentName || 'Không có tên'}</h3>
       </div>
       <div>${statusBadge}</div>
     </div>
 
-    <div class="detail-grid" style="margin-top: 16px;">
+    <div class="detail-grid form-group-spaced">
       <div class="detail-item">
         <span class="detail-label">Số lượng nhân viên</span>
         <div class="detail-value">${countBadge}</div>
@@ -437,26 +437,26 @@ export function openViewDepartmentModal(dept) {
         <span class="detail-value">${dept.phone || 'Chưa cập nhật'}</span>
       </div>
 
-      <div class="detail-item" style="grid-column: span 2;">
+      <div class="detail-item detail-item-col-2">
         <span class="detail-label">Địa điểm / Tầng làm việc</span>
         <span class="detail-value">${dept.location || 'Chưa cập nhật vị trí'}</span>
       </div>
 
-      <div class="detail-item" style="grid-column: span 2;">
+      <div class="detail-item detail-item-col-2">
         <span class="detail-label">Mô tả chức năng</span>
-        <div class="detail-value" style="font-weight: 400; line-height: 1.6; color: #475569; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px;">
+        <div class="detail-value dept-detail-desc-box">
           ${dept.description || 'Chưa có mô tả chức năng cho phòng ban này.'}
         </div>
       </div>
 
       <div class="detail-item">
         <span class="detail-label">Ngày khởi tạo</span>
-        <span class="detail-value" style="font-size: 12px; color: #64748b;">${formatDate(dept.createdAt)}</span>
+        <span class="detail-value dept-detail-date">${formatDate(dept.createdAt)}</span>
       </div>
 
       <div class="detail-item">
         <span class="detail-label">Cập nhật lần cuối</span>
-        <span class="detail-value" style="font-size: 12px; color: #64748b;">${formatDate(dept.updatedAt)}</span>
+        <span class="detail-value dept-detail-date">${formatDate(dept.updatedAt)}</span>
       </div>
     </div>
   `;
@@ -487,7 +487,7 @@ export function openDeleteDepartmentModal(department, { onConfirm }) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         <div>
           <strong>Cảnh báo nghiệp vụ:</strong> Phòng ban này hiện đang có <strong>${department.employeeCount} nhân sự</strong> trực thuộc.
-          <div style="margin-top: 4px; font-size: 11px;">
+          <div class="alert-warning-subtext">
             Theo quy định bảo vệ dữ liệu, hệ thống Backend sẽ từ chối xóa (HTTP 409) cho tới khi nhân sự được điều chuyển sang phòng ban khác.
           </div>
         </div>
@@ -501,20 +501,20 @@ export function openDeleteDepartmentModal(department, { onConfirm }) {
       <span id="modal-error-text"></span>
     </div>
 
-    <p style="font-size: 14px; line-height: 1.6; color: #334155; margin: 0;">
+    <p class="modal-delete-text">
       Bạn có chắc chắn muốn xóa phòng ban <strong>${department.departmentName}</strong> (Mã: <code>${department.departmentCode || 'N/A'}</code>) không?
     </p>
 
     ${warningEmployeesHtml}
 
-    <p style="font-size: 12px; color: #ef4444; margin: 0; font-weight: 500;">
+    <p class="modal-delete-notice">
       Lưu ý: Hành động này không thể hoàn tác sau khi đã xóa thành công.
     </p>
   `;
 
   const footerHtml = `
     <button type="button" class="btn btn-secondary" id="modal-cancel-btn">Hủy bỏ</button>
-    <button type="button" class="btn btn-danger" id="modal-confirm-delete-btn" style="background-color: #ef4444; color: #ffffff; border: 1px solid #dc2626;">
+    <button type="button" class="btn btn-danger btn-delete-confirm" id="modal-confirm-delete-btn">
       <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
       <span>Xác nhận xóa</span>
     </button>
@@ -532,7 +532,7 @@ export function openDeleteDepartmentModal(department, { onConfirm }) {
   confirmBtn.addEventListener('click', async () => {
     confirmBtn.disabled = true;
     confirmBtn.innerHTML = `
-      <div class="spinner" style="width: 14px; height: 14px; border-width: 2px;"></div>
+      <div class="spinner btn-spinner"></div>
       <span>Đang xóa...</span>
     `;
 
