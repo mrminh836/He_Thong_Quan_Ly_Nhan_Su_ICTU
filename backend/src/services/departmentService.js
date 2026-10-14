@@ -231,9 +231,35 @@ export async function deleteDepartment(departmentId, { isSoftDelete = false } = 
   };
 }
 
+/**
+ * Thống kê số lượng nhân viên hiện tại của từng phòng ban
+ * Tổng hợp thông tin chi tiết và tóm tắt tổng số nhân viên toàn công ty
+ */
+export async function getDepartmentStatistics(options = {}) {
+  const departments = await departmentRepository.getDepartmentEmployeeStats(options);
+
+  const totalEmployees = departments.reduce((acc, curr) => acc + curr.employeeCount, 0);
+  const activeEmployees = departments.reduce((acc, curr) => acc + curr.activeCount, 0);
+  const onLeaveEmployees = departments.reduce((acc, curr) => acc + curr.onLeaveCount, 0);
+  const totalDepartments = departments.length;
+  const emptyDepartments = departments.filter((d) => d.employeeCount === 0).length;
+
+  return {
+    departments,
+    summary: {
+      totalDepartments,
+      emptyDepartments,
+      totalEmployees,
+      activeEmployees,
+      onLeaveEmployees,
+    },
+  };
+}
+
 export default {
   getDepartments,
   getDepartmentById,
+  getDepartmentStatistics,
   createDepartment,
   updateDepartment,
   deleteDepartment,

@@ -69,6 +69,7 @@ npm run migrate:status
 | Phương thức | Endpoint | ADMIN | HR_MANAGER | EMPLOYEE | Khách (Chưa đăng nhập) |
 |---|---|:---:|:---:|:---:|:---:|
 | `GET` | `/api/departments` | ✅ Cho phép | ✅ Cho phép | ✅ Cho phép | ❌ 401 Unauthorized |
+| `GET` | `/api/departments/statistics` | ✅ Cho phép | ✅ Cho phép | ❌ 403 Forbidden | ❌ 401 Unauthorized |
 | `GET` | `/api/departments/:id` | ✅ Cho phép | ✅ Cho phép | ✅ Cho phép | ❌ 401 Unauthorized |
 | `POST` | `/api/departments` | ✅ Cho phép | ✅ Cho phép | ❌ 403 Forbidden | ❌ 401 Unauthorized |
 | `PUT` | `/api/departments/:id` | ✅ Cho phép | ✅ Cho phép | ❌ 403 Forbidden | ❌ 401 Unauthorized |
@@ -124,7 +125,76 @@ npm run migrate:status
 
 ---
 
-### 4.2. `GET /api/departments/:id` — Xem chi tiết phòng ban
+### 4.2. `GET /api/departments/statistics` — Thống kê số lượng nhân viên hiện tại theo phòng ban
+
+- **Mô tả:** Thống kê số lượng nhân sự thuộc biên chế hiện tại của từng phòng ban phục vụ hiển thị Dashboard và màn hình Cơ cấu tổ chức. Sử dụng `LEFT JOIN` và `COUNT(...)` theo điều kiện trạng thái để bảo đảm các phòng ban chưa có nhân sự vẫn xuất hiện đầy đủ với `employeeCount = 0`.
+- **Quyền truy cập:** `ADMIN`, `HR_MANAGER`
+- **Query Parameters:**
+  - `status`: Lọc phòng ban theo trạng thái (`active`, `inactive`, `all` - Mặc định: `all`)
+  - `sortBy`: Tiêu chí sắp xếp (`employee_count`, `department_name`, `department_code` - Mặc định: `employee_count`)
+  - `sortOrder`: Thứ tự sắp xếp (`DESC` hoặc `ASC` - Mặc định: `DESC`)
+- **Quy tắc đếm nhân viên hiện tại:**
+  - Đếm các nhân viên có `employment_status IN ('Active', 'OnLeave')`.
+  - **Loại trừ** các nhân viên có trạng thái `Resigned` (đã thôi việc / soft delete).
+  - Nhân viên chưa gán phòng ban (`department_id = NULL`) **không** bị tính nhầm vào bất kỳ phòng ban nào.
+- **Headers:** `Authorization: Bearer <accessToken>`
+- **Response `200 OK`:**
+
+```json
+{
+  "success": true,
+  "status": "success",
+  "statusCode": 200,
+  "message": "Lấy thống kê số lượng nhân viên theo phòng ban thành công",
+  "data": [
+    {
+      "departmentId": 1,
+      "departmentCode": "PB-TECH",
+      "departmentName": "Phòng Kỹ thuật & Công nghệ",
+      "isActive": true,
+      "employeeCount": 3,
+      "activeCount": 3,
+      "onLeaveCount": 0,
+      "resignedCount": 0
+    },
+    {
+      "departmentId": 2,
+      "departmentCode": "PB-HR",
+      "departmentName": "Phòng Nhân sự & Hành chính",
+      "isActive": true,
+      "employeeCount": 1,
+      "activeCount": 1,
+      "onLeaveCount": 0,
+      "resignedCount": 0
+    },
+    {
+      "departmentId": 3,
+      "departmentCode": "PB-BIZ",
+      "departmentName": "Phòng Kinh doanh & Marketing",
+      "isActive": true,
+      "employeeCount": 1,
+      "activeCount": 1,
+      "onLeaveCount": 0,
+      "resignedCount": 0
+    }
+  ],
+  "meta": {
+    "totalDepartments": 3,
+    "emptyDepartments": 0,
+    "totalEmployees": 5,
+    "activeEmployees": 5,
+    "onLeaveEmployees": 0
+  },
+  "timestamp": "2026-10-14T12:00:00.000Z"
+}
+```
+
+- **Lỗi `401 Unauthorized`:** Nếu không truyền Header Authorization hoặc Token hết hạn.
+- **Lỗi `403 Forbidden`:** Nếu người dùng có vai trò `EMPLOYEE` cố tình truy xuất API thống kê tổ chức.
+
+---
+
+### 4.3. `GET /api/departments/:id` — Xem chi tiết phòng ban
 
 - **Mô tả:** Lấy thông tin chi tiết một phòng ban cụ thể bằng ID.
 - **Path Parameter:** `id` (Bắt buộc, số nguyên dương)
@@ -158,7 +228,7 @@ npm run migrate:status
 
 ---
 
-### 4.3. `POST /api/departments` — Thêm mới phòng ban
+### 4.4. `POST /api/departments` — Thêm mới phòng ban
 
 - **Mô tả:** Khởi tạo phòng ban mới trong tổ chức.
 - **Quyền:** `ADMIN`, `HR_MANAGER`
@@ -207,7 +277,7 @@ npm run migrate:status
 
 ---
 
-### 4.4. `PUT /api/departments/:id` — Cập nhật phòng ban
+### 4.5. `PUT /api/departments/:id` — Cập nhật phòng ban
 
 - **Mô tả:** Chỉnh sửa thông tin phòng ban hiện có.
 - **Quyền:** `ADMIN`, `HR_MANAGER`
@@ -250,7 +320,7 @@ npm run migrate:status
 
 ---
 
-### 4.5. `DELETE /api/departments/:id` — Xóa phòng ban
+### 4.6. `DELETE /api/departments/:id` — Xóa phòng ban
 
 - **Mô tả:** Xóa phòng ban khỏi hệ thống khi đã thỏa mãn ràng buộc toàn vẹn dữ liệu.
 - **Quyền:** `ADMIN`

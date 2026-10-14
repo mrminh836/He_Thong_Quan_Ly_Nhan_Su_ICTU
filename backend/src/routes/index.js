@@ -24,6 +24,7 @@ router.get('/', (req, res) => {
       authLogin: '/api/auth/login',
       authProfile: '/api/auth/profile',
       departments: '/api/departments',
+      departmentStatistics: '/api/departments/statistics',
       rbacAdminUsers: '/api/rbac/admin/users',
       rbacHrEmployees: '/api/rbac/hr/employees',
       rbacEmployeeAttendance: '/api/rbac/employees/:id/attendances',

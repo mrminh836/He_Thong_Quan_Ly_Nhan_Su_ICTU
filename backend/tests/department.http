@@ -132,3 +132,29 @@ Authorization: Bearer {{empToken}}
 ### ==============================================================================
 DELETE {{baseUrl}}/departments/1
 Authorization: Bearer {{hrToken}}
+
+### ==============================================================================
+### 13. GET /api/departments/statistics - Thống kê số lượng nhân viên hiện tại theo phòng ban
+### Quyền: ADMIN, HR_MANAGER
+### ==============================================================================
+GET {{baseUrl}}/departments/statistics
+Authorization: Bearer {{adminToken}}
+
+### ==============================================================================
+### 14. GET /api/departments/statistics - Sắp xếp theo tên phòng ban (A-Z)
+### ==============================================================================
+GET {{baseUrl}}/departments/statistics?sortBy=department_name&sortOrder=ASC
+Authorization: Bearer {{hrToken}}
+
+### ==============================================================================
+### 15. GET /api/departments/statistics - Sắp xếp theo số nhân viên giảm dần
+### ==============================================================================
+GET {{baseUrl}}/departments/statistics?sortBy=employee_count&sortOrder=DESC
+Authorization: Bearer {{adminToken}}
+
+### ==============================================================================
+### 16. RBAC Check: Employee gọi API thống kê phòng ban (403 Forbidden)
+### ==============================================================================
+GET {{baseUrl}}/departments/statistics
+Authorization: Bearer {{empToken}}
+
