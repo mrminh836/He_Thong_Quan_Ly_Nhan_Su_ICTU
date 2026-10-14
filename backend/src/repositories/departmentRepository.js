@@ -1,0 +1,373 @@
+import { query } from '../config/database.js';
+
+/**
+ * Ánh xạ các cột được phép sắp xếp để chống SQL Injection
+ */
+const ALLOWED_SORT_COLUMNS = {
+  id: 'd.department_id',
+  department_id: 'd.department_id',
+  departmentId: 'd.department_id',
+  name: 'd.department_name',
+  department_name: 'd.department_name',
+  departmentName: 'd.department_name',
+  code: 'd.department_code',
+  department_code: 'd.department_code',
+  departmentCode: 'd.department_code',
+  created_at: 'd.created_at',
+  createdAt: 'd.created_at',
+};
+
+/**
+ * Chuẩn hóa đối tượng phòng ban đầu ra
+ */
+export function formatDepartment(dept) {
+  if (!dept) return null;
+  return {
+    id: dept.department_id,
+    departmentId: dept.department_id,
+    departmentCode: dept.department_code,
+    departmentName: dept.department_name,
+    location: dept.location ?? null,
+    phone: dept.phone ?? null,
+    description: dept.description ?? null,
+    isActive: Boolean(dept.is_active),
+    employeeCount: Number(dept.employee_count || 0),
+    createdAt: dept.created_at,
+    updatedAt: dept.updated_at,
+  };
+}
+
+/**
+ * Lấy danh sách phòng ban có phân trang, tìm kiếm và thống kê số lượng nhân sự
+ * 100% Parameterized queries
+ */
+export async function findAll({
+  page = 1,
+  limit = 10,
+  search = '',
+  sortBy = 'department_id',
+  sortOrder = 'ASC',
+  isActive = null,
+} = {}) {
+  const safePage = Math.max(1, parseInt(page, 10) || 1);
+  const safeLimit = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
+  const offset = (safePage - 1) * safeLimit;
+
+  const whereConditions = [];
+  const whereParams = [];
+
+  if (search && typeof search === 'string' && search.trim() !== '') {
+    const trimmed = search.trim();
+    whereConditions.push('(d.department_name LIKE ? OR d.department_code LIKE ?)');
+    whereParams.push(`%${trimmed}%`, `%${trimmed}%`);
+  }
+
+  if (isActive !== null && isActive !== undefined) {
+    whereConditions.push('d.is_active = ?');
+    whereParams.push(isActive ? 1 : 0);
+  }
+
+  const whereSql = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
+  // 1. Đếm tổng số bản ghi (Count total)
+  const countSql = `
+    SELECT COUNT(DISTINCT d.department_id) AS total
+    FROM \`departments\` d
+    ${whereSql}
+  `;
+  const countRows = await query(countSql, [...whereParams]);
+  const total = countRows[0]?.total || 0;
+
+  // 2. Sắp xếp an toàn qua Whitelist
+  const sortColumn = ALLOWED_SORT_COLUMNS[sortBy] || 'd.department_id';
+  const sortDirection = String(sortOrder).toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+
+  // 3. Lấy dữ liệu kèm nhân viên đếm qua LEFT JOIN
+  const dataSql = `
+    SELECT 
+      d.department_id,
+      d.department_code,
+      d.department_name,
+      d.location,
+      d.phone,
+      d.description,
+      d.is_active,
+      d.created_at,
+      d.updated_at,
+      COUNT(e.employee_id) AS employee_count
+    FROM \`departments\` d
+    LEFT JOIN \`employees\` e ON d.department_id = e.department_id
+    ${whereSql}
+    GROUP BY d.department_id
+    ORDER BY ${sortColumn} ${sortDirection}
+    LIMIT ? OFFSET ?
+  `;
+
+  const rows = await query(dataSql, [...whereParams, safeLimit, offset]);
+
+  return {
+    items: rows.map(formatDepartment),
+    total,
+    page: safePage,
+    limit: safeLimit,
+    totalPages: Math.ceil(total / safeLimit) || 1,
+  };
+}
+
+/**
+ * Tìm phòng ban theo ID kèm số nhân sự
+ * @param {number} departmentId
+ * @returns {Promise<object|null>}
+ */
+export async function findById(departmentId) {
+  if (!departmentId || isNaN(departmentId)) return null;
+
+  const sql = `
+    SELECT 
+      d.department_id,
+      d.department_code,
+      d.department_name,
+      d.location,
+      d.phone,
+      d.description,
+      d.is_active,
+      d.created_at,
+      d.updated_at,
+      COUNT(e.employee_id) AS employee_count
+    FROM \`departments\` d
+    LEFT JOIN \`employees\` e ON d.department_id = e.department_id
+    WHERE d.department_id = ?
+    GROUP BY d.department_id
+    LIMIT 1
+  `;
+
+  const rows = await query(sql, [departmentId]);
+  return rows.length > 0 ? formatDepartment(rows[0]) : null;
+}
+
+/**
+ * Tìm phòng ban theo Tên (chính xác, không phân biệt hoa thường)
+ * @param {string} name
+ * @returns {Promise<object|null>}
+ */
+export async function findByName(name) {
+  if (!name || typeof name !== 'string') return null;
+
+  const sql = `
+    SELECT * FROM \`departments\`
+    WHERE LOWER(department_name) = LOWER(?)
+    LIMIT 1
+  `;
+  const rows = await query(sql, [name.trim()]);
+  return rows.length > 0 ? rows[0] : null;
+}
+
+/**
+ * Tìm phòng ban theo Tên ngoại trừ một ID xác định (dùng khi cập nhật)
+ * @param {string} name
+ * @param {number} excludeId
+ * @returns {Promise<object|null>}
+ */
+export async function findByNameExcludingId(name, excludeId) {
+  if (!name || typeof name !== 'string' || !excludeId) return null;
+
+  const sql = `
+    SELECT * FROM \`departments\`
+    WHERE LOWER(department_name) = LOWER(?) AND department_id != ?
+    LIMIT 1
+  `;
+  const rows = await query(sql, [name.trim(), excludeId]);
+  return rows.length > 0 ? rows[0] : null;
+}
+
+/**
+ * Tìm phòng ban theo Mã (department_code)
+ * @param {string} code
+ * @returns {Promise<object|null>}
+ */
+export async function findByCode(code) {
+  if (!code || typeof code !== 'string') return null;
+
+  const sql = `
+    SELECT * FROM \`departments\`
+    WHERE LOWER(department_code) = LOWER(?)
+    LIMIT 1
+  `;
+  const rows = await query(sql, [code.trim()]);
+  return rows.length > 0 ? rows[0] : null;
+}
+
+/**
+ * Tìm phòng ban theo Mã ngoại trừ một ID xác định (dùng khi cập nhật)
+ * @param {string} code
+ * @param {number} excludeId
+ * @returns {Promise<object|null>}
+ */
+export async function findByCodeExcludingId(code, excludeId) {
+  if (!code || typeof code !== 'string' || !excludeId) return null;
+
+  const sql = `
+    SELECT * FROM \`departments\`
+    WHERE LOWER(department_code) = LOWER(?) AND department_id != ?
+    LIMIT 1
+  `;
+  const rows = await query(sql, [code.trim(), excludeId]);
+  return rows.length > 0 ? rows[0] : null;
+}
+
+/**
+ * Đếm số lượng nhân viên trực thuộc phòng ban (kiểm tra toàn vẹn khóa ngoại)
+ * @param {number} departmentId
+ * @returns {Promise<number>}
+ */
+export async function countEmployeesByDepartmentId(departmentId) {
+  if (!departmentId || isNaN(departmentId)) return 0;
+
+  const sql = `
+    SELECT COUNT(*) AS total
+    FROM \`employees\`
+    WHERE department_id = ?
+  `;
+  const rows = await query(sql, [departmentId]);
+  return Number(rows[0]?.total || 0);
+}
+
+/**
+ * Tạo mới phòng ban
+ * @param {object} param0
+ * @returns {Promise<number>} ID của phòng ban vừa tạo
+ */
+export async function create({
+  departmentCode,
+  departmentName,
+  location = null,
+  phone = null,
+  description = null,
+  isActive = true,
+}) {
+  const sql = `
+    INSERT INTO \`departments\` (
+      \`department_code\`, 
+      \`department_name\`, 
+      \`location\`, 
+      \`phone\`, 
+      \`description\`, 
+      \`is_active\`
+    ) VALUES (?, ?, ?, ?, ?, ?)
+  `;
+
+  const result = await query(sql, [
+    departmentCode.trim(),
+    departmentName.trim(),
+    location ? location.trim() : null,
+    phone ? phone.trim() : null,
+    description ? description.trim() : null,
+    isActive ? 1 : 0,
+  ]);
+
+  return result.insertId;
+}
+
+/**
+ * Cập nhật thông tin phòng ban
+ * @param {number} departmentId
+ * @param {object} updates
+ * @returns {Promise<boolean>}
+ */
+export async function update(departmentId, updates = {}) {
+  if (!departmentId || isNaN(departmentId)) return false;
+
+  const setClauses = [];
+  const params = [];
+
+  if (updates.departmentName !== undefined) {
+    setClauses.push('`department_name` = ?');
+    params.push(updates.departmentName.trim());
+  }
+
+  if (updates.departmentCode !== undefined) {
+    setClauses.push('`department_code` = ?');
+    params.push(updates.departmentCode.trim());
+  }
+
+  if (updates.location !== undefined) {
+    setClauses.push('`location` = ?');
+    params.push(updates.location ? updates.location.trim() : null);
+  }
+
+  if (updates.phone !== undefined) {
+    setClauses.push('`phone` = ?');
+    params.push(updates.phone ? updates.phone.trim() : null);
+  }
+
+  if (updates.description !== undefined) {
+    setClauses.push('`description` = ?');
+    params.push(updates.description ? updates.description.trim() : null);
+  }
+
+  if (updates.isActive !== undefined) {
+    setClauses.push('`is_active` = ?');
+    params.push(updates.isActive ? 1 : 0);
+  }
+
+  if (setClauses.length === 0) {
+    return false;
+  }
+
+  setClauses.push('`updated_at` = CURRENT_TIMESTAMP');
+
+  const sql = `
+    UPDATE \`departments\`
+    SET ${setClauses.join(', ')}
+    WHERE \`department_id\` = ?
+  `;
+
+  params.push(departmentId);
+  const result = await query(sql, params);
+  return result.affectedRows > 0;
+}
+
+/**
+ * Xóa vật lý phòng ban (khi không còn nhân sự trực thuộc)
+ * @param {number} departmentId
+ * @returns {Promise<boolean>}
+ */
+export async function deleteById(departmentId) {
+  if (!departmentId || isNaN(departmentId)) return false;
+
+  const sql = 'DELETE FROM `departments` WHERE `department_id` = ?';
+  const result = await query(sql, [departmentId]);
+  return result.affectedRows > 0;
+}
+
+/**
+ * Xóa mềm phòng ban (Soft delete)
+ * @param {number} departmentId
+ * @returns {Promise<boolean>}
+ */
+export async function softDeleteById(departmentId) {
+  if (!departmentId || isNaN(departmentId)) return false;
+
+  const sql = `
+    UPDATE \`departments\`
+    SET \`is_active\` = 0, \`updated_at\` = CURRENT_TIMESTAMP
+    WHERE \`department_id\` = ?
+  `;
+  const result = await query(sql, [departmentId]);
+  return result.affectedRows > 0;
+}
+
+export default {
+  findAll,
+  findById,
+  findByName,
+  findByNameExcludingId,
+  findByCode,
+  findByCodeExcludingId,
+  countEmployeesByDepartmentId,
+  create,
+  update,
+  deleteById,
+  softDeleteById,
+  formatDepartment,
+};
