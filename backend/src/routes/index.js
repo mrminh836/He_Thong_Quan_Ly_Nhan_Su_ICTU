@@ -2,6 +2,7 @@ import { Router } from 'express';
 import healthRoutes from './healthRoutes.js';
 import authRoutes from './authRoutes.js';
 import rbacDemoRoutes from './rbacDemoRoutes.js';
+import departmentRoutes from './departmentRoutes.js';
 
 const router = Router();
 
@@ -9,6 +10,7 @@ const router = Router();
 router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
 router.use('/rbac', rbacDemoRoutes);
+router.use('/departments', departmentRoutes);
 
 // Thông tin API Root
 router.get('/', (req, res) => {
@@ -21,6 +23,7 @@ router.get('/', (req, res) => {
       dbHealth: '/api/health/db',
       authLogin: '/api/auth/login',
       authProfile: '/api/auth/profile',
+      departments: '/api/departments',
       rbacAdminUsers: '/api/rbac/admin/users',
       rbacHrEmployees: '/api/rbac/hr/employees',
       rbacEmployeeAttendance: '/api/rbac/employees/:id/attendances',

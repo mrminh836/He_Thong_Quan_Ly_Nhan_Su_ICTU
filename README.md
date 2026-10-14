@@ -56,7 +56,8 @@ QLNS_QLTKPM/
 │
 ├── database/                            # 🗄️ CƠ SỞ DỮ LIỆU MYSQL 8.0 & KỊCH BẢN KHỞI TẠO
 │   ├── schema.sql                       # DDL chuẩn 4 bảng, Index, AES-256, User permissions
-│   └── init.sql                         # Kịch bản DDL sao lưu bổ trợ
+│   ├── init.sql                         # Kịch bản DDL sao lưu bổ trợ
+│   └── migrations/                      # Kịch bản migration & rollback cơ sở dữ liệu
 │
 └── docs/                                # 📚 BỘ TÀI LIỆU KỸ THUẬT & QUẢN TRỊ DỰ ÁN
     ├── DEFINITION_OF_DONE.md            # Tiêu chí hoàn thành công việc (DoD) chuẩn mực
@@ -65,6 +66,7 @@ QLNS_QLTKPM/
     ├── ERD_DATABASE_DESIGN.md           # Thiết kế ERD, từ điển dữ liệu và chuẩn 3NF
     ├── PRODUCT_BACKLOG.md               # Product Backlog & phân rã User Stories
     ├── SPRINT_1_BACKLOG.md              # Kế hoạch chi tiết Sprint 1
+    ├── API_DEPARTMENTS_GUIDE.md         # Đặc tả REST API & Migration Quản lý Phòng ban
     ├── QA_TEST_CASES_AND_BUG_MANAGEMENT.md # 20 Test Cases chuẩn & Bảng quản lý 8 Bugs
     └── HRM_TestCases_BugTracking.xlsx   # Sổ tay bảng tính Excel quản lý chất lượng
 ```
