@@ -53,8 +53,8 @@ export function getVietnamAttendanceInfo(date = new Date()) {
   const s = Number.parseInt(secondStr, 10);
 
   const workDate = `${year}-${month}-${day}`;
-  const checkInTimeString = `${hourStr}:${minuteStr}:${secondStr}`;
-  const checkInIso = `${workDate}T${checkInTimeString}+07:00`;
+  const timeString = `${hourStr}:${minuteStr}:${secondStr}`;
+  const isoTime = `${workDate}T${timeString}+07:00`;
 
   // Tổng số giây tính từ đầu ngày theo giờ địa phương Việt Nam
   const totalSecondsInDay = h * 3600 + m * 60 + s;
@@ -68,8 +68,10 @@ export function getVietnamAttendanceInfo(date = new Date()) {
 
   return {
     workDate,
-    checkInTimeString,
-    checkInIso,
+    checkInTimeString: timeString,
+    checkInIso: isoTime,
+    timeString,
+    isoTime,
     status,
     dbStatus,
     isLate,
@@ -81,6 +83,36 @@ export function getVietnamAttendanceInfo(date = new Date()) {
   };
 }
 
+/**
+ * Định dạng thời gian chấm công sang chuỗi chuẩn ISO 8601 kèm múi giờ Việt Nam (+07:00)
+ * Ví dụ: workDate '2026-10-16', timeStr '08:25:00' -> '2026-10-16T08:25:00+07:00'
+ * 
+ * @param {string|Date} dateOrStr - Ngày làm việc (YYYY-MM-DD hoặc Date)
+ * @param {string|null} timeStr - Giờ dạng HH:mm:ss hoặc HH:mm
+ * @returns {string|null} Chuỗi ISO 8601 có múi giờ +07:00 hoặc null nếu timeStr là null
+ */
+export function formatToVietnamIso(dateOrStr, timeStr) {
+  if (!timeStr) return null;
+
+  // Nếu timeStr đã là chuỗi ISO hoàn chỉnh có ký tự T và offset
+  if (typeof timeStr === 'string' && timeStr.includes('T')) {
+    return timeStr;
+  }
+
+  let datePart = dateOrStr;
+  if (dateOrStr instanceof Date) {
+    const info = getVietnamAttendanceInfo(dateOrStr);
+    datePart = info.workDate;
+  } else if (typeof dateOrStr === 'string') {
+    datePart = dateOrStr.slice(0, 10);
+  }
+
+  const rawTime = String(timeStr).trim();
+  const timeFormatted = rawTime.length === 5 ? `${rawTime}:00` : rawTime;
+
+  return `${datePart}T${timeFormatted}+07:00`;
+}
+
 export default {
   VIETNAM_TIMEZONE,
   CUTOFF_HOUR,
@@ -88,4 +120,5 @@ export default {
   CUTOFF_SECOND,
   CUTOFF_TOTAL_SECONDS,
   getVietnamAttendanceInfo,
+  formatToVietnamIso,
 };

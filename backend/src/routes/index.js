@@ -15,6 +15,7 @@ router.use('/rbac', rbacDemoRoutes);
 router.use('/departments', departmentRoutes);
 router.use('/employees', employeeRoutes);
 router.use('/attendances', attendanceRoutes);
+router.use('/attendance', attendanceRoutes);
 
 // Thông tin API Root
 router.get('/', (req, res) => {
@@ -30,7 +31,9 @@ router.get('/', (req, res) => {
       departments: '/api/departments',
       departmentStatistics: '/api/departments/statistics',
       employees: '/api/employees',
-      attendancesCheckIn: '/api/attendances/check-in',
+      attendanceCheckIn: '/api/attendance/check-in',
+      attendanceCheckOut: '/api/attendance/check-out',
+      attendanceToday: '/api/attendance/today',
       rbacAdminUsers: '/api/rbac/admin/users',
       rbacHrEmployees: '/api/rbac/hr/employees',
       rbacEmployeeAttendance: '/api/rbac/employees/:id/attendances',
