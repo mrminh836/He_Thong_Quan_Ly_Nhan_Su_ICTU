@@ -1,0 +1,431 @@
+/* ==============================================================================
+   ATTENDANCE CHECK-IN / CHECK-OUT WIDGET (ENTERPRISE HRM SAAS)
+   ============================================================================== */
+
+.attendance-widget-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl, 16px);
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition-normal, 0.2s ease);
+}
+
+.attendance-widget-card:hover {
+  box-shadow: 0 10px 20px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
+}
+
+.attendance-widget-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #2563eb, #3b82f6, #10b981);
+}
+
+/* ------------------------------------------------------------------------------
+   WIDGET HEADER & TOP BAR
+   ------------------------------------------------------------------------------ */
+.att-widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.att-widget-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.att-widget-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background-color: var(--color-primary-light, #eff6ff);
+  color: var(--color-primary, #2563eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.att-widget-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+.att-widget-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-main, #0f172a);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.att-widget-subtitle {
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #64748b);
+  margin-top: 2px;
+}
+
+/* ------------------------------------------------------------------------------
+   MAIN LAYOUT (2 CỘT: ĐỒNG HỒ SỐ & THÔNG TIN CHẤM CÔNG)
+   ------------------------------------------------------------------------------ */
+.att-widget-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+@media (max-width: 868px) {
+  .att-widget-body {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+}
+
+/* ------------------------------------------------------------------------------
+   ĐỒNG HỒ SỐ THỜI GIAN THỰC (DIGITAL CLOCK)
+   ------------------------------------------------------------------------------ */
+.att-clock-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 1.25rem;
+  background: #ffffff;
+  border: 1px solid var(--color-border-light, #f1f5f9);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.att-clock-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted, #64748b);
+  margin-bottom: 0.25rem;
+}
+
+.att-clock-label .pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: pulseGreen 2s infinite;
+}
+
+@keyframes pulseGreen {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.att-digital-clock {
+  font-size: 2.25rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  font-family: 'Inter', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #0f172a;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  margin: 0.25rem 0;
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.att-date-display {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.att-tz-tag {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  background: #f1f5f9;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-left: 0.4rem;
+}
+
+/* ------------------------------------------------------------------------------
+   KHU VỰC THÔNG TIN & THỜI ĐIỂM CHẤM CÔNG HÔM NAY
+   ------------------------------------------------------------------------------ */
+.att-info-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.att-times-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.875rem;
+}
+
+.att-time-box {
+  background: #ffffff;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 10px);
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  position: relative;
+  transition: border-color 0.15s ease;
+}
+
+.att-time-box.is-active {
+  border-color: #93c5fd;
+  background: #f8fafc;
+}
+
+.att-time-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted, #64748b);
+}
+
+.att-time-box-header svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+.att-time-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #1e293b;
+  letter-spacing: -0.01em;
+}
+
+.att-time-value.is-empty {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.att-guidance-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: #475569;
+  background: #f8fafc;
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  border-left: 3px solid #3b82f6;
+}
+
+.att-guidance-bar svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  stroke: #2563eb;
+  stroke-width: 2;
+  fill: none;
+}
+
+/* ------------------------------------------------------------------------------
+   BADGE TRẠNG THÁI CHẤM CÔNG (STATUS BADGES)
+   ------------------------------------------------------------------------------ */
+.att-badge-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.att-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-full, 9999px);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.att-badge svg {
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  fill: none;
+}
+
+/* 1. Chưa check-in */
+.att-badge-neutral {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+/* 2. Đúng giờ (ON_TIME) */
+.att-badge-success {
+  background-color: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+/* 3. Đi muộn (LATE) */
+.att-badge-warning {
+  background-color: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+/* 4. Đã check-out */
+.att-badge-info {
+  background-color: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+/* 5. Đang tải / Loading */
+.att-badge-loading {
+  background-color: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+/* 6. Lỗi kết nối */
+.att-badge-error {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+/* ------------------------------------------------------------------------------
+   NÚT HÀNH ĐỘNG CHECK-IN / CHECK-OUT (ACTION BUTTON)
+   ------------------------------------------------------------------------------ */
+.att-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  border-radius: var(--radius-lg, 12px);
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.att-action-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  fill: none;
+  transition: transform 0.2s ease;
+}
+
+/* Nút Check-in: Màu Xanh Ngọc Emerald / Brand Blue */
+.att-action-btn.btn-checkin {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.att-action-btn.btn-checkin:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+  transform: translateY(-1px);
+}
+
+.att-action-btn.btn-checkin:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Nút Check-out: Màu Indigo / Brand Primary */
+.att-action-btn.btn-checkout {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.att-action-btn.btn-checkout:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+  transform: translateY(-1px);
+}
+
+/* Trạng thái Đã hoàn thành (Disabled) */
+.att-action-btn.btn-completed {
+  background-color: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Trạng thái Loading / Đang gửi */
+.att-action-btn:disabled:not(.btn-completed) {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.att-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: attSpin 0.8s linear infinite;
+}
+
+@keyframes attSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Nút Thử lại khi có lỗi */
+.btn-att-retry {
+  padding: 0.25rem 0.6rem;
+  background: #ffffff;
+  border: 1px solid #dc2626;
+  color: #dc2626;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-att-retry:hover {
+  background: #fef2f2;
+}
