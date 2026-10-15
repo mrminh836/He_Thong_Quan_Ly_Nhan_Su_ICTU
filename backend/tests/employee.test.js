@@ -25,10 +25,11 @@ import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { env } from '../src/config/env.js';
 import { ROLES } from '../src/constants/roles.js';
-import { createEmployee, getEmployeeById } from '../src/controllers/employeeController.js';
+import { createEmployee, getEmployeeById, getEmployees } from '../src/controllers/employeeController.js';
 import employeeService, {
   EmployeeError,
   EmployeeNotFoundError,
+  DepartmentNotFoundError,
   CccdDecryptionError,
   EncryptionKeyMissingError,
 } from '../src/services/employeeService.js';
@@ -122,6 +123,8 @@ const origEmployeeFindByIdWithDecryptedCccd = employeeRepository.findByIdWithDec
 const origEmployeeGenerateNextCode = employeeRepository.generateNextEmployeeCode;
 const origEmployeeCreate = employeeRepository.create;
 const origEmployeeDeleteById = employeeRepository.deleteById;
+const origEmployeeFindAll = employeeRepository.findAll;
+const origEmployeeCountAll = employeeRepository.countAll;
 const origDepartmentFindById = departmentRepository.findById;
 
 function setupStubs() {
@@ -239,6 +242,68 @@ function setupStubs() {
       return true;
     }
     return false;
+  };
+
+  employeeRepository.findAll = async ({ page = 1, limit = 10, departmentId = null, search = '' } = {}) => {
+    let list = [...mockEmployees];
+
+    if (departmentId !== null && departmentId !== undefined) {
+      list = list.filter((e) => e.department_id === Number(departmentId));
+    }
+
+    if (search && typeof search === 'string' && search.trim() !== '') {
+      const s = search.trim().toLowerCase();
+      list = list.filter((e) =>
+        (e.employee_code && e.employee_code.toLowerCase().includes(s)) ||
+        (e.full_name && e.full_name.toLowerCase().includes(s))
+      );
+    }
+
+    list.sort((a, b) => b.employee_id - a.employee_id);
+
+    const offset = (Number(page) - 1) * Number(limit);
+    const paged = list.slice(offset, offset + Number(limit));
+
+    return paged.map((emp) => {
+      const dept = mockDepartments.find((d) => d.department_id === emp.department_id);
+      return {
+        employee_id: emp.employee_id,
+        employee_code: emp.employee_code,
+        full_name: emp.full_name,
+        email: emp.email || null,
+        phone: emp.phone || null,
+        address: emp.address || null,
+        gender: emp.gender || null,
+        date_of_birth: emp.date_of_birth || null,
+        department_id: emp.department_id,
+        department_name: dept ? dept.department_name : null,
+        department_code: dept ? dept.department_code : null,
+        position: emp.position || null,
+        base_salary: emp.base_salary || 0,
+        hire_date: emp.hire_date,
+        employment_status: emp.employment_status || 'Active',
+        created_at: emp.created_at,
+        updated_at: emp.updated_at,
+      };
+    });
+  };
+
+  employeeRepository.countAll = async ({ departmentId = null, search = '' } = {}) => {
+    let list = [...mockEmployees];
+
+    if (departmentId !== null && departmentId !== undefined) {
+      list = list.filter((e) => e.department_id === Number(departmentId));
+    }
+
+    if (search && typeof search === 'string' && search.trim() !== '') {
+      const s = search.trim().toLowerCase();
+      list = list.filter((e) =>
+        (e.employee_code && e.employee_code.toLowerCase().includes(s)) ||
+        (e.full_name && e.full_name.toLowerCase().includes(s))
+      );
+    }
+
+    return list.length;
   };
 }
 
@@ -933,6 +998,307 @@ async function startTestSuite() {
       }
     });
 
+    // =============================================================================
+    // PHẦN 3: KIỂM THỬ API DANH SÁCH NHÂN VIÊN, PHÂN TRANG & LỌC THEO PHÒNG BAN
+    // Đáp ứng đầy đủ 12 tiêu chí kiểm thử theo yêu cầu:
+    // =============================================================================
+
+    // -----------------------------------------------------------------------------
+    // TEST 27 (Req 1): Lấy danh sách mặc định với page=1, limit=10
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 27: Lấy danh sách nhân viên mặc định (page=1, limit=10) -> 200 OK', async () => {
+      const { req, res, next } = createMockHttp({
+        query: {},
+        user: { userId: 1, role: ROLES.ADMIN },
+      });
+
+      await getEmployees(req, res, next);
+
+      assert.strictEqual(res.statusCode, 200);
+      assert.strictEqual(res.responseBody.success, true);
+      assert.strictEqual(res.responseBody.message, 'Lấy danh sách nhân viên thành công');
+      assert.ok(Array.isArray(res.responseBody.data));
+
+      const { pagination } = res.responseBody;
+      assert.strictEqual(pagination.page, 1);
+      assert.strictEqual(pagination.limit, 10);
+      assert.strictEqual(pagination.total, mockEmployees.length);
+      assert.strictEqual(pagination.totalPages, Math.ceil(mockEmployees.length / 10));
+
+      // Kiểm tra cấu trúc item nhân viên
+      const first = res.responseBody.data[0];
+      assert.ok(first.employeeId);
+      assert.ok(first.employeeCode);
+      assert.ok(first.fullName);
+      assert.ok(first.departmentId);
+      assert.ok(first.departmentName);
+      assert.ok(first.status);
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 28 (Req 2): Phân trang trang đầu và trang tiếp theo
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 28: Phân trang trang đầu (page=1&limit=2) và trang tiếp theo (page=2&limit=2)', async () => {
+      // Trang 1
+      const { req: req1, res: res1, next: next1 } = createMockHttp({
+        query: { page: '1', limit: '2' },
+        user: { userId: 1, role: ROLES.ADMIN },
+      });
+      await getEmployees(req1, res1, next1);
+      assert.strictEqual(res1.statusCode, 200);
+      assert.strictEqual(res1.responseBody.data.length, 2);
+      assert.strictEqual(res1.responseBody.pagination.page, 1);
+      assert.strictEqual(res1.responseBody.pagination.limit, 2);
+
+      const page1Ids = res1.responseBody.data.map((e) => e.employeeId);
+
+      // Trang 2
+      const { req: req2, res: res2, next: next2 } = createMockHttp({
+        query: { page: '2', limit: '2' },
+        user: { userId: 1, role: ROLES.ADMIN },
+      });
+      await getEmployees(req2, res2, next2);
+      assert.strictEqual(res2.statusCode, 200);
+      assert.strictEqual(res2.responseBody.pagination.page, 2);
+
+      const page2Ids = res2.responseBody.data.map((e) => e.employeeId);
+
+      // Không có bản ghi nào bị trùng lặp giữa 2 trang
+      for (const id of page2Ids) {
+        assert.strictEqual(page1Ids.includes(id), false, `ID ${id} không được trùng giữa 2 trang`);
+      }
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 29 (Req 3): Lọc theo phòng ban hợp lệ
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 29: Lọc nhân viên theo phòng ban hợp lệ (departmentId=1)', async () => {
+      const { req, res, next } = createMockHttp({
+        query: { departmentId: '1' },
+        user: { userId: 1, role: ROLES.ADMIN },
+      });
+
+      await getEmployees(req, res, next);
+
+      assert.strictEqual(res.statusCode, 200);
+      const expectedCount = mockEmployees.filter((e) => e.department_id === 1).length;
+      assert.strictEqual(res.responseBody.pagination.total, expectedCount);
+
+      // Tất cả nhân viên trả về phải thuộc departmentId=1
+      for (const emp of res.responseBody.data) {
+        assert.strictEqual(emp.departmentId, 1);
+      }
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 30 (Req 4): Lọc theo phòng ban không tồn tại -> 404 Not Found
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 30: Lọc theo phòng ban không tồn tại (departmentId=99999) -> 404 Not Found', async () => {
+      const { req, res, next } = createMockHttp({
+        query: { departmentId: '99999' },
+        user: { userId: 1, role: ROLES.ADMIN },
+      });
+
+      await getEmployees(req, res, next);
+
+      assert.strictEqual(res.statusCode, 404);
+      assert.strictEqual(res.responseBody.success, false);
+      assert.strictEqual(res.responseBody.errorCode, 'DEPARTMENT_NOT_FOUND');
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 31 (Req 5): Kết hợp departmentId và search
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 31: Kết hợp lọc theo phòng ban và từ khóa tìm kiếm (departmentId=1&search=Minh)', async () => {
+      const { req, res, next } = createMockHttp({
+        query: { departmentId: '1', search: 'Minh' },
+        user: { userId: 1, role: ROLES.ADMIN },
+      });
+
+      await getEmployees(req, res, next);
+
+      assert.strictEqual(res.statusCode, 200);
+      assert.ok(res.responseBody.data.length > 0);
+
+      for (const emp of res.responseBody.data) {
+        assert.strictEqual(emp.departmentId, 1);
+        const match = emp.fullName.toLowerCase().includes('minh') || emp.employeeCode.toLowerCase().includes('minh');
+        assert.strictEqual(match, true);
+      }
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 32 (Req 6): Tổng total và totalPages chính xác sau khi lọc
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 32: Tổng số bản ghi (total) và tổng số trang (totalPages) tính toán chính xác', async () => {
+      const { req, res, next } = createMockHttp({
+        query: { limit: '2' },
+        user: { userId: 1, role: ROLES.ADMIN },
+      });
+
+      await getEmployees(req, res, next);
+
+      assert.strictEqual(res.statusCode, 200);
+      const { total, totalPages, limit } = res.responseBody.pagination;
+      assert.strictEqual(totalPages, Math.ceil(total / limit));
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 33 (Req 7): page, limit, departmentId không hợp lệ -> 400 Bad Request
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 33: Tham số page, limit, departmentId không hợp lệ trả về 400 Bad Request', async () => {
+      const invalidQueries = [
+        { page: '0' },
+        { page: '-1' },
+        { page: 'abc' },
+        { page: '1.5' },
+        { limit: '0' },
+        { limit: '-5' },
+        { limit: '101' },
+        { limit: 'xyz' },
+        { departmentId: '0' },
+        { departmentId: '-2' },
+        { departmentId: 'abc' },
+      ];
+
+      for (const q of invalidQueries) {
+        const { req, res, next } = createMockHttp({
+          query: q,
+          user: { userId: 1, role: ROLES.ADMIN },
+        });
+
+        await getEmployees(req, res, next);
+
+        assert.strictEqual(res.statusCode, 400, `Query ${JSON.stringify(q)} phải trả 400`);
+        assert.strictEqual(res.responseBody.success, false);
+        assert.strictEqual(res.responseBody.errorCode, 'VALIDATION_ERROR');
+      }
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 34 (Req 8): Trang vượt quá số trang hiện có -> trả data rỗng và pagination đúng
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 34: Yêu cầu trang vượt quá totalPages (page=999) trả về mảng rỗng [] với 200 OK', async () => {
+      const { req, res, next } = createMockHttp({
+        query: { page: '999', limit: '10' },
+        user: { userId: 1, role: ROLES.ADMIN },
+      });
+
+      await getEmployees(req, res, next);
+
+      assert.strictEqual(res.statusCode, 200);
+      assert.deepStrictEqual(res.responseBody.data, []);
+      assert.strictEqual(res.responseBody.pagination.page, 999);
+      assert.ok(res.responseBody.pagination.total > 0);
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 35 (Req 9): Không có nhân viên nào phù hợp -> trả data rỗng, total=0, totalPages=0
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 35: Tìm kiếm không có kết quả phù hợp trả về total=0 và totalPages=0', async () => {
+      const { req, res, next } = createMockHttp({
+        query: { search: 'TenNhanVienHoanToanKhongCoThat999' },
+        user: { userId: 1, role: ROLES.ADMIN },
+      });
+
+      await getEmployees(req, res, next);
+
+      assert.strictEqual(res.statusCode, 200);
+      assert.deepStrictEqual(res.responseBody.data, []);
+      assert.strictEqual(res.responseBody.pagination.total, 0);
+      assert.strictEqual(res.responseBody.pagination.totalPages, 0);
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 36 (Req 10): Thiếu JWT hoặc không đủ quyền
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 36: Kiểm tra bảo vệ route: Không có JWT (401) hoặc vai trò EMPLOYEE (403)', async () => {
+      // 1. Không có JWT
+      const { req: reqNoAuth, res: resNoAuth, next: nextNoAuth, getNextCalled: getNextNoAuth } = createMockHttp({
+        headers: {},
+      });
+      await authenticateToken(reqNoAuth, resNoAuth, nextNoAuth);
+      assert.strictEqual(resNoAuth.statusCode, 401);
+      assert.strictEqual(getNextNoAuth(), false);
+
+      // 2. Vai trò EMPLOYEE
+      const roleMiddleware = requireRole(ROLES.ADMIN, ROLES.HR_MANAGER);
+      const { req: reqEmp, res: resEmp, next: nextEmp, getNextCalled: getNextEmp } = createMockHttp({
+        user: { userId: 3, role: ROLES.EMPLOYEE },
+      });
+      roleMiddleware(reqEmp, resEmp, nextEmp);
+      assert.strictEqual(resEmp.statusCode, 403);
+      assert.strictEqual(getNextEmp(), false);
+
+      // 3. Vai trò HR_MANAGER được phép truy cập
+      const { req: reqHR, res: resHR, next: nextHR } = createMockHttp({
+        query: {},
+        user: { userId: 2, role: ROLES.HR_MANAGER },
+      });
+      await getEmployees(reqHR, resHR, nextHR);
+      assert.strictEqual(resHR.statusCode, 200);
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 37 (Req 11): Thử SQL injection qua query parameters
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 37: Ngăn chặn tấn công SQL Injection qua các query parameters', async () => {
+      // departmentId chứa SQL injection payload bị chặn ngay tại validation layer (400)
+      const badDeptPayloads = ['1 OR 1=1', '1; DROP TABLE employees;', '1 UNION SELECT 1,2,3'];
+      for (const payload of badDeptPayloads) {
+        const { req, res, next } = createMockHttp({
+          query: { departmentId: payload },
+          user: { userId: 1, role: ROLES.ADMIN },
+        });
+
+        await getEmployees(req, res, next);
+
+        assert.strictEqual(res.statusCode, 400);
+        assert.strictEqual(res.responseBody.errorCode, 'VALIDATION_ERROR');
+      }
+
+      // search chứa ký tự nháy đơn được parameterized an toàn, không gây crash SQL
+      const { req: reqSearch, res: resSearch, next: nextSearch } = createMockHttp({
+        query: { search: "Minh' OR '1'='1" },
+        user: { userId: 1, role: ROLES.ADMIN },
+      });
+      await getEmployees(reqSearch, resSearch, nextSearch);
+      assert.strictEqual(resSearch.statusCode, 200);
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 38 (Req 12): Xác nhận response không chứa CCCD rõ, CCCDEncrypted hoặc CCCDHash
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 38: Response API danh sách tuyệt đối không chứa số CCCD, ciphertext hoặc mã băm', async () => {
+      const { req, res, next } = createMockHttp({
+        query: { limit: '10' },
+        user: { userId: 1, role: ROLES.ADMIN },
+      });
+
+      await getEmployees(req, res, next);
+
+      assert.strictEqual(res.statusCode, 200);
+      assert.ok(res.responseBody.data.length > 0);
+
+      for (const emp of res.responseBody.data) {
+        assert.strictEqual(emp.cccd, undefined, 'Không được có trường cccd');
+        assert.strictEqual(emp.ssn_encrypted, undefined, 'Không được có trường ssn_encrypted');
+        assert.strictEqual(emp.ssnEncrypted, undefined, 'Không được có trường ssnEncrypted');
+        assert.strictEqual(emp.CCCDEncrypted, undefined, 'Không được có trường CCCDEncrypted');
+        assert.strictEqual(emp.ssn_hash, undefined, 'Không được có trường ssn_hash');
+        assert.strictEqual(emp.ssnHash, undefined, 'Không được có trường ssnHash');
+        assert.strictEqual(emp.CCCDHash, undefined, 'Không được có trường CCCDHash');
+      }
+
+      const jsonStr = JSON.stringify(res.responseBody);
+      assert.strictEqual(jsonStr.includes('ssn_encrypted'), false);
+      assert.strictEqual(jsonStr.includes('ssn_hash'), false);
+      assert.strictEqual(jsonStr.includes('CCCDEncrypted'), false);
+      assert.strictEqual(jsonStr.includes('CCCDHash'), false);
+      assert.strictEqual(jsonStr.includes('038204001234'), false);
+      assert.strictEqual(jsonStr.includes(env.cccdEncryptionKey), false);
+    });
+
   } finally {
     // Khôi phục stub
     employeeRepository.findByCode = origEmployeeFindByCode;
@@ -943,11 +1309,13 @@ async function startTestSuite() {
     employeeRepository.generateNextEmployeeCode = origEmployeeGenerateNextCode;
     employeeRepository.create = origEmployeeCreate;
     employeeRepository.deleteById = origEmployeeDeleteById;
+    employeeRepository.findAll = origEmployeeFindAll;
+    employeeRepository.countAll = origEmployeeCountAll;
     departmentRepository.findById = origDepartmentFindById;
   }
 
   console.log('\n============================================================');
-  console.log(`🎉 KẾT QUẢ: ĐÃ VƯỢT QUA ${passedTests}/${totalTests} BÀI KIỂM THỬ NHÂN VIÊN (MÃ HÓA & GIẢI MÃ CCCD)!`);
+  console.log(`🎉 KẾT QUẢ: ĐÃ VƯỢT QUA ${passedTests}/${totalTests} BÀI KIỂM THỬ NHÂN VIÊN (TẠO MỚI, GIẢI MÃ & DANH SÁCH PHÂN TRANG)!`);
   console.log('============================================================\n');
 
   process.exit(0);

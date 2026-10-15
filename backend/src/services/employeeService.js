@@ -282,7 +282,77 @@ export async function getEmployeeById(employeeId, options = {}) {
   };
 }
 
+/**
+ * Lấy danh sách nhân viên có phân trang và lọc theo phòng ban
+ * @param {object} options
+ * @param {number} [options.page=1]
+ * @param {number} [options.limit=10]
+ * @param {number|null} [options.departmentId=null]
+ * @param {string} [options.search='']
+ * @returns {Promise<{ items: object[], total: number, totalPages: number, page: number, limit: number }>}
+ */
+export async function getEmployees({ page = 1, limit = 10, departmentId = null, search = '' } = {}) {
+  // 1. Nếu có lọc theo departmentId, kiểm tra sự tồn tại của phòng ban
+  if (departmentId !== null && departmentId !== undefined) {
+    const dept = await departmentRepository.findById(departmentId);
+    if (!dept) {
+      throw new DepartmentNotFoundError(`Phòng ban với ID ${departmentId} không tồn tại trong hệ thống.`);
+    }
+  }
+
+  // 2. Truy vấn đồng thời tổng số bản ghi và danh sách trang hiện tại
+  const [total, rows] = await Promise.all([
+    employeeRepository.countAll({ departmentId, search }),
+    employeeRepository.findAll({ page, limit, departmentId, search }),
+  ]);
+
+  const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
+
+  // Hàm tiện ích format ngày về YYYY-MM-DD
+  const formatDate = (dateVal) => {
+    if (!dateVal) return null;
+    if (typeof dateVal === 'string') return dateVal.slice(0, 10);
+    if (dateVal instanceof Date && !isNaN(dateVal.getTime())) {
+      const year = dateVal.getFullYear();
+      const month = String(dateVal.getMonth() + 1).padStart(2, '0');
+      const day = String(dateVal.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    return String(dateVal).slice(0, 10);
+  };
+
+  // 3. Chuẩn hóa dữ liệu từng nhân viên (Tuyệt đối KHÔNG có thông tin CCCD)
+  const items = rows.map((row) => ({
+    employeeId: row.employee_id,
+    employeeCode: row.employee_code,
+    fullName: row.full_name,
+    departmentId: row.department_id,
+    departmentName: row.department_name || null,
+    phone: row.phone || null,
+    hireDate: formatDate(row.hire_date),
+    status: row.employment_status ? row.employment_status.toUpperCase() : 'ACTIVE',
+    email: row.email || null,
+    gender: row.gender || null,
+    dateOfBirth: formatDate(row.date_of_birth),
+    departmentCode: row.department_code || null,
+    position: row.position || null,
+    baseSalary: Number(row.base_salary || 0),
+    employmentStatus: row.employment_status || 'Active',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }));
+
+  return {
+    items,
+    total,
+    totalPages,
+    page: Number(page),
+    limit: Number(limit),
+  };
+}
+
 export default {
   createEmployee,
   getEmployeeById,
+  getEmployees,
 };

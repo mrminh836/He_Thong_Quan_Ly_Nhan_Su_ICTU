@@ -84,3 +84,56 @@ Authorization: Bearer {{adminToken}}
 ### Case 9: Tấn công SQL Injection qua tham số ID (400 Bad Request - An toàn)
 GET {{baseUrl}}/employees/1%20OR%201=1
 Authorization: Bearer {{adminToken}}
+
+### -----------------------------------------------------------------------------
+### KIỂM THỬ DANH SÁCH NHÂN VIÊN, PHÂN TRANG & LỌC THEO PHÒNG BAN
+### Endpoint: GET /api/employees
+### -----------------------------------------------------------------------------
+
+### Case 10: Lấy danh sách mặc định (page=1, limit=10)
+GET {{baseUrl}}/employees
+Authorization: Bearer {{adminToken}}
+
+### Case 11: Phân trang trang 2 với limit=2
+GET {{baseUrl}}/employees?page=2&limit=2
+Authorization: Bearer {{adminToken}}
+
+### Case 12: Lọc nhân viên theo phòng ban (departmentId=1)
+GET {{baseUrl}}/employees?departmentId=1
+Authorization: Bearer {{adminToken}}
+
+### Case 13: Lọc theo phòng ban kết hợp tìm kiếm (departmentId=1&search=Minh)
+GET {{baseUrl}}/employees?departmentId=1&search=Minh
+Authorization: Bearer {{adminToken}}
+
+### Case 14: Tìm kiếm theo mã nhân viên (search=NV001)
+GET {{baseUrl}}/employees?search=NV001
+Authorization: Bearer {{adminToken}}
+
+### Case 15: HR_MANAGER lấy danh sách nhân viên thành công (200 OK)
+GET {{baseUrl}}/employees
+Authorization: Bearer {{hrToken}}
+
+### Case 16: EMPLOYEE bị từ chối truy cập danh sách nhân viên (403 Forbidden)
+GET {{baseUrl}}/employees
+Authorization: Bearer {{empToken}}
+
+### Case 17: Không có token bị từ chối (401 Unauthorized)
+GET {{baseUrl}}/employees
+
+### Case 18: Tham số page không hợp lệ (400 Bad Request)
+GET {{baseUrl}}/employees?page=0
+Authorization: Bearer {{adminToken}}
+
+### Case 19: Tham số limit vượt quá 100 (400 Bad Request)
+GET {{baseUrl}}/employees?limit=101
+Authorization: Bearer {{adminToken}}
+
+### Case 20: Lọc theo phòng ban không tồn tại (404 Not Found)
+GET {{baseUrl}}/employees?departmentId=99999
+Authorization: Bearer {{adminToken}}
+
+### Case 21: Thử tấn công SQL Injection qua tham số departmentId (400 Bad Request)
+GET {{baseUrl}}/employees?departmentId=1%20OR%201=1
+Authorization: Bearer {{adminToken}}
+
