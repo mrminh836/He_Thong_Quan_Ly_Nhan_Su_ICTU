@@ -200,6 +200,29 @@ runTest('6. Quản lý Nhân sự (HR_MANAGER) xem Dashboard: Hiển thị đầ
   assert.ok(!html.includes('personal-profile-card'), 'HR_MANAGER KHÔNG hiển thị card hồ sơ cá nhân riêng biệt');
 });
 
+runTest('7. Sidebar & Header phân quyền gộp: Nhân viên chỉ thấy duy nhất menu Tổng quan, không thấy Chấm công', async () => {
+  const { renderSidebarMenu } = await import('../src/components/Sidebar.js');
+  const { renderHeader } = await import('../src/components/Header.js');
+
+  setCurrentUser({
+    id: 3,
+    employeeId: 3,
+    role: 'EMPLOYEE',
+    fullName: 'Trần Văn Nam',
+    username: 'emp1',
+  });
+
+  const sidebarHtml = renderSidebarMenu('EMPLOYEE');
+  assert.ok(sidebarHtml.includes('data-nav-path="/dashboard"'), 'Sidebar phải có Tổng quan');
+  assert.ok(!sidebarHtml.includes('data-nav-path="/attendances"'), 'Sidebar Nhân viên KHÔNG ĐƯỢC có Chấm công');
+  assert.ok(!sidebarHtml.includes('QUẢN LÝ NHÂN SỰ'), 'Section Quản lý nhân sự phải bị ẩn hoàn toàn khi không có item nào');
+
+  const headerHtml = renderHeader();
+  assert.ok(!headerHtml.includes('href="/attendances"'), 'Dropdown Header của Nhân viên không trỏ vào /attendances');
+  assert.ok(headerHtml.includes('href="/dashboard"'), 'Dropdown Header của Nhân viên trỏ về Dashboard');
+});
+
 console.log('\n===========================================================================');
 console.log(`📊 KẾT QUẢ KIỂM THỬ: ${passedTests}/${totalTests} TESTS ĐẠT 100%`);
 console.log('===========================================================================\n');
+

@@ -69,9 +69,9 @@ export function renderHeader() {
                 <span>Quản lý nhân sự</span>
               </a>
             ` : `
-              <a href="/attendances" class="dropdown-item" data-link>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="m9 16 2 2 4-4"/></svg>
-                <span>Chấm công của tôi</span>
+              <a href="/dashboard" class="dropdown-item" data-link>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <span>Bàn làm việc của tôi</span>
               </a>
             `}
             <div class="dropdown-divider"></div>
