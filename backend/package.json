@@ -15,6 +15,7 @@
     "test:employee": "node tests/employee.test.js",
     "test:attendance": "node tests/attendance.test.js",
     "test:db": "node tests/databaseInitSecurity.test.js",
+    "test:e2e:https": "node tests/e2eHttpsIntegration.test.js",
     "migrate": "node src/scripts/migrate.js up",
     "migrate:rollback": "node src/scripts/migrate.js rollback",
     "migrate:status": "node src/scripts/migrate.js status",

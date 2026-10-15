@@ -58,3 +58,9 @@ desktop.ini
 .docker/
 tmp/
 temp/
+
+# TLS / SSL Certificates & Private Keys (DevSecOps - TUYỆT ĐỐI KHÔNG COMMIT PRIVATE KEY)
+certs/*.key
+*.key
+certs/*.crt
+!certs/hrm.local.cnf
