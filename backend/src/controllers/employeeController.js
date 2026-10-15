@@ -80,18 +80,27 @@ export async function createEmployee(req, res, next) {
 }
 
 /**
- * Controller xem thông tin chi tiết một nhân viên
+ * Controller xem thông tin chi tiết một nhân viên và giải mã CCCD bằng AES_DECRYPT
  * Endpoint: GET /api/employees/:id
- * Phân quyền: ADMIN, HR_MANAGER, EMPLOYEE (thông qua ownership)
+ * Phân quyền: ADMIN, HR_MANAGER
  */
 export async function getEmployeeById(req, res, next) {
   try {
-    const employeeId = Number(req.params.id);
-    if (!Number.isInteger(employeeId) || employeeId <= 0) {
+    const rawId = req.params.id;
+    if (!rawId || !/^\d+$/.test(String(rawId).trim())) {
       return errorResponse(res, {
         statusCode: 400,
         errorCode: 'INVALID_ID',
-        message: 'Mã định danh nhân sự (ID) phải là số nguyên dương.',
+        message: 'Mã định danh nhân viên (ID) phải là số nguyên dương hợp lệ.',
+      });
+    }
+
+    const employeeId = Number(rawId);
+    if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+      return errorResponse(res, {
+        statusCode: 400,
+        errorCode: 'INVALID_ID',
+        message: 'Mã định danh nhân viên (ID) phải là số nguyên dương hợp lệ.',
       });
     }
 
@@ -99,7 +108,7 @@ export async function getEmployeeById(req, res, next) {
 
     return successResponse(res, {
       statusCode: 200,
-      message: 'Lấy thông tin nhân sự thành công',
+      message: 'Lấy chi tiết nhân viên thành công',
       data: employee,
     });
   } catch (error) {

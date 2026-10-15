@@ -23,12 +23,13 @@ router.post(
 );
 
 /**
- * 2. GET /api/employees/:id - Xem thông tin chi tiết một nhân sự
- * Quyền hạn: ADMIN, HR_MANAGER, EMPLOYEE
+ * 2. GET /api/employees/:id - Xem thông tin chi tiết một nhân sự và giải mã CCCD
+ * Giải mã số CCCD bằng hàm MySQL AES_DECRYPT()
+ * Quyền hạn: Chỉ ADMIN và HR_MANAGER được phép truy cập
  */
 router.get(
   '/:id',
-  requireRole(ROLES.ADMIN, ROLES.HR_MANAGER, ROLES.EMPLOYEE),
+  requireRole(ROLES.ADMIN, ROLES.HR_MANAGER),
   getEmployeeById
 );
 

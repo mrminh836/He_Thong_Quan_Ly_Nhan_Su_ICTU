@@ -1,6 +1,6 @@
 import employeeRepository from '../repositories/employeeRepository.js';
 import departmentRepository from '../repositories/departmentRepository.js';
-import { maskCccd, computeCccdHmac, normalizeCccd } from '../utils/cccdSecurity.js';
+import { maskCccd, computeCccdHmac, normalizeCccd, validateCccdFormat } from '../utils/cccdSecurity.js';
 import { env } from '../config/env.js';
 
 /**
@@ -22,6 +22,16 @@ export class DepartmentNotFoundError extends EmployeeError {
   constructor(message = 'Phòng ban không tồn tại hoặc đã tạm ngưng hoạt động.') {
     super(message, 404, 'DEPARTMENT_NOT_FOUND');
     this.name = 'DepartmentNotFoundError';
+  }
+}
+
+/**
+ * Lỗi không tìm thấy nhân viên (404 Not Found)
+ */
+export class EmployeeNotFoundError extends EmployeeError {
+  constructor(message = 'Không tìm thấy nhân viên trong hệ thống.') {
+    super(message, 404, 'EMPLOYEE_NOT_FOUND');
+    this.name = 'EmployeeNotFoundError';
   }
 }
 
@@ -62,6 +72,16 @@ export class EncryptionKeyMissingError extends EmployeeError {
   constructor(message = 'Khóa bảo mật mã hóa hoặc HMAC chưa được cấu hình trên máy chủ.') {
     super(message, 500, 'CONFIGURATION_ERROR');
     this.name = 'EncryptionKeyMissingError';
+  }
+}
+
+/**
+ * Lỗi giải mã CCCD (500 Internal Server Error)
+ */
+export class CccdDecryptionError extends EmployeeError {
+  constructor(message = 'Không thể giải mã dữ liệu CCCD do lỗi dữ liệu hoặc khóa giải mã không hợp lệ.') {
+    super(message, 500, 'DECRYPTION_ERROR');
+    this.name = 'CccdDecryptionError';
   }
 }
 
@@ -183,37 +203,80 @@ export async function createEmployee(employeeData, options = {}) {
 }
 
 /**
- * Lấy thông tin chi tiết một nhân viên theo ID
- * @param {number} employeeId
- * @returns {Promise<object>}
+ * Lấy thông tin chi tiết một nhân viên theo ID và giải mã CCCD bằng MySQL AES_DECRYPT()
+ * Quy trình xử lý bảo mật:
+ * 1. Kiểm tra ID nguyên dương hợp lệ.
+ * 2. Kiểm tra cấu hình biến môi trường CCCD_ENCRYPTION_KEY. Nếu thiếu, FAIL-CLOSED (ném lỗi 500, không truy vấn).
+ * 3. Thực thi truy vấn parameterized query giải mã CCCD qua MySQL CAST(AES_DECRYPT(ssn_encrypted, ?) AS CHAR CHARACTER SET utf8mb4).
+ * 4. Kiểm tra sự tồn tại của nhân viên (404 nếu không tìm thấy).
+ * 5. Kiểm tra kết quả giải mã: Nếu NULL hoặc không đúng định dạng CCCD/CMND -> coi là lỗi giải mã / dữ liệu (ném lỗi 500 DECRYPTION_ERROR).
+ * 6. Format dữ liệu trả về: KHÔNG trả ssn_encrypted, ssn_hash, hoặc bất kỳ thông tin khóa nào.
+ * 
+ * @param {number} employeeId - ID nhân viên
+ * @param {object} [options] - Tùy chọn cấu hình (dùng khi kiểm thử)
+ * @returns {Promise<object>} Dữ liệu chi tiết nhân viên kèm CCCD đã giải mã
  */
-export async function getEmployeeById(employeeId) {
-  if (!employeeId) {
-    throw new EmployeeError('ID nhân sự là bắt buộc.', 400, 'INVALID_ID');
+export async function getEmployeeById(employeeId, options = {}) {
+  const parsedId = Number(employeeId);
+  if (!Number.isInteger(parsedId) || parsedId <= 0) {
+    throw new EmployeeError('Mã định danh nhân viên (ID) phải là số nguyên dương hợp lệ.', 400, 'INVALID_ID');
   }
 
-  const record = await employeeRepository.findById(employeeId);
+  // 1. Kiểm tra cấu hình khóa mã hóa CCCD (Fail-closed)
+  const cccdEncryptionKey = options.cccdEncryptionKey !== undefined ? options.cccdEncryptionKey : env.cccdEncryptionKey;
+  if (!cccdEncryptionKey || !String(cccdEncryptionKey).trim()) {
+    console.error('[SECURITY AUDIT] Không thể giải mã CCCD: Khóa CCCD_ENCRYPTION_KEY chưa được cấu hình.');
+    throw new EncryptionKeyMissingError('Khóa mã hóa CCCD_ENCRYPTION_KEY chưa được cấu hình trên máy chủ.');
+  }
+
+  // 2. Truy vấn CSDL và giải mã bằng MySQL AES_DECRYPT qua repository
+  const record = await employeeRepository.findByIdWithDecryptedCccd(parsedId, cccdEncryptionKey);
   if (!record) {
-    throw new EmployeeError(`Không tìm thấy nhân sự với ID ${employeeId}.`, 404, 'EMPLOYEE_NOT_FOUND');
+    throw new EmployeeNotFoundError(`Không tìm thấy nhân viên với ID ${parsedId}.`);
   }
 
+  // 3. Kiểm tra tính hợp lệ của kết quả giải mã CCCD
+  // Nếu MySQL trả về NULL (do sai khóa hoặc dữ liệu hỏng) hoặc chuỗi không đúng định dạng
+  const decryptedCccd = record.cccd ? String(record.cccd).trim() : null;
+  const cccdValidation = decryptedCccd ? validateCccdFormat(decryptedCccd) : { isValid: false };
+
+  if (!decryptedCccd || !cccdValidation.isValid) {
+    console.error(`[SECURITY AUDIT] Giải mã CCCD thất bại cho Employee ID ${parsedId}: Kết quả NULL hoặc sai định dạng.`);
+    throw new CccdDecryptionError('Không thể giải mã số CCCD do lỗi dữ liệu hoặc khóa giải mã không hợp lệ.');
+  }
+
+  // Hàm tiện ích format ngày về YYYY-MM-DD
+  const formatDate = (dateVal) => {
+    if (!dateVal) return null;
+    if (typeof dateVal === 'string') return dateVal.slice(0, 10);
+    if (dateVal instanceof Date && !isNaN(dateVal.getTime())) {
+      const year = dateVal.getFullYear();
+      const month = String(dateVal.getMonth() + 1).padStart(2, '0');
+      const day = String(dateVal.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    return String(dateVal).slice(0, 10);
+  };
+
+  // 4. Định dạng phản hồi an toàn: Tuyệt đối không trả ciphertext hay dữ liệu băm
   return {
     employeeId: record.employee_id,
     employeeCode: record.employee_code,
     fullName: record.full_name,
-    email: record.email,
-    phone: record.phone,
-    address: record.address,
-    gender: record.gender,
-    dateOfBirth: record.date_of_birth,
-    ssnMasked: record.ssn_masked,
+    cccd: decryptedCccd,
+    email: record.email || null,
+    phone: record.phone || null,
+    address: record.address || null,
+    gender: record.gender || null,
+    dateOfBirth: formatDate(record.date_of_birth),
     departmentId: record.department_id,
-    departmentName: record.department_name,
-    departmentCode: record.department_code,
-    position: record.position,
+    departmentName: record.department_name || null,
+    departmentCode: record.department_code || null,
+    position: record.position || null,
     baseSalary: Number(record.base_salary || 0),
-    hireDate: record.hire_date,
-    employmentStatus: record.employment_status,
+    hireDate: formatDate(record.hire_date),
+    status: record.employment_status ? record.employment_status.toUpperCase() : 'ACTIVE',
+    employmentStatus: record.employment_status || 'Active',
     createdAt: record.created_at,
     updatedAt: record.updated_at,
   };
