@@ -81,6 +81,64 @@ export async function createCheckIn({ employeeId, workDate, checkInTime, status,
 }
 
 /**
+ * Cập nhật giờ check-out cho nhân viên trong ngày làm việc
+ * Sử dụng câu lệnh UPDATE có điều kiện (check_out IS NULL) để đảm bảo tính nguyên tử,
+ * ngăn chặn race condition khi hai request check-out đến cùng lúc.
+ * 
+ * @param {object} params
+ * @param {number} params.employeeId - ID nhân viên
+ * @param {string} params.workDate - Ngày làm việc (YYYY-MM-DD)
+ * @param {string} params.checkOutTime - Giờ tan ca (HH:mm:ss)
+ * @returns {Promise<number>} Số dòng bị ảnh hưởng (1 nếu thành công, 0 nếu đã check-out hoặc không tìm thấy)
+ */
+export async function updateCheckOut({ employeeId, workDate, checkOutTime }) {
+  const sql = `
+    UPDATE \`attendances\`
+    SET 
+      \`check_out\` = ?,
+      \`updated_at\` = CURRENT_TIMESTAMP
+    WHERE \`employee_id\` = ? 
+      AND \`attendance_date\` = ? 
+      AND \`check_out\` IS NULL
+  `;
+
+  const result = await query(sql, [checkOutTime, employeeId, workDate]);
+  return result.affectedRows;
+}
+
+/**
+ * Lấy danh sách bảng chấm công hôm nay cho Quản trị viên (ADMIN / HR_MANAGER)
+ * Sử dụng LEFT JOIN từ employees sang attendances để nhân viên chưa check-in vẫn hiển thị.
+ * Bảo mật: Tuyệt đối không SELECT ssn_encrypted, ssn_hash hoặc bất kỳ dữ liệu nhạy cảm nào.
+ * 
+ * @param {string} workDate - Ngày làm việc định dạng YYYY-MM-DD
+ * @returns {Promise<Array<object>>} Danh sách chấm công hôm nay của toàn bộ nhân viên hoạt động
+ */
+export async function getTodayAttendanceBoard(workDate) {
+  const sql = `
+    SELECT 
+      a.attendance_id,
+      e.employee_id,
+      e.employee_code,
+      e.full_name,
+      e.department_id,
+      d.department_name,
+      ? AS work_date,
+      a.check_in,
+      a.check_out,
+      a.attendance_status
+    FROM \`employees\` e
+    LEFT JOIN \`departments\` d ON e.department_id = d.department_id
+    LEFT JOIN \`attendances\` a ON e.employee_id = a.employee_id AND a.attendance_date = ?
+    WHERE e.employment_status = 'Active'
+    ORDER BY d.department_name ASC, e.employee_code ASC
+  `;
+
+  const rows = await query(sql, [workDate, workDate]);
+  return rows;
+}
+
+/**
  * Tìm bản ghi chấm công theo ID
  * @param {number} attendanceId
  * @returns {Promise<object|null>}
@@ -123,6 +181,8 @@ export async function deleteById(attendanceId) {
 export default {
   findByEmployeeAndDate,
   createCheckIn,
+  updateCheckOut,
+  getTodayAttendanceBoard,
   findById,
   deleteById,
 };
