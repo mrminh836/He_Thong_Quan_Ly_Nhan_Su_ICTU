@@ -11,5 +11,8 @@ export const findByIdWithDecryptedCccd = employeeRepository.findByIdWithDecrypte
 export const generateNextEmployeeCode = employeeRepository.generateNextEmployeeCode;
 export const create = employeeRepository.create;
 export const deleteById = employeeRepository.deleteById;
+export const findAll = employeeRepository.findAll;
+export const countAll = employeeRepository.countAll;
 
 export default employeeRepository;
+

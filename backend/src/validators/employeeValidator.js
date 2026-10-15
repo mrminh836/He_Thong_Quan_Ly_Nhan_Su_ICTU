@@ -250,6 +250,101 @@ export function validateCreateEmployee(body) {
   };
 }
 
+/**
+ * Kiểm tra và chuẩn hóa các tham số phân trang, tìm kiếm và lọc danh sách nhân viên
+ * @param {object} query 
+ * @returns {{ isValid: boolean, error?: string, data?: { page: number, limit: number, departmentId: number|null, search: string } }}
+ */
+export function validateEmployeeQueryParams(query = {}) {
+  let page = 1;
+  let limit = 10;
+  let departmentId = null;
+  let search = '';
+
+  // 1. Kiểm tra page (Mặc định: 1)
+  if (query.page !== undefined && query.page !== null && query.page !== '') {
+    const rawPage = String(query.page).trim();
+    if (!/^\d+$/.test(rawPage)) {
+      return {
+        isValid: false,
+        error: 'Tham số page phải là số nguyên dương hợp lệ (>= 1).',
+      };
+    }
+    page = parseInt(rawPage, 10);
+    if (page <= 0 || !Number.isSafeInteger(page)) {
+      return {
+        isValid: false,
+        error: 'Tham số page phải lớn hơn hoặc bằng 1.',
+      };
+    }
+  }
+
+  // 2. Kiểm tra limit (Mặc định: 10, tối đa: 100)
+  if (query.limit !== undefined && query.limit !== null && query.limit !== '') {
+    const rawLimit = String(query.limit).trim();
+    if (!/^\d+$/.test(rawLimit)) {
+      return {
+        isValid: false,
+        error: 'Tham số limit phải là số nguyên dương hợp lệ (từ 1 đến 100).',
+      };
+    }
+    limit = parseInt(rawLimit, 10);
+    if (limit <= 0 || limit > 100 || !Number.isSafeInteger(limit)) {
+      return {
+        isValid: false,
+        error: 'Tham số limit phải nằm trong khoảng từ 1 đến 100.',
+      };
+    }
+  }
+
+  // 3. Kiểm tra departmentId (Tùy chọn)
+  const rawDeptId = query.departmentId ?? query.department_id;
+  if (rawDeptId !== undefined && rawDeptId !== null && rawDeptId !== '') {
+    const strDeptId = String(rawDeptId).trim();
+    if (!/^\d+$/.test(strDeptId)) {
+      return {
+        isValid: false,
+        error: 'Mã phòng ban (departmentId) phải là số nguyên dương hợp lệ.',
+      };
+    }
+    departmentId = parseInt(strDeptId, 10);
+    if (departmentId <= 0 || !Number.isSafeInteger(departmentId)) {
+      return {
+        isValid: false,
+        error: 'Mã phòng ban (departmentId) phải lớn hơn 0.',
+      };
+    }
+  }
+
+  // 4. Kiểm tra search (Tùy chọn)
+  if (query.search !== undefined && query.search !== null) {
+    if (typeof query.search !== 'string') {
+      return {
+        isValid: false,
+        error: 'Từ khóa tìm kiếm (search) phải là chuỗi ký tự.',
+      };
+    }
+    search = query.search.trim();
+    if (search.length > 100) {
+      return {
+        isValid: false,
+        error: 'Từ khóa tìm kiếm không được vượt quá 100 ký tự.',
+      };
+    }
+  }
+
+  return {
+    isValid: true,
+    data: {
+      page,
+      limit,
+      departmentId,
+      search,
+    },
+  };
+}
+
 export default {
   validateCreateEmployee,
+  validateEmployeeQueryParams,
 };

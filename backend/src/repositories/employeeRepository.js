@@ -295,6 +295,101 @@ export async function findByIdWithDecryptedCccd(employeeId, cccdEncryptionKey) {
 }
 
 /**
+ * Lấy danh sách nhân viên có phân trang, hỗ trợ lọc theo phòng ban và tìm kiếm
+ * Sử dụng 100% Prepared Statements / Parameterized Queries chống SQL Injection.
+ * Bảo mật: Tuyệt đối không SELECT ssn_encrypted hoặc ssn_hash hoặc AES_DECRYPT.
+ * 
+ * @param {object} options
+ * @param {number} [options.page=1]
+ * @param {number} [options.limit=10]
+ * @param {number|null} [options.departmentId=null]
+ * @param {string} [options.search='']
+ * @returns {Promise<object[]>}
+ */
+export async function findAll({ page = 1, limit = 10, departmentId = null, search = '' } = {}) {
+  const whereClauses = [];
+  const params = [];
+
+  if (departmentId !== null && departmentId !== undefined) {
+    whereClauses.push('e.department_id = ?');
+    params.push(Number(departmentId));
+  }
+
+  if (search && typeof search === 'string' && search.trim() !== '') {
+    const cleanSearch = search.trim().replace(/([%_\\])/g, '\\$1');
+    whereClauses.push('(e.employee_code LIKE ? OR e.full_name LIKE ?)');
+    params.push(`%${cleanSearch}%`, `%${cleanSearch}%`);
+  }
+
+  const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+  const offset = (Number(page) - 1) * Number(limit);
+
+  const sql = `
+    SELECT 
+      e.employee_id,
+      e.employee_code,
+      e.full_name,
+      e.email,
+      e.phone,
+      e.address,
+      e.gender,
+      e.date_of_birth,
+      e.department_id,
+      d.department_name,
+      d.department_code,
+      e.position,
+      e.base_salary,
+      e.hire_date,
+      e.employment_status,
+      e.created_at,
+      e.updated_at
+    FROM \`employees\` e
+    LEFT JOIN \`departments\` d ON e.department_id = d.department_id
+    ${whereSql}
+    ORDER BY e.employee_id DESC
+    LIMIT ? OFFSET ?
+  `;
+
+  const rows = await query(sql, [...params, Number(limit), Number(offset)]);
+  return rows;
+}
+
+/**
+ * Đếm tổng số nhân viên thỏa mãn điều kiện lọc và tìm kiếm (Count Query)
+ * @param {object} options
+ * @param {number|null} [options.departmentId=null]
+ * @param {string} [options.search='']
+ * @returns {Promise<number>}
+ */
+export async function countAll({ departmentId = null, search = '' } = {}) {
+  const whereClauses = [];
+  const params = [];
+
+  if (departmentId !== null && departmentId !== undefined) {
+    whereClauses.push('e.department_id = ?');
+    params.push(Number(departmentId));
+  }
+
+  if (search && typeof search === 'string' && search.trim() !== '') {
+    const cleanSearch = search.trim().replace(/([%_\\])/g, '\\$1');
+    whereClauses.push('(e.employee_code LIKE ? OR e.full_name LIKE ?)');
+    params.push(`%${cleanSearch}%`, `%${cleanSearch}%`);
+  }
+
+  const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+  const sql = `
+    SELECT COUNT(*) AS total
+    FROM \`employees\` e
+    LEFT JOIN \`departments\` d ON e.department_id = d.department_id
+    ${whereSql}
+  `;
+
+  const rows = await query(sql, params);
+  return Number(rows[0]?.total || 0);
+}
+
+/**
  * Xóa nhân sự theo ID (Chỉ dùng cho mục đích kiểm thử và rollback)
  * @param {number} employeeId
  * @returns {Promise<boolean>}
@@ -314,5 +409,7 @@ export default {
   generateNextEmployeeCode,
   create,
   deleteById,
+  findAll,
+  countAll,
 };
 

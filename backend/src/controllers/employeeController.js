@@ -1,5 +1,5 @@
 import employeeService, { EmployeeError } from '../services/employeeService.js';
-import { validateCreateEmployee } from '../validators/employeeValidator.js';
+import { validateCreateEmployee, validateEmployeeQueryParams } from '../validators/employeeValidator.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 
 /**
@@ -123,7 +123,59 @@ export async function getEmployeeById(req, res, next) {
   }
 }
 
+/**
+ * Controller lấy danh sách nhân viên có phân trang và lọc theo phòng ban
+ * Endpoint: GET /api/employees
+ * Phân quyền: ADMIN, HR_MANAGER
+ * 
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function getEmployees(req, res, next) {
+  try {
+    const queryValidation = validateEmployeeQueryParams(req.query);
+    if (!queryValidation.isValid) {
+      return errorResponse(res, {
+        statusCode: 400,
+        errorCode: 'VALIDATION_ERROR',
+        message: queryValidation.error,
+      });
+    }
+
+    const result = await employeeService.getEmployees(queryValidation.data);
+
+    return successResponse(res, {
+      statusCode: 200,
+      message: 'Lấy danh sách nhân viên thành công',
+      data: result.items,
+      pagination: {
+        page: result.page,
+        limit: result.limit,
+        total: result.total,
+        totalPages: result.totalPages,
+      },
+      meta: {
+        page: result.page,
+        limit: result.limit,
+        total: result.total,
+        totalPages: result.totalPages,
+      },
+    });
+  } catch (error) {
+    if (error instanceof EmployeeError) {
+      return errorResponse(res, {
+        statusCode: error.statusCode,
+        errorCode: error.errorCode,
+        message: error.message,
+      });
+    }
+    next(error);
+  }
+}
+
 export default {
   createEmployee,
   getEmployeeById,
+  getEmployees,
 };

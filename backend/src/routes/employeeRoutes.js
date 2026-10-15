@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createEmployee, getEmployeeById } from '../controllers/employeeController.js';
+import { createEmployee, getEmployeeById, getEmployees } from '../controllers/employeeController.js';
 import { authenticateToken } from '../middlewares/auth.js';
 import { requireRole } from '../middlewares/role.js';
 import { ROLES } from '../constants/roles.js';
@@ -12,7 +12,18 @@ const router = Router();
 router.use(authenticateToken);
 
 /**
- * 1. POST /api/employees - Thêm mới nhân sự vào hệ thống
+ * 1. GET /api/employees - Lấy danh sách nhân viên có phân trang và lọc theo phòng ban
+ * Hỗ trợ các query: page, limit, departmentId, search
+ * Quyền hạn: Chỉ ADMIN và HR_MANAGER được phép truy cập
+ */
+router.get(
+  '/',
+  requireRole(ROLES.ADMIN, ROLES.HR_MANAGER),
+  getEmployees
+);
+
+/**
+ * 2. POST /api/employees - Thêm mới nhân sự vào hệ thống
  * Mã hóa số CCCD bằng hàm MySQL AES_ENCRYPT và bảo vệ tính duy nhất bằng HMAC-SHA-256
  * Quyền hạn: Chỉ ADMIN và HR_MANAGER được phép thực hiện
  */
