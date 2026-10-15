@@ -4,6 +4,7 @@ import { isAuthenticated, getCurrentUserRole } from '../services/authService.js'
 import { showToast } from '../components/Toast.js';
 
 let currentLayoutType = null;
+let currentComponent = null;
 
 /**
  * Tìm route tương ứng với URL hiện tại
@@ -78,6 +79,16 @@ export async function handleRouteChange() {
 
   const appEl = qs('#app');
   if (!appEl) return;
+
+  // Dọn dẹp component trang trước (nếu có hàm destroy, vd: clearInterval đồng hồ)
+  if (currentComponent && typeof currentComponent.destroy === 'function') {
+    try {
+      currentComponent.destroy();
+    } catch (e) {
+      console.warn('[Router] Lỗi khi dọn dẹp component trang cũ:', e);
+    }
+  }
+  currentComponent = route.component;
 
   const pageContentHtml = route.component.render();
 

@@ -1,6 +1,7 @@
 import { renderPageHeader } from '../components/PageHeader.js';
 import { showToast } from '../components/Toast.js';
 import { qs } from '../utils/dom.js';
+import { attendanceService } from '../services/attendanceService.js';
 
 export function renderAttendancesPage() {
   const todayStr = new Date().toISOString().split('T')[0];
@@ -122,14 +123,32 @@ export function initAttendancesPageEvents() {
   const checkoutBtn = qs('#btn-quick-checkout');
 
   if (checkinBtn) {
-    checkinBtn.addEventListener('click', () => {
-      showToast('Ghi nhận Check-in thành công (Giả lập Client - API sẽ kết nối ở Sprint sau).', 'success');
+    checkinBtn.addEventListener('click', async () => {
+      try {
+        checkinBtn.disabled = true;
+        const res = await attendanceService.checkIn();
+        showToast(res.message || 'Check-in thành công!', 'success');
+      } catch (err) {
+        const errorMsg = (err.data && err.data.message) || err.message || 'Check-in thất bại.';
+        showToast(errorMsg, 'danger');
+      } finally {
+        checkinBtn.disabled = false;
+      }
     });
   }
 
   if (checkoutBtn) {
-    checkoutBtn.addEventListener('click', () => {
-      showToast('Ghi nhận Check-out thành công (Giả lập Client).', 'info');
+    checkoutBtn.addEventListener('click', async () => {
+      try {
+        checkoutBtn.disabled = true;
+        const res = await attendanceService.checkOut();
+        showToast(res.message || 'Check-out thành công!', 'success');
+      } catch (err) {
+        const errorMsg = (err.data && err.data.message) || err.message || 'Check-out thất bại.';
+        showToast(errorMsg, 'danger');
+      } finally {
+        checkoutBtn.disabled = false;
+      }
     });
   }
 }

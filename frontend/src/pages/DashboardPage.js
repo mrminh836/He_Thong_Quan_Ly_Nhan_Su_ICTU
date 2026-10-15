@@ -2,6 +2,7 @@ import { renderPageHeader } from '../components/PageHeader.js';
 import { api } from '../services/api.js';
 import { showToast } from '../components/Toast.js';
 import { qs } from '../utils/dom.js';
+import { renderAttendanceWidgetMarkup, initAttendanceWidgetEvents, destroyAttendanceWidget } from '../components/AttendanceWidget.js';
 
 export function renderDashboardPage() {
   const headerHtml = renderPageHeader({
@@ -22,6 +23,9 @@ export function renderDashboardPage() {
 
   return `
     ${headerHtml}
+
+    <!-- Widget Chấm công thời gian thực Check-in / Check-out -->
+    ${renderAttendanceWidgetMarkup()}
 
     <!-- Thẻ chỉ số tổng quan (KPIs) -->
     <div class="stats-grid">
@@ -155,11 +159,15 @@ export function renderDashboardPage() {
 }
 
 export function initDashboardPageEvents() {
+  // 1. Khởi tạo Widget Chấm công thời gian thực & tải dữ liệu hôm nay
+  initAttendanceWidgetEvents();
+
   const refreshBtn = qs('#btn-refresh-stats');
   if (refreshBtn) {
     refreshBtn.addEventListener('click', () => {
       showToast('Đang cập nhật số liệu tổng quan...', 'info');
       checkLiveBackendStatus();
+      initAttendanceWidgetEvents();
     });
   }
 
@@ -200,4 +208,5 @@ async function checkLiveBackendStatus() {
 export default {
   render: renderDashboardPage,
   initEvents: initDashboardPageEvents,
+  destroy: destroyAttendanceWidget,
 };
