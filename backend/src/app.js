@@ -8,6 +8,9 @@ import apiRoutes from './routes/index.js';
 
 const app = express();
 
+// Kích hoạt trust proxy khi chạy sau Nginx Reverse Proxy
+app.set('trust proxy', true);
+
 // 1. Cấu hình bảo mật CORS theo môi trường
 app.use(
   cors({
