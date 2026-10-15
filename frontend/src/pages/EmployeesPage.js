@@ -6,6 +6,7 @@ import { ROLES } from '../utils/rbac.js';
 import { showToast } from '../components/Toast.js';
 import { qs, qsa, sanitizeHTML } from '../utils/dom.js';
 import { openEmployeeDetailModal } from '../components/EmployeeDetailModal.js';
+import { openEmployeeFormModal } from '../components/EmployeeFormModal.js';
 
 // State nội bộ của trang Quản lý nhân sự
 let pageState = {
@@ -177,7 +178,12 @@ export function initEmployeesPageEvents() {
   const addBtn = qs('#btn-add-emp');
   if (addBtn) {
     addBtn.addEventListener('click', () => {
-      showToast('Tính năng thêm nhân sự mới với mã hóa AES-256 đang sẵn sàng qua API POST /api/employees.', 'info');
+      openEmployeeFormModal({
+        triggerEl: addBtn,
+        onSuccess: () => {
+          loadEmployeeData();
+        },
+      });
     });
   }
 
@@ -474,8 +480,13 @@ function renderSuccessState() {
       </tr>
     `;
 
-    qs('#btn-empty-add-emp')?.addEventListener('click', () => {
-      showToast('Tính năng thêm nhân sự mới đang sẵn sàng.', 'info');
+    qs('#btn-empty-add-emp')?.addEventListener('click', (e) => {
+      openEmployeeFormModal({
+        triggerEl: e.currentTarget,
+        onSuccess: () => {
+          loadEmployeeData();
+        },
+      });
     });
     return;
   }
@@ -704,7 +715,7 @@ function handleTableActionClick(e) {
   const id = btn.dataset.id;
 
   if (action === 'view') {
-    openEmployeeDetailModal(id);
+    openEmployeeDetailModal(id, btn);
   } else if (action === 'edit') {
     showToast(`Chức năng cập nhật nhân viên #${id} sẽ sẵn sàng ở giai đoạn tiếp theo.`, 'info');
   }
