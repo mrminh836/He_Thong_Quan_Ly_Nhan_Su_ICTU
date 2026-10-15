@@ -95,7 +95,7 @@ services:
       - hrm-network
 
   # ----------------------------------------------------------------------------
-  # SERVICE 3: Frontend SPA Nginx (frontend)
+  # SERVICE 3: Frontend SPA Nginx (frontend / hrm-app)
   # ----------------------------------------------------------------------------
   frontend:
     build:
@@ -103,15 +103,9 @@ services:
       dockerfile: Dockerfile
     container_name: hrm-ictu-frontend
     restart: unless-stopped
-    volumes:
-      # Mount SSL Certificate và Private Key (chế độ chỉ đọc :ro)
-      - ./certs/hrm.local.crt:/etc/nginx/ssl/hrm.local.crt:ro
-      - ./certs/hrm.local.key:/etc/nginx/ssl/hrm.local.key:ro
     ports:
-      # Cổng 5173 trên máy host -> cổng 80 Nginx trong container
+      # Cổng 5173 trên máy host -> cổng 80 Nginx trong container (Direct Dev access)
       - "${FRONTEND_PORT:-5173}:80"
-      # Cổng 443 trên máy host -> cổng 443 HTTPS Nginx trong container
-      - "${HTTPS_PORT:-443}:443"
     environment:
       NODE_ENV: production
     depends_on:
@@ -124,7 +118,10 @@ services:
       retries: 3
       start_period: 5s
     networks:
-      - hrm-network
+      hrm-network:
+        aliases:
+          - hrm-app
+          - frontend
 
   # ----------------------------------------------------------------------------
   # SERVICE 4: phpMyAdmin Web Database Manager (phpmyadmin)
@@ -149,6 +146,39 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    networks:
+      - hrm-network
+
+  # ----------------------------------------------------------------------------
+  # SERVICE 5: Nginx Reverse Proxy (HTTPS hrm.local Gateway)
+  # ----------------------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: hrm-nginx
+    restart: unless-stopped
+    ports:
+      # Port 80: HTTP Redirect -> 301 HTTPS
+      - "80:80"
+      # Port 443: HTTPS Reverse Proxy cho hrm.local
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certs/hrm.local.crt:/etc/nginx/certs/hrm.local.crt:ro
+      - ./certs/hrm.local.key:/etc/nginx/certs/hrm.local.key:ro
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+      phpmyadmin:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -k -s -o /dev/null https://localhost:443/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
     networks:
       - hrm-network
 
