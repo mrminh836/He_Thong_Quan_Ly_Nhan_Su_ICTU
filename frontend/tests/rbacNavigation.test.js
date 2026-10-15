@@ -143,15 +143,16 @@ test('Test 3.2: HR_MANAGER nhìn thấy 4 chức năng, mục Tài khoản (/use
   assert.strictEqual(hrSections.length, 2);
 });
 
-test('Test 3.3: EMPLOYEE chỉ nhìn thấy Tổng quan và Chấm công cá nhân (Ẩn /departments, /employees, /users)', () => {
+test('Test 3.3: EMPLOYEE chỉ nhìn thấy duy nhất Tổng quan cá nhân (Gộp Chấm công vào Dashboard, ẩn các module quản lý)', () => {
   const empSections = filterNavigationByRole(ROLES.EMPLOYEE);
   const allItems = empSections.flatMap((s) => s.items);
   const paths = allItems.map((i) => i.path);
 
-  assert.strictEqual(allItems.length, 2);
-  assert.deepStrictEqual(paths, ['/dashboard', '/attendances']);
+  assert.strictEqual(allItems.length, 1);
+  assert.deepStrictEqual(paths, ['/dashboard']);
   assert.strictEqual(paths.includes('/departments'), false, 'Employee KHÔNG được thấy /departments');
   assert.strictEqual(paths.includes('/employees'), false, 'Employee KHÔNG được thấy /employees');
+  assert.strictEqual(paths.includes('/attendances'), false, 'Employee gộp chấm công vào Dashboard, không thấy /attendances');
   assert.strictEqual(paths.includes('/users'), false, 'Employee KHÔNG được thấy /users');
 });
 
@@ -179,9 +180,9 @@ test('Test 4.1: hasAccessToRoute - Quyền truy cập chi tiết từng đườn
   assert.strictEqual(hasAccessToRoute('/attendances', ROLES.HR_MANAGER), true);
   assert.strictEqual(hasAccessToRoute('/users', ROLES.HR_MANAGER), false);
 
-  // EMPLOYEE
+  // EMPLOYEE (Gộp Chấm công vào Dashboard, không truy cập /attendances quản lý toàn công ty)
   assert.strictEqual(hasAccessToRoute('/dashboard', ROLES.EMPLOYEE), true);
-  assert.strictEqual(hasAccessToRoute('/attendances', ROLES.EMPLOYEE), true);
+  assert.strictEqual(hasAccessToRoute('/attendances', ROLES.EMPLOYEE), false);
   assert.strictEqual(hasAccessToRoute('/departments', ROLES.EMPLOYEE), false);
   assert.strictEqual(hasAccessToRoute('/employees', ROLES.EMPLOYEE), false);
   assert.strictEqual(hasAccessToRoute('/users', ROLES.EMPLOYEE), false);
@@ -201,7 +202,7 @@ test('Test 5.1: renderSidebarMenu sinh chuỗi HTML chính xác theo role', () =
 
   const empHtml = renderSidebarMenu(ROLES.EMPLOYEE, '/dashboard');
   assert.strictEqual(empHtml.includes('data-nav-path="/dashboard"'), true);
-  assert.strictEqual(empHtml.includes('data-nav-path="/attendances"'), true);
+  assert.strictEqual(empHtml.includes('data-nav-path="/attendances"'), false, 'Menu Chấm công bị ẩn khỏi Sidebar Nhân viên');
   assert.strictEqual(empHtml.includes('data-nav-path="/users"'), false);
   assert.strictEqual(empHtml.includes('data-nav-path="/employees"'), false);
   assert.strictEqual(empHtml.includes('data-nav-path="/departments"'), false);
@@ -254,7 +255,7 @@ test('Test 6.2: Chuyển đổi tài khoản từ Admin sang Employee không đ�
   assert.strictEqual(menuHtml.includes('data-nav-path="/users"'), false);
   assert.strictEqual(menuHtml.includes('data-nav-path="/employees"'), false);
   assert.strictEqual(menuHtml.includes('data-nav-path="/dashboard"'), true);
-  assert.strictEqual(menuHtml.includes('data-nav-path="/attendances"'), true);
+  assert.strictEqual(menuHtml.includes('data-nav-path="/attendances"'), false);
 });
 
 console.log('\n============================================================');

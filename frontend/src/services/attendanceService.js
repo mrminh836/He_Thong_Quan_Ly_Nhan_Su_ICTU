@@ -17,13 +17,21 @@ export const attendanceService = {
    * 
    * @returns {Promise<object>} Response từ backend
    */
-  async getTodayAttendance() {
+  async getTodayAttendance(params = {}) {
+    const query = new URLSearchParams();
+    if (params.search && params.search.trim()) query.append('search', params.search.trim());
+    if (params.departmentId && params.departmentId !== 'all') query.append('departmentId', params.departmentId);
+    if (params.status && params.status !== 'all') query.append('status', params.status);
+    if (params.page) query.append('page', params.page);
+    if (params.limit) query.append('limit', params.limit);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+
     try {
-      return await api.get('/attendance/today');
+      return await api.get(`/attendance/today${qs}`);
     } catch (err) {
       // Fallback nếu route là /attendances/today
       if (err.status === 404) {
-        return await api.get('/attendances/today');
+        return await api.get(`/attendances/today${qs}`);
       }
       throw err;
     }
@@ -99,6 +107,148 @@ export const attendanceService = {
 
     // Nếu data là một object đơn (Employee view)
     return response.data;
+  },
+
+  /**
+   * Tính toán các chỉ số thống kê tổng quan chấm công hôm nay
+   * Ưu tiên dữ liệu summary từ backend nếu có, hoặc tính toán chuẩn xác trên toàn bộ danh sách
+   * 
+   * @param {Array} items - Danh sách toàn bộ nhân viên hôm nay
+   * @param {object} [apiSummary] - Đối tượng summary trả về từ API backend
+   * @returns {object} { totalEmployees, checkedIn, onTime, late, notCheckedIn, checkedOut }
+   */
+  calculateAttendanceSummary(items = [], apiSummary = null) {
+    if (!Array.isArray(items)) {
+      items = [];
+    }
+
+    const totalEmployees = (apiSummary && typeof apiSummary.totalEmployees === 'number')
+      ? apiSummary.totalEmployees
+      : items.length;
+
+    const checkedIn = (apiSummary && typeof apiSummary.checkedIn === 'number')
+      ? apiSummary.checkedIn
+      : items.filter((i) => Boolean(i.checkInTime)).length;
+
+    const late = (apiSummary && typeof apiSummary.late === 'number')
+      ? apiSummary.late
+      : items.filter((i) => i.status === 'LATE').length;
+
+    const onTime = items.filter((i) => Boolean(i.checkInTime) && i.status !== 'LATE').length;
+
+    const notCheckedIn = (apiSummary && typeof apiSummary.notCheckedIn === 'number')
+      ? apiSummary.notCheckedIn
+      : items.filter((i) => !i.checkInTime).length;
+
+    const checkedOut = (apiSummary && typeof apiSummary.checkedOut === 'number')
+      ? apiSummary.checkedOut
+      : items.filter((i) => Boolean(i.checkOutTime)).length;
+
+    return {
+      totalEmployees,
+      checkedIn,
+      onTime,
+      late,
+      notCheckedIn,
+      checkedOut,
+    };
+  },
+
+  /**
+   * Lọc danh sách chấm công kết hợp đa điều kiện: Tìm kiếm, Phòng ban và Trạng thái
+   * 
+   * @param {Array} items
+   * @param {object} options
+   * @param {string} [options.search='']
+   * @param {string|number} [options.departmentId='all']
+   * @param {string} [options.status='all']
+   * @returns {Array} Danh sách đã lọc
+   */
+  filterAttendanceList(items = [], { search = '', departmentId = 'all', status = 'all' } = {}) {
+    if (!Array.isArray(items)) return [];
+
+    const searchKeyword = String(search || '').trim().toLowerCase();
+
+    return items.filter((item) => {
+      // 1. Lọc theo từ khóa tìm kiếm (Họ tên hoặc Mã nhân viên)
+      if (searchKeyword) {
+        const nameMatch = item.fullName && item.fullName.toLowerCase().includes(searchKeyword);
+        const codeMatch = item.employeeCode && item.employeeCode.toLowerCase().includes(searchKeyword);
+        if (!nameMatch && !codeMatch) {
+          return false;
+        }
+      }
+
+      // 2. Lọc theo phòng ban
+      if (departmentId && departmentId !== 'all') {
+        if (Number(item.departmentId) !== Number(departmentId)) {
+          return false;
+        }
+      }
+
+      // 3. Lọc theo trạng thái chấm công
+      if (status && status !== 'all') {
+        const hasCheckIn = Boolean(item.checkInTime);
+        const hasCheckOut = Boolean(item.checkOutTime);
+        const isLate = item.status === 'LATE';
+
+        switch (status) {
+          case 'present': // Đã có mặt (bao gồm cả đúng giờ và đi muộn)
+            if (!hasCheckIn) return false;
+            break;
+          case 'ontime': // Đúng giờ
+            if (!hasCheckIn || isLate) return false;
+            break;
+          case 'late': // Đi muộn
+            if (!isLate) return false;
+            break;
+          case 'not_checked_in': // Chưa check-in
+            if (hasCheckIn) return false;
+            break;
+          case 'checked_out': // Đã check-out
+            if (!hasCheckOut) return false;
+            break;
+          default:
+            break;
+        }
+      }
+
+      return true;
+    });
+  },
+
+  /**
+   * Phân trang danh sách chấm công
+   * 
+   * @param {Array} items
+   * @param {number} [page=1]
+   * @param {number} [limit=10]
+   * @returns {object} { page, limit, total, totalPages, items, startIndex, endIndex }
+   */
+  paginateAttendanceList(items = [], page = 1, limit = 10) {
+    if (!Array.isArray(items)) {
+      return { page: 1, limit: 10, total: 0, totalPages: 1, items: [], startIndex: 0, endIndex: 0 };
+    }
+
+    const total = items.length;
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = Math.max(1, Number(limit) || 10);
+    const totalPages = Math.ceil(total / limitNum) || 1;
+    const validPage = Math.min(pageNum, totalPages);
+
+    const startIndex = (validPage - 1) * limitNum;
+    const endIndex = Math.min(startIndex + limitNum, total);
+    const pageItems = items.slice(startIndex, endIndex);
+
+    return {
+      page: validPage,
+      limit: limitNum,
+      total,
+      totalPages,
+      items: pageItems,
+      startIndex,
+      endIndex,
+    };
   },
 };
 

@@ -100,8 +100,8 @@ export const NAVIGATION_SECTIONS = [
         title: 'Chấm công',
         path: '/attendances',
         icon: `<svg viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="m9 16 2 2 4-4"/></svg>`,
-        // Admin, HR xem toàn bộ; Employee xem chấm công cá nhân
-        allowedRoles: [ROLES.ADMIN, ROLES.HR_MANAGER, ROLES.EMPLOYEE],
+        // Chỉ ADMIN và HR_MANAGER quản trị bảng chấm công công ty. Nhân viên chấm công trọn gói tại Dashboard
+        allowedRoles: [ROLES.ADMIN, ROLES.HR_MANAGER],
       },
     ],
   },

@@ -51,7 +51,8 @@ export const routes = [
     renderLayout: renderAppLayout,
     initLayoutEvents: initAppLayoutEvents,
     component: AttendancesPage,
-    allowedRoles: [ROLES.ADMIN, ROLES.HR_MANAGER, ROLES.EMPLOYEE],
+    // Bảng chấm công toàn công ty chỉ dành cho Admin và Quản lý nhân sự
+    allowedRoles: [ROLES.ADMIN, ROLES.HR_MANAGER],
   },
   {
     path: '/users',

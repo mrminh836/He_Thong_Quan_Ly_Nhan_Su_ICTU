@@ -8,6 +8,7 @@ import './styles/departments.css';
 import './styles/department-form-modal.css';
 import './styles/employees.css';
 import './styles/attendance-widget.css';
+import './styles/attendance-board.css';
 
 import { initApp } from './app.js';
 

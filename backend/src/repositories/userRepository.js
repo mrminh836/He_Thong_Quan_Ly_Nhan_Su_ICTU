@@ -23,13 +23,18 @@ export async function findByUsernameOrEmail(identifier) {
       u.last_login_at,
       u.created_at,
       u.updated_at,
+      e.employee_code,
       e.full_name,
       e.email,
+      e.phone,
       e.position,
       e.department_id,
+      d.department_name,
+      e.hire_date,
       e.employment_status
     FROM ` + '`users`' + ` u
     LEFT JOIN ` + '`employees`' + ` e ON u.employee_id = e.employee_id
+    LEFT JOIN ` + '`departments`' + ` d ON e.department_id = d.department_id
     WHERE u.username = ? OR e.email = ?
     LIMIT 1
   `;
@@ -58,13 +63,18 @@ export async function findById(userId) {
       u.last_login_at,
       u.created_at,
       u.updated_at,
+      e.employee_code,
       e.full_name,
       e.email,
+      e.phone,
       e.position,
       e.department_id,
+      d.department_name,
+      e.hire_date,
       e.employment_status
     FROM ` + '`users`' + ` u
     LEFT JOIN ` + '`employees`' + ` e ON u.employee_id = e.employee_id
+    LEFT JOIN ` + '`departments`' + ` d ON e.department_id = d.department_id
     WHERE u.user_id = ?
     LIMIT 1
   `;

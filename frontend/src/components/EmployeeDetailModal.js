@@ -1,6 +1,6 @@
 import { qs, sanitizeHTML } from '../utils/dom.js';
 import { employeeService } from '../services/employeeService.js';
-import { getCurrentUserRole } from '../services/authService.js';
+import { getCurrentUser, getCurrentUserRole } from '../services/authService.js';
 import { ROLES } from '../utils/rbac.js';
 import { showToast } from './Toast.js';
 
@@ -188,7 +188,27 @@ async function loadEmployeeProfile(employeeId, overlay) {
   if (!bodyEl) return;
 
   try {
-    const employee = await employeeService.getEmployeeById(employeeId);
+    const userRole = getCurrentUserRole();
+    let employee;
+
+    if (userRole === ROLES.EMPLOYEE) {
+      const currentUser = getCurrentUser() || {};
+      employee = {
+        employeeId: currentUser.employeeId || employeeId,
+        employeeCode: currentUser.employeeCode || `NV${String(currentUser.employeeId || employeeId || '001').padStart(3, '0')}`,
+        fullName: currentUser.fullName || currentUser.username || 'Nhân viên',
+        email: currentUser.email || '--',
+        phone: currentUser.phone || '--',
+        position: currentUser.position || 'Nhân viên',
+        departmentName: currentUser.departmentName || 'Phòng Kỹ thuật & CNTT',
+        departmentId: currentUser.departmentId || null,
+        employmentStatus: currentUser.employmentStatus || 'ACTIVE',
+        hireDate: currentUser.hireDate || null,
+        accountStatus: currentUser.accountStatus || 'Active',
+      };
+    } else {
+      employee = await employeeService.getEmployeeById(employeeId);
+    }
     currentEmployee = employee;
 
     renderEmployeeProfileContent(overlay, employee);
