@@ -30,7 +30,7 @@ services:
       # Named volume lưu trữ dữ liệu bền vững (không bị mất khi restart container)
       - mysql_data:/var/lib/mysql
       # Tự động thực thi kịch bản DDL khi khởi tạo database lần đầu
-      - ./database:/docker-entrypoint-initdb.d:ro
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       # Cổng 3308 trên máy host -> 3306 trong container (dành cho DBeaver/Navicat/MySQL Workbench)
       - "${DB_PORT:-3308}:3306"
