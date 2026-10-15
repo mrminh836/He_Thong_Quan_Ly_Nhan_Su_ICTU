@@ -6,6 +6,7 @@ import './styles/components.css';
 import './styles/pages.css';
 import './styles/departments.css';
 import './styles/department-form-modal.css';
+import './styles/employees.css';
 
 import { initApp } from './app.js';
 
