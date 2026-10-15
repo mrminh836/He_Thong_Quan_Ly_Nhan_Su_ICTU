@@ -1,0 +1,51 @@
+### ==============================================================================
+### BỘ KIỂM THỬ REST CLIENT - ATTENDANCE CHECK-IN (HRM ICTU)
+### Extension khuyến nghị: REST Client (Huachao Mao) trên VS Code
+### ==============================================================================
+
+@baseUrl = http://localhost:3005/api
+@contentType = application/json
+
+### 1. Đăng nhập với tài khoản Nhân viên (emp1)
+# @name loginEmployee
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "emp1",
+  "password": "Emp@123"
+}
+
+### 2. Trích xuất Token của Employee
+@empToken = {{loginEmployee.response.body.data.accessToken}}
+
+### 3. Thực hiện Check-in ca làm việc (Tự động xác định đúng giờ / đi muộn theo 08:30)
+POST {{baseUrl}}/attendances/check-in
+Authorization: Bearer {{empToken}}
+Content-Type: {{contentType}}
+
+{}
+
+### 4. Thử Check-in lần 2 trong cùng ngày -> Kỳ vọng HTTP 409 Conflict
+POST {{baseUrl}}/attendances/check-in
+Authorization: Bearer {{empToken}}
+Content-Type: {{contentType}}
+
+{}
+
+### 5. Check-in không có JWT Token -> Kỳ vọng HTTP 401 Unauthorized
+POST {{baseUrl}}/attendances/check-in
+Content-Type: {{contentType}}
+
+{}
+
+### 6. Thử gửi dữ liệu giả mạo (employeeId, checkInTime, status) -> Phải bị Backend phớt lờ
+POST {{baseUrl}}/attendances/check-in
+Authorization: Bearer {{empToken}}
+Content-Type: {{contentType}}
+
+{
+  "employeeId": 9999,
+  "checkInTime": "2026-10-16T08:00:00+07:00",
+  "status": "ON_TIME"
+}
