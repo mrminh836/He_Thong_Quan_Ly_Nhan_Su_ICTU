@@ -640,3 +640,222 @@
   height: 12px;
   stroke: currentColor;
 }
+
+/* ------------------------------------------------------------------------------
+   8. EMPLOYEE FORM MODAL STYLES (Add Employee Modal)
+   ------------------------------------------------------------------------------ */
+.emp-form-modal-container {
+  max-width: 680px;
+  width: 100%;
+}
+
+.emp-form-modal-body {
+  padding: var(--space-5) var(--space-6);
+  max-height: calc(85vh - 130px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.emp-form-section {
+  background-color: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.emp-form-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  margin-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.emp-form-section-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid #bfdbfe;
+}
+
+.emp-form-section-title {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-main);
+}
+
+.emp-form-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+
+.emp-form-grid-2col:first-of-type {
+  margin-top: 0;
+}
+
+.emp-form-grid-3col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+@media (max-width: 640px) {
+  .emp-form-grid-2col,
+  .emp-form-grid-3col {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .emp-form-modal-body {
+    padding: var(--space-4);
+  }
+}
+
+/* ------------------------------------------------------------------------------
+   9. ENHANCED EMPLOYEE PROFILE DETAIL MODAL STYLES & CCCD TOGGLE
+   ------------------------------------------------------------------------------ */
+.emp-detail-modal-container {
+  max-width: 640px;
+  width: 100%;
+}
+
+.emp-detail-modal-body {
+  padding: var(--space-5) var(--space-6);
+  max-height: calc(85vh - 130px);
+  overflow-y: auto;
+}
+
+.emp-profile-section {
+  background-color: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.emp-profile-section-title {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: var(--space-3);
+  margin-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.emp-cccd-section {
+  background-color: #f8fafc;
+  border-color: #bae6fd;
+}
+
+.emp-cccd-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.emp-cccd-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.emp-cccd-label {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: #0369a1;
+}
+
+.emp-cccd-actions-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.emp-btn-toggle-cccd {
+  padding: 0.25rem 0.65rem;
+  font-size: 11px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.emp-btn-toggle-cccd:hover {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.emp-cccd-value-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: #ffffff;
+  transition: all var(--transition-fast);
+}
+
+.emp-cccd-value-box.is-visible {
+  background-color: #f0f9ff;
+  border-color: #7dd3fc;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+.emp-cccd-value-box.is-masked {
+  background-color: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.emp-cccd-number-text {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #0f172a;
+}
+
+.emp-cccd-value-box.is-masked .emp-cccd-number-text {
+  color: #475569;
+  letter-spacing: 0.12em;
+}
+
+.emp-cccd-denied-box {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background-color: #fffbeb;
+  border: 1px dashed #fde68a;
+  border-radius: var(--radius-md);
+}
+
+.emp-cccd-denied-text {
+  font-size: var(--font-size-xs);
+  color: #92400e;
+  line-height: 1.4;
+}
+
