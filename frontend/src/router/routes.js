@@ -8,6 +8,7 @@ import NotFoundPage from '../pages/NotFoundPage.js';
 
 import { renderAppLayout, initAppLayoutEvents } from '../layouts/AppLayout.js';
 import { renderAuthLayout, initAuthLayoutEvents } from '../layouts/AuthLayout.js';
+import { ROLES } from '../utils/rbac.js';
 
 export const routes = [
   {
@@ -21,6 +22,7 @@ export const routes = [
     renderLayout: renderAppLayout,
     initLayoutEvents: initAppLayoutEvents,
     component: DashboardPage,
+    allowedRoles: [ROLES.ADMIN, ROLES.HR_MANAGER, ROLES.EMPLOYEE],
   },
   {
     path: '/departments',
@@ -29,6 +31,8 @@ export const routes = [
     renderLayout: renderAppLayout,
     initLayoutEvents: initAppLayoutEvents,
     component: DepartmentsPage,
+    // Chỉ Admin và Quản lý nhân sự có quyền truy cập
+    allowedRoles: [ROLES.ADMIN, ROLES.HR_MANAGER],
   },
   {
     path: '/employees',
@@ -37,6 +41,8 @@ export const routes = [
     renderLayout: renderAppLayout,
     initLayoutEvents: initAppLayoutEvents,
     component: EmployeesPage,
+    // Chỉ Admin và Quản lý nhân sự có quyền truy cập
+    allowedRoles: [ROLES.ADMIN, ROLES.HR_MANAGER],
   },
   {
     path: '/attendances',
@@ -45,6 +51,8 @@ export const routes = [
     renderLayout: renderAppLayout,
     initLayoutEvents: initAppLayoutEvents,
     component: AttendancesPage,
+    // Bảng chấm công toàn công ty chỉ dành cho Admin và Quản lý nhân sự
+    allowedRoles: [ROLES.ADMIN, ROLES.HR_MANAGER],
   },
   {
     path: '/users',
@@ -53,7 +61,10 @@ export const routes = [
     renderLayout: renderAppLayout,
     initLayoutEvents: initAppLayoutEvents,
     component: UsersPage,
+    // Chỉ Quản trị viên hệ thống có quyền truy cập
+    allowedRoles: [ROLES.ADMIN],
   },
+
   {
     path: '/login',
     title: 'Đăng nhập - HRM ICTU',

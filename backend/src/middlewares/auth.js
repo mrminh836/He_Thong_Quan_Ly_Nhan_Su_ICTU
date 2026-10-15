@@ -99,6 +99,7 @@ export async function authenticateToken(req, res, next) {
 
     // 8. Gắn thông tin người dùng an toàn vào đối tượng Request
     req.user = {
+      sub: user.user_id,
       id: user.user_id,
       userId: user.user_id,
       username: user.username,

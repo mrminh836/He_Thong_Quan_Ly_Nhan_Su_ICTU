@@ -201,6 +201,49 @@
   text-transform: uppercase;
 }
 
+/* Vai trò RBAC (Role Badges) */
+.badge-purple {
+  background-color: #f3e8ff;
+  color: #7e22ce;
+  border: 1px solid #d8b4fe;
+}
+
+.badge-blue {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.badge-gray {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+/* Huy hiệu hiển thị trong danh mục Menu (Sidebar Nav Item Badge) */
+.nav-item-badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+}
+
+.nav-item-badge.badge-admin {
+  background-color: rgba(168, 85, 247, 0.2);
+  color: #d8b4fe;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
+.nav-item-badge.badge-hr {
+  background-color: rgba(56, 189, 248, 0.2);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+
 /* ------------------------------------------------------------------------------
    DATA TABLES
    ------------------------------------------------------------------------------ */
@@ -272,6 +315,8 @@
   width: 16px;
   height: 16px;
   stroke: var(--color-text-muted);
+  stroke-width: 2;
+  fill: none;
   pointer-events: none;
 }
 

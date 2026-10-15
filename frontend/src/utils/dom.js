@@ -2,11 +2,13 @@
  * Tiện ích thao tác DOM an toàn và tối ưu (DOM Utilities)
  */
 
-export function qs(selector, scope = document) {
+export function qs(selector, scope = typeof document !== 'undefined' ? document : null) {
+  if (!scope || typeof scope.querySelector !== 'function') return null;
   return scope.querySelector(selector);
 }
 
-export function qsa(selector, scope = document) {
+export function qsa(selector, scope = typeof document !== 'undefined' ? document : null) {
+  if (!scope || typeof scope.querySelectorAll !== 'function') return [];
   return Array.from(scope.querySelectorAll(selector));
 }
 

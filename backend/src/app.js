@@ -8,6 +8,9 @@ import apiRoutes from './routes/index.js';
 
 const app = express();
 
+// Kích hoạt trust proxy khi chạy sau Nginx Reverse Proxy
+app.set('trust proxy', true);
+
 // 1. Cấu hình bảo mật CORS theo môi trường
 app.use(
   cors({
@@ -18,10 +21,11 @@ app.use(
   })
 );
 
-// 2. Thêm Security Headers cơ bản
+// 2. Bảo mật HTTP Headers & Vô hiệu hóa X-Powered-By
+app.disable('x-powered-by');
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   next();
 });

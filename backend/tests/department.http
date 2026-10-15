@@ -1,0 +1,160 @@
+### ==============================================================================
+### BỘ KIỂM THỬ REST CLIENT - CRUD PHÒNG BAN (DEPARTMENT API) - HRM ICTU
+### Extension khuyến nghị: REST Client (Huachao Mao) trên VS Code / Antigravity IDE
+### ==============================================================================
+
+@baseUrl = http://localhost:3005/api
+@contentType = application/json
+
+### 1. Đăng nhập với tài khoản Admin để lấy Access Token
+# @name adminLogin
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "admin",
+  "password": "Admin@123"
+}
+
+### Lưu token Admin
+@adminToken = {{adminLogin.response.body.data.accessToken}}
+
+### 2. Đăng nhập với tài khoản HR Manager để lấy Access Token
+# @name hrLogin
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "hr",
+  "password": "Hr@123"
+}
+
+### Lưu token HR
+@hrToken = {{hrLogin.response.body.data.accessToken}}
+
+### 3. Đăng nhập với tài khoản Employee để lấy Access Token
+# @name empLogin
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "emp1",
+  "password": "Emp@123"
+}
+
+### Lưu token Employee
+@empToken = {{empLogin.response.body.data.accessToken}}
+
+
+### ==============================================================================
+### 4. GET /api/departments - Lấy danh sách phòng ban (Có phân trang, tìm kiếm)
+### Quyền: ADMIN, HR_MANAGER, EMPLOYEE
+### ==============================================================================
+GET {{baseUrl}}/departments?page=1&limit=10&search=&sortBy=department_id&sortOrder=ASC
+Authorization: Bearer {{adminToken}}
+
+### ==============================================================================
+### 5. GET /api/departments/:id - Lấy chi tiết phòng ban theo ID
+### Quyền: ADMIN, HR_MANAGER, EMPLOYEE
+### ==============================================================================
+GET {{baseUrl}}/departments/1
+Authorization: Bearer {{adminToken}}
+
+### ==============================================================================
+### 6. POST /api/departments - Tạo phòng ban mới (Admin / HR)
+### ==============================================================================
+# @name createDept
+POST {{baseUrl}}/departments
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "departmentName": "Phòng Công nghệ thông tin",
+  "departmentCode": "PB-CNTT",
+  "location": "Tầng 4 - Tòa nhà Công nghệ",
+  "phone": "0208-3846-999",
+  "description": "Phụ trách hạ tầng và chuyển đổi số doanh nghiệp",
+  "isActive": true
+}
+
+### Lưu ID vừa tạo
+@createdDeptId = {{createDept.response.body.data.id}}
+
+### ==============================================================================
+### 7. POST /api/departments - Thử tạo trùng tên (409 Conflict)
+### ==============================================================================
+POST {{baseUrl}}/departments
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "departmentName": "Phòng Công nghệ thông tin",
+  "description": "Tạo trùng tên sẽ bị chặn"
+}
+
+### ==============================================================================
+### 8. PUT /api/departments/:id - Cập nhật thông tin phòng ban
+### ==============================================================================
+PUT {{baseUrl}}/departments/{{createdDeptId}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "departmentName": "Phòng Chuyển đổi số & CNTT",
+  "location": "Tầng 5 - Tòa nhà Công nghệ"
+}
+
+### ==============================================================================
+### 9. DELETE /api/departments/:id - Xóa phòng ban rỗng (Chỉ ADMIN)
+### ==============================================================================
+DELETE {{baseUrl}}/departments/{{createdDeptId}}
+Authorization: Bearer {{adminToken}}
+
+### ==============================================================================
+### 10. DELETE /api/departments/1 - Thử xóa phòng ban đang có nhân viên (409 Conflict)
+### ==============================================================================
+DELETE {{baseUrl}}/departments/1
+Authorization: Bearer {{adminToken}}
+
+### ==============================================================================
+### 11. RBAC Check: Employee cố tạo phòng ban (403 Forbidden)
+### ==============================================================================
+POST {{baseUrl}}/departments
+Content-Type: {{contentType}}
+Authorization: Bearer {{empToken}}
+
+{
+  "departmentName": "Phòng Ban Của Hacker"
+}
+
+### ==============================================================================
+### 12. RBAC Check: HR Manager cố xóa phòng ban (403 Forbidden)
+### ==============================================================================
+DELETE {{baseUrl}}/departments/1
+Authorization: Bearer {{hrToken}}
+
+### ==============================================================================
+### 13. GET /api/departments/statistics - Thống kê số lượng nhân viên hiện tại theo phòng ban
+### Quyền: ADMIN, HR_MANAGER
+### ==============================================================================
+GET {{baseUrl}}/departments/statistics
+Authorization: Bearer {{adminToken}}
+
+### ==============================================================================
+### 14. GET /api/departments/statistics - Sắp xếp theo tên phòng ban (A-Z)
+### ==============================================================================
+GET {{baseUrl}}/departments/statistics?sortBy=department_name&sortOrder=ASC
+Authorization: Bearer {{hrToken}}
+
+### ==============================================================================
+### 15. GET /api/departments/statistics - Sắp xếp theo số nhân viên giảm dần
+### ==============================================================================
+GET {{baseUrl}}/departments/statistics?sortBy=employee_count&sortOrder=DESC
+Authorization: Bearer {{adminToken}}
+
+### ==============================================================================
+### 16. RBAC Check: Employee gọi API thống kê phòng ban (403 Forbidden)
+### ==============================================================================
+GET {{baseUrl}}/departments/statistics
+Authorization: Bearer {{empToken}}
+

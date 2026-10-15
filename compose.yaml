@@ -9,11 +9,11 @@
 
 services:
   # ----------------------------------------------------------------------------
-  # SERVICE 1: MySQL 8.0 Database (db)
+  # SERVICE 1: MySQL 8.0 Database (mysql-db)
   # ----------------------------------------------------------------------------
-  db:
+  mysql-db:
     image: mysql:8.0
-    container_name: hrm-ictu-mysql
+    container_name: mysql-db
     restart: unless-stopped
     command: >
       --default-authentication-plugin=mysql_native_password
@@ -21,6 +21,13 @@ services:
       --collation-server=utf8mb4_unicode_ci
       --general_log=1
       --general_log_file=/var/lib/mysql/mysql_general.log
+      --log_output=FILE
+      --loose-validate_password.policy=MEDIUM
+      --loose-validate_password.length=8
+      --loose-validate_password.mixed_case_count=1
+      --loose-validate_password.number_count=1
+      --loose-validate_password.special_char_count=1
+      --loose-validate_password.check_user_name=ON
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-RootPassword@2026}
       MYSQL_DATABASE: ${DB_NAME:-hrm_db}
@@ -30,7 +37,9 @@ services:
       # Named volume lưu trữ dữ liệu bền vững (không bị mất khi restart container)
       - mysql_data:/var/lib/mysql
       # Tự động thực thi kịch bản DDL khi khởi tạo database lần đầu
-      - ./database:/docker-entrypoint-initdb.d:ro
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      # Cấu hình bảo mật Lab 6 (General Query Log & Password Policy MEDIUM)
+      - ./database/conf.d:/etc/mysql/conf.d:ro
     ports:
       # Cổng 3308 trên máy host -> 3306 trong container (dành cho DBeaver/Navicat/MySQL Workbench)
       - "${DB_PORT:-3308}:3306"
@@ -41,7 +50,10 @@ services:
       retries: 5
       start_period: 15s
     networks:
-      - hrm-network
+      hrm-network:
+        aliases:
+          - mysql-db
+          - db
 
   # ----------------------------------------------------------------------------
   # SERVICE 2: Node.js Express Backend API (backend)
@@ -59,17 +71,19 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: ${PORT:-3005}
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
-      # Kết nối nội bộ qua service hostname 'db' cổng 3306
-      DB_HOST: db
+      # Kết nối nội bộ qua service hostname 'mysql-db' (hoặc alias 'db') cổng 3306
+      DB_HOST: mysql-db
       DB_PORT: 3306
       DB_NAME: ${DB_NAME:-hrm_db}
       DB_USER: ${DB_USER:-app_user}
       DB_PASSWORD: ${DB_PASSWORD:-AppUser@Pass2026}
       DB_CONNECTION_LIMIT: ${DB_CONNECTION_LIMIT:-10}
       DB_AES_SECRET_KEY: ${DB_AES_SECRET_KEY:-ICTU_HRM_SECRET_KEY_2026_AES256}
+      CCCD_ENCRYPTION_KEY: ${CCCD_ENCRYPTION_KEY:-${DB_AES_SECRET_KEY:-ICTU_HRM_SECRET_KEY_2026_AES256}}
+      CCCD_HMAC_SECRET: ${CCCD_HMAC_SECRET:-ICTU_HRM_CCCD_HMAC_SECRET_2026_KEY}
       JWT_SECRET: ${JWT_SECRET:-ICTU_HRM_JWT_SECRET_KEY_2026_SUPER_SECURE}
     depends_on:
-      db:
+      mysql-db:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${PORT:-3005}/api/health"]
@@ -81,7 +95,7 @@ services:
       - hrm-network
 
   # ----------------------------------------------------------------------------
-  # SERVICE 3: Frontend SPA Nginx (frontend)
+  # SERVICE 3: Frontend SPA Nginx (frontend / hrm-app)
   # ----------------------------------------------------------------------------
   frontend:
     build:
@@ -90,7 +104,7 @@ services:
     container_name: hrm-ictu-frontend
     restart: unless-stopped
     ports:
-      # Cổng 5173 trên máy host -> cổng 80 Nginx trong container
+      # Cổng 5173 trên máy host -> cổng 80 Nginx trong container (Direct Dev access)
       - "${FRONTEND_PORT:-5173}:80"
     environment:
       NODE_ENV: production
@@ -99,6 +113,68 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:80/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      hrm-network:
+        aliases:
+          - hrm-app
+          - frontend
+
+  # ----------------------------------------------------------------------------
+  # SERVICE 4: phpMyAdmin Web Database Manager (phpmyadmin)
+  # ----------------------------------------------------------------------------
+  phpmyadmin:
+    image: phpmyadmin:5.2.1
+    container_name: phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql-db
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 0
+      UPLOAD_LIMIT: 64M
+    ports:
+      - "${PMA_PORT:-8080}:80"
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -s http://localhost/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - hrm-network
+
+  # ----------------------------------------------------------------------------
+  # SERVICE 5: Nginx Reverse Proxy (HTTPS hrm.local Gateway)
+  # ----------------------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: hrm-nginx
+    restart: unless-stopped
+    ports:
+      # Port 80: HTTP Redirect -> 301 HTTPS
+      - "80:80"
+      # Port 443: HTTPS Reverse Proxy cho hrm.local
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certs/hrm.local.crt:/etc/nginx/certs/hrm.local.crt:ro
+      - ./certs/hrm.local.key:/etc/nginx/certs/hrm.local.key:ro
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+      phpmyadmin:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -k -s -o /dev/null https://localhost:443/ || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3

@@ -1,0 +1,31 @@
+# ==============================================================================
+# OPENSSL CONFIGURATION FOR LOCAL HRM DEVELOPMENT & LAB
+# Domain: hrm.local
+# Algorithm: RSA 2048-bit | Hash: SHA-256 | X.509 v3 Extensions
+# ==============================================================================
+
+[req]
+default_bits        = 2048
+prompt              = no
+default_md          = sha256
+distinguished_name  = dn
+x509_extensions     = v3_req
+
+[dn]
+C                   = VN
+ST                  = Thai Nguyen
+L                   = Thai Nguyen
+O                   = ICTU HRM System
+OU                  = DevSecOps Security Lab
+CN                  = hrm.local
+
+[v3_req]
+subjectAltName      = @alt_names
+basicConstraints    = critical, CA:FALSE
+keyUsage            = critical, digitalSignature, keyEncipherment
+extendedKeyUsage    = serverAuth
+
+[alt_names]
+DNS.1               = hrm.local
+DNS.2               = localhost
+IP.1                = 127.0.0.1

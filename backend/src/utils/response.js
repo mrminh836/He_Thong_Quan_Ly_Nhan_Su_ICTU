@@ -10,6 +10,7 @@ export function successResponse(res, {
   data = null,
   statusCode = 200,
   meta = null,
+  pagination = null,
 } = {}) {
   const payload = {
     success: true,
@@ -19,6 +20,10 @@ export function successResponse(res, {
     data,
     timestamp: new Date().toISOString(),
   };
+
+  if (pagination) {
+    payload.pagination = pagination;
+  }
 
   if (meta) {
     payload.meta = meta;
@@ -38,6 +43,7 @@ export function errorResponse(res, {
     status: 'error',
     statusCode,
     errorCode,
+    code: errorCode,
     message,
     timestamp: new Date().toISOString(),
   };

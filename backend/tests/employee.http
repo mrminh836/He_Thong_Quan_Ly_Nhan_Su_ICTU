@@ -1,0 +1,139 @@
+### ==============================================================================
+### BỘ KIỂM THỬ REST CLIENT - EMPLOYEE API & AES_DECRYPT CCCD (HRM ICTU)
+### Endpoint: GET /api/employees/:id
+### Extension khuyến nghị: REST Client (Huachao Mao) trên VS Code
+### ==============================================================================
+
+@baseUrl = http://localhost:3005/api
+@contentType = application/json
+
+### 1. Đăng nhập ADMIN để lấy JWT Access Token
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "admin",
+  "password": "Admin@123"
+}
+
+### 2. Trích xuất Admin Token
+@adminToken = {{loginAdmin.response.body.data.accessToken}}
+
+### 3. Đăng nhập HR_MANAGER để lấy Token
+# @name loginHR
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "hr",
+  "password": "Hr@123"
+}
+
+### 4. Trích xuất HR Token
+@hrToken = {{loginHR.response.body.data.accessToken}}
+
+### 5. Đăng nhập EMPLOYEE để lấy Token (Kiểm tra chặn quyền 403)
+# @name loginEmp
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "emp1",
+  "password": "Emp@123"
+}
+
+### 6. Trích xuất Employee Token
+@empToken = {{loginEmp.response.body.data.accessToken}}
+
+### -----------------------------------------------------------------------------
+### KIỂM THỬ XEM CHI TIẾT VÀ GIẢI MÃ SỐ CCCD
+### -----------------------------------------------------------------------------
+
+### Case 1: ADMIN lấy chi tiết nhân sự thành công kèm giải mã CCCD (200 OK)
+GET {{baseUrl}}/employees/1
+Authorization: Bearer {{adminToken}}
+
+### Case 2: HR_MANAGER lấy chi tiết nhân sự thành công kèm giải mã CCCD (200 OK)
+GET {{baseUrl}}/employees/1
+Authorization: Bearer {{hrToken}}
+
+### Case 3: EMPLOYEE bị từ chối truy cập (403 Forbidden)
+GET {{baseUrl}}/employees/1
+Authorization: Bearer {{empToken}}
+
+### Case 4: Người chưa đăng nhập bị từ chối (401 Unauthorized)
+GET {{baseUrl}}/employees/1
+
+### Case 5: Token không hợp lệ / giả mạo (401 Unauthorized)
+GET {{baseUrl}}/employees/1
+Authorization: Bearer TokenGiaMaoKhongHopLe99999
+
+### Case 6: ID không hợp lệ - Chuỗi ký tự (400 Bad Request)
+GET {{baseUrl}}/employees/abc
+Authorization: Bearer {{adminToken}}
+
+### Case 7: ID không hợp lệ - Số âm hoặc 0 (400 Bad Request)
+GET {{baseUrl}}/employees/-5
+Authorization: Bearer {{adminToken}}
+
+### Case 8: Nhân viên không tồn tại trong hệ thống (404 Not Found)
+GET {{baseUrl}}/employees/99999
+Authorization: Bearer {{adminToken}}
+
+### Case 9: Tấn công SQL Injection qua tham số ID (400 Bad Request - An toàn)
+GET {{baseUrl}}/employees/1%20OR%201=1
+Authorization: Bearer {{adminToken}}
+
+### -----------------------------------------------------------------------------
+### KIỂM THỬ DANH SÁCH NHÂN VIÊN, PHÂN TRANG & LỌC THEO PHÒNG BAN
+### Endpoint: GET /api/employees
+### -----------------------------------------------------------------------------
+
+### Case 10: Lấy danh sách mặc định (page=1, limit=10)
+GET {{baseUrl}}/employees
+Authorization: Bearer {{adminToken}}
+
+### Case 11: Phân trang trang 2 với limit=2
+GET {{baseUrl}}/employees?page=2&limit=2
+Authorization: Bearer {{adminToken}}
+
+### Case 12: Lọc nhân viên theo phòng ban (departmentId=1)
+GET {{baseUrl}}/employees?departmentId=1
+Authorization: Bearer {{adminToken}}
+
+### Case 13: Lọc theo phòng ban kết hợp tìm kiếm (departmentId=1&search=Minh)
+GET {{baseUrl}}/employees?departmentId=1&search=Minh
+Authorization: Bearer {{adminToken}}
+
+### Case 14: Tìm kiếm theo mã nhân viên (search=NV001)
+GET {{baseUrl}}/employees?search=NV001
+Authorization: Bearer {{adminToken}}
+
+### Case 15: HR_MANAGER lấy danh sách nhân viên thành công (200 OK)
+GET {{baseUrl}}/employees
+Authorization: Bearer {{hrToken}}
+
+### Case 16: EMPLOYEE bị từ chối truy cập danh sách nhân viên (403 Forbidden)
+GET {{baseUrl}}/employees
+Authorization: Bearer {{empToken}}
+
+### Case 17: Không có token bị từ chối (401 Unauthorized)
+GET {{baseUrl}}/employees
+
+### Case 18: Tham số page không hợp lệ (400 Bad Request)
+GET {{baseUrl}}/employees?page=0
+Authorization: Bearer {{adminToken}}
+
+### Case 19: Tham số limit vượt quá 100 (400 Bad Request)
+GET {{baseUrl}}/employees?limit=101
+Authorization: Bearer {{adminToken}}
+
+### Case 20: Lọc theo phòng ban không tồn tại (404 Not Found)
+GET {{baseUrl}}/employees?departmentId=99999
+Authorization: Bearer {{adminToken}}
+
+### Case 21: Thử tấn công SQL Injection qua tham số departmentId (400 Bad Request)
+GET {{baseUrl}}/employees?departmentId=1%20OR%201=1
+Authorization: Bearer {{adminToken}}
+

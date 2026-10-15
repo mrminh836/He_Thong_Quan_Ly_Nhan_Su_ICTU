@@ -75,9 +75,16 @@ export async function login({ username, password }) {
     username: user.username,
     role: user.role,
     employeeId: user.employee_id || null,
+    employeeCode: user.employee_code || null,
     fullName: user.full_name || null,
     email: user.email || null,
+    phone: user.phone || null,
     position: user.position || null,
+    departmentId: user.department_id || null,
+    departmentName: user.department_name || null,
+    hireDate: user.hire_date || null,
+    employmentStatus: user.employment_status || null,
+    accountStatus: user.account_status || 'Active',
   };
 
   return {
@@ -109,11 +116,16 @@ export async function getProfile(userId) {
     username: user.username,
     role: user.role,
     employeeId: user.employee_id || null,
+    employeeCode: user.employee_code || null,
     accountStatus: user.account_status,
     fullName: user.full_name || null,
     email: user.email || null,
+    phone: user.phone || null,
     position: user.position || null,
     departmentId: user.department_id || null,
+    departmentName: user.department_name || null,
+    hireDate: user.hire_date || null,
+    employmentStatus: user.employment_status || null,
     lastLoginAt: user.last_login_at,
     createdAt: user.created_at,
   };

@@ -1,8 +1,10 @@
 import { routes } from './routes.js';
 import { qs, qsa } from '../utils/dom.js';
-import { isAuthenticated } from '../services/authService.js';
+import { isAuthenticated, getCurrentUserRole } from '../services/authService.js';
+import { showToast } from '../components/Toast.js';
 
 let currentLayoutType = null;
+let currentComponent = null;
 
 /**
  * Tìm route tương ứng với URL hiện tại
@@ -46,7 +48,7 @@ export async function handleRouteChange() {
   }
 
   // ---------------------------------------------------------------------------
-  // ROUTE GUARD: Kiểm tra quyền truy cập theo trạng thái đăng nhập
+  // ROUTE GUARD: Kiểm tra quyền truy cập theo trạng thái đăng nhập & RBAC
   // ---------------------------------------------------------------------------
   const authenticated = isAuthenticated();
 
@@ -62,11 +64,31 @@ export async function handleRouteChange() {
     return;
   }
 
+  // 3. Phân quyền RBAC: Đã đăng nhập nhưng vai trò không có quyền truy cập route này
+  if (authenticated && Array.isArray(route.allowedRoles) && route.allowedRoles.length > 0) {
+    const userRole = getCurrentUserRole();
+    if (!route.allowedRoles.includes(userRole)) {
+      showToast('Bạn không có quyền truy cập vào chức năng này.', 'warning');
+      navigateTo('/dashboard');
+      return;
+    }
+  }
+
   // Cập nhật tiêu đề trang
   document.title = route.title || 'HRM - Hệ Thống Quản Lý Nhân Sự ICTU';
 
   const appEl = qs('#app');
   if (!appEl) return;
+
+  // Dọn dẹp component trang trước (nếu có hàm destroy, vd: clearInterval đồng hồ)
+  if (currentComponent && typeof currentComponent.destroy === 'function') {
+    try {
+      currentComponent.destroy();
+    } catch (e) {
+      console.warn('[Router] Lỗi khi dọn dẹp component trang cũ:', e);
+    }
+  }
+  currentComponent = route.component;
 
   const pageContentHtml = route.component.render();
 
