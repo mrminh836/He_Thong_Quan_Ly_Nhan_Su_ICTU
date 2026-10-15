@@ -2,7 +2,8 @@ import { renderPageHeader } from '../components/PageHeader.js';
 import { api } from '../services/api.js';
 import { showToast } from '../components/Toast.js';
 import { qs } from '../utils/dom.js';
-import { renderAttendanceWidgetMarkup, initAttendanceWidgetEvents, destroyAttendanceWidget } from '../components/AttendanceWidget.js';
+import { renderAttendanceWidgetMarkup, initAttendanceWidgetEvents, destroyAttendanceWidget, formatTimeDisplay } from '../components/AttendanceWidget.js';
+import { attendanceService } from '../services/attendanceService.js';
 
 export function renderDashboardPage() {
   const headerHtml = renderPageHeader({
@@ -63,10 +64,9 @@ export function renderDashboardPage() {
       <div class="stat-card">
         <div class="stat-info">
           <span class="stat-label">Đi làm đúng giờ hôm nay</span>
-          <span class="stat-value">3 / 5</span>
+          <span class="stat-value" id="dash-ontime-val">-- / --</span>
           <span class="stat-meta">
-            <span class="badge badge-success">60% Đúng giờ</span>
-            <span class="badge badge-mock">Mock data</span>
+            <span class="badge badge-success" id="dash-ontime-pct">Đang tải...</span>
           </span>
         </div>
         <div class="stat-icon icon-green">
@@ -77,11 +77,10 @@ export function renderDashboardPage() {
       <!-- Card 4 -->
       <div class="stat-card">
         <div class="stat-info">
-          <span class="stat-label">Đi muộn / Về sớm</span>
-          <span class="stat-value">2</span>
+          <span class="stat-label">Đi muộn hôm nay</span>
+          <span class="stat-value" id="dash-late-val">--</span>
           <span class="stat-meta">
-            <span class="badge badge-warning">1 muộn • 1 về sớm</span>
-            <span class="badge badge-mock">Mock data</span>
+            <span class="badge badge-warning" id="dash-late-badge">Ghi nhận sau 08:30</span>
           </span>
         </div>
         <div class="stat-icon icon-orange">
@@ -95,45 +94,14 @@ export function renderDashboardPage() {
       <!-- Cột 1: Danh sách chấm công gần nhất -->
       <div class="card">
         <div class="card-header">
-          <h2 class="card-title">Nhật ký chấm công gần đây</h2>
-          <span class="badge badge-mock">Dữ liệu mẫu</span>
+          <h2 class="card-title">Nhật ký chấm công hôm nay</h2>
+          <a href="/attendances" class="badge badge-blue" data-link style="text-decoration: none;">Xem bảng đầy đủ →</a>
         </div>
         <div class="card-body">
-          <div class="activity-list">
-            <div class="activity-item">
-              <div class="activity-avatar">QM</div>
-              <div class="activity-content">
-                <div class="activity-title">Đỗ Quang Minh (Trưởng phòng Kỹ thuật)</div>
-                <div class="activity-time">Check-in lúc 08:15:00 • PB Kỹ thuật & Công nghệ</div>
-              </div>
-              <span class="badge badge-success">Đúng giờ</span>
-            </div>
-
-            <div class="activity-item">
-              <div class="activity-avatar">TH</div>
-              <div class="activity-content">
-                <div class="activity-title">Nguyễn Thị Thu Hà (Trưởng phòng Nhân sự)</div>
-                <div class="activity-time">Check-in lúc 08:25:00 • PB Nhân sự & Hành chính</div>
-              </div>
-              <span class="badge badge-success">Đúng giờ</span>
-            </div>
-
-            <div class="activity-item">
-              <div class="activity-avatar">VN</div>
-              <div class="activity-content">
-                <div class="activity-title">Trần Văn Nam (Kỹ sư Phần mềm)</div>
-                <div class="activity-time">Check-in lúc 08:45:00 • Đi muộn 15 phút do kẹt xe</div>
-              </div>
-              <span class="badge badge-warning">Đi muộn</span>
-            </div>
-
-            <div class="activity-item">
-              <div class="activity-avatar">LM</div>
-              <div class="activity-content">
-                <div class="activity-title">Lê Thị Mai (Chuyên viên Kinh doanh)</div>
-                <div class="activity-time">Check-out lúc 16:45:00 • Xin phép về sớm 45 phút</div>
-              </div>
-              <span class="badge badge-danger">Về sớm</span>
+          <div class="activity-list" id="dash-activity-list">
+            <div class="loading-container" style="padding: 1rem 0;">
+              <div class="spinner"></div>
+              <span>Đang tải nhật ký chấm công hôm nay...</span>
             </div>
           </div>
         </div>
@@ -168,11 +136,80 @@ export function initDashboardPageEvents() {
       showToast('Đang cập nhật số liệu tổng quan...', 'info');
       checkLiveBackendStatus();
       initAttendanceWidgetEvents();
+      loadLiveDashboardAttendance();
     });
   }
 
   // Tự động kiểm tra trạng thái Backend & MySQL live
   checkLiveBackendStatus();
+
+  // Tải dữ liệu nhật ký và KPI chấm công hôm nay trực tiếp từ API
+  loadLiveDashboardAttendance();
+}
+
+async function loadLiveDashboardAttendance() {
+  const ontimeVal = qs('#dash-ontime-val');
+  const ontimePct = qs('#dash-ontime-pct');
+  const lateVal = qs('#dash-late-val');
+  const activityList = qs('#dash-activity-list');
+
+  try {
+    const res = await attendanceService.getTodayAttendance();
+    let records = [];
+
+    if (Array.isArray(res.data)) {
+      records = res.data;
+    } else if (res.data && typeof res.data === 'object') {
+      records = [res.data];
+    }
+
+    const summary = attendanceService.calculateAttendanceSummary(records, res.summary);
+
+    if (ontimeVal) {
+      ontimeVal.textContent = `${summary.onTime} / ${summary.totalEmployees}`;
+    }
+    if (ontimePct) {
+      const pct = summary.totalEmployees > 0
+        ? Math.round((summary.onTime / summary.totalEmployees) * 100)
+        : 0;
+      ontimePct.textContent = `${pct}% Đúng giờ`;
+    }
+    if (lateVal) {
+      lateVal.textContent = summary.late;
+    }
+
+    if (activityList) {
+      const activeRows = records.filter((r) => Boolean(r.checkInTime));
+      if (activeRows.length === 0) {
+        activityList.innerHTML = `
+          <div style="text-align: center; color: #94a3b8; font-size: 13px; padding: 1.5rem 0;">
+            Chưa có nhân viên nào check-in hôm nay.
+          </div>
+        `;
+      } else {
+        activityList.innerHTML = activeRows.slice(0, 5).map((row) => {
+          const initials = (row.fullName || 'NV').slice(0, 2).toUpperCase();
+          const isLate = row.status === 'LATE';
+          const time = formatTimeDisplay(row.checkInTime);
+          const badgeClass = isLate ? 'badge-warning' : 'badge-success';
+          const badgeText = isLate ? 'Đi muộn' : 'Đúng giờ';
+
+          return `
+            <div class="activity-item">
+              <div class="activity-avatar">${initials}</div>
+              <div class="activity-content">
+                <div class="activity-title">${row.fullName || 'Nhân viên'}</div>
+                <div class="activity-time">Check-in lúc ${time} • ${row.departmentName || 'Nhân sự'}</div>
+              </div>
+              <span class="badge ${badgeClass}">${badgeText}</span>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+  } catch (err) {
+    console.warn('[DashboardPage] Không thể tải dữ liệu chấm công cho dashboard:', err);
+  }
 }
 
 async function checkLiveBackendStatus() {
