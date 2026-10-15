@@ -103,9 +103,15 @@ services:
       dockerfile: Dockerfile
     container_name: hrm-ictu-frontend
     restart: unless-stopped
+    volumes:
+      # Mount SSL Certificate và Private Key (chế độ chỉ đọc :ro)
+      - ./certs/hrm.local.crt:/etc/nginx/ssl/hrm.local.crt:ro
+      - ./certs/hrm.local.key:/etc/nginx/ssl/hrm.local.key:ro
     ports:
       # Cổng 5173 trên máy host -> cổng 80 Nginx trong container
       - "${FRONTEND_PORT:-5173}:80"
+      # Cổng 443 trên máy host -> cổng 443 HTTPS Nginx trong container
+      - "${HTTPS_PORT:-443}:443"
     environment:
       NODE_ENV: production
     depends_on:
