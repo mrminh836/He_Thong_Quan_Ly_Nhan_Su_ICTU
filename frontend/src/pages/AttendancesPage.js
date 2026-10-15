@@ -124,10 +124,16 @@ export function renderAttendancesPage() {
         <svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
         <span>Làm mới dữ liệu</span>
       </button>
-      <a href="/employees" class="btn btn-primary" data-link>
-        <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        <span>Danh sách nhân sự</span>
-      </a>
+      ${
+        !isEmployeeOnly
+          ? `
+        <a href="/employees" class="btn btn-primary" data-link>
+          <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Danh sách nhân sự</span>
+        </a>
+      `
+          : ''
+      }
     `,
   });
 
@@ -209,7 +215,7 @@ export function renderAttendancesPage() {
     </div>
 
     <!-- 4. THANH TÌM KIẾM VÀ BỘ LỌC (TOOLBAR) -->
-    <div class="att-board-toolbar" id="att-board-toolbar">
+    <div class="att-board-toolbar" id="att-board-toolbar" style="display: ${isEmployeeOnly ? 'none' : 'flex'};">
       <div class="att-search-wrapper">
         <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/></svg>
         <input
