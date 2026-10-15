@@ -66,52 +66,7 @@ export function renderEmployeesPage() {
   return `
     ${headerHtml}
 
-    <!-- 1. CÁC THẺ THỐNG KÊ TỔNG QUAN (3 THẺ CHỈ SỐ DOANH NGHIỆP) -->
-    <div class="emp-stats-grid" id="emp-stats-container">
-      <!-- Thẻ 1: Tổng số nhân viên -->
-      <div class="emp-stat-card">
-        <div class="emp-stat-info">
-          <span class="emp-stat-label">Tổng số nhân viên</span>
-          <span class="emp-stat-value" id="stat-total-emp">--</span>
-          <span class="emp-stat-meta">
-            <span class="badge badge-blue">Toàn hệ thống</span>
-          </span>
-        </div>
-        <div class="emp-stat-icon icon-blue-gradient">
-          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        </div>
-      </div>
-
-      <!-- Thẻ 2: Nhân viên đang hoạt động -->
-      <div class="emp-stat-card">
-        <div class="emp-stat-info">
-          <span class="emp-stat-label">Đang hoạt động</span>
-          <span class="emp-stat-value" id="stat-active-emp">--</span>
-          <span class="emp-stat-meta">
-            <span class="badge badge-success">Active</span>
-          </span>
-        </div>
-        <div class="emp-stat-icon icon-emerald-gradient">
-          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        </div>
-      </div>
-
-      <!-- Thẻ 3: Phòng ban có nhân viên -->
-      <div class="emp-stat-card">
-        <div class="emp-stat-info">
-          <span class="emp-stat-label">Phòng ban có nhân viên</span>
-          <span class="emp-stat-value" id="stat-dept-count">--</span>
-          <span class="emp-stat-meta">
-            <span class="badge badge-purple">Đã phân bổ nhân sự</span>
-          </span>
-        </div>
-        <div class="emp-stat-icon icon-purple-gradient">
-          <svg viewBox="0 0 24 24"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/></svg>
-        </div>
-      </div>
-    </div>
-
-    <!-- 2. THANH CÔNG CỤ TÌM KIẾM VÀ BỘ LỌC (SEARCH & FILTER TOOLBAR) -->
+    <!-- 1. THANH CÔNG CỤ TÌM KIẾM VÀ BỘ LỌC (SEARCH & FILTER TOOLBAR) -->
     <div class="emp-toolbar">
       <!-- Ô tìm kiếm nhanh với Debounce và nút Clear -->
       <div class="emp-search-wrapper">
@@ -212,7 +167,7 @@ export function initEmployeesPageEvents() {
   if (refreshBtn) {
     refreshBtn.addEventListener('click', () => {
       refreshBtn.querySelector('svg')?.classList.add('spinning');
-      Promise.all([loadEmployeeData(), loadStatistics()]).finally(() => {
+      loadEmployeeData().finally(() => {
         refreshBtn.querySelector('svg')?.classList.remove('spinning');
       });
     });
@@ -301,7 +256,6 @@ export function initEmployeesPageEvents() {
   if (retryBtn) {
     retryBtn.addEventListener('click', () => {
       loadEmployeeData();
-      loadStatistics();
     });
   }
 
@@ -319,7 +273,6 @@ export function initEmployeesPageEvents() {
 
   // 11. Tải danh mục phòng ban động & nạp dữ liệu nhân sự thực tế
   loadDepartmentsDropdown();
-  loadStatistics();
   loadEmployeeData();
 }
 
@@ -359,26 +312,6 @@ async function loadDepartmentsDropdown() {
     showToast('Không thể tải danh sách phòng ban. Vui lòng thử lại.', 'warning');
   } finally {
     pageState.isDeptLoading = false;
-  }
-}
-
-/**
- * Tải các chỉ số thống kê từ Backend API
- */
-async function loadStatistics() {
-  try {
-    const stats = await employeeService.getEmployeeSummaryStats();
-    pageState.stats = stats;
-
-    const totalEl = qs('#stat-total-emp');
-    const activeEl = qs('#stat-active-emp');
-    const deptEl = qs('#stat-dept-count');
-
-    if (totalEl) totalEl.textContent = stats.totalEmployees.toLocaleString('vi-VN');
-    if (activeEl) activeEl.textContent = stats.activeEmployees.toLocaleString('vi-VN');
-    if (deptEl) deptEl.textContent = stats.deptsWithEmployees.toLocaleString('vi-VN');
-  } catch (err) {
-    console.warn('[EmployeesPage] Thống kê gặp lỗi:', err.message);
   }
 }
 

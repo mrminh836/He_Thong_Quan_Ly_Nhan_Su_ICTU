@@ -246,10 +246,8 @@ await testAsync('Test 6: renderEmployeesPage() sinh cấu trúc HTML đầy đ�
   assert.ok(html.includes('Quản lý nhân sự'), 'Phải có tiêu đề "Quản lý nhân sự"');
   assert.ok(html.includes('Quản lý hồ sơ và thông tin nhân viên trong hệ thống'), 'Phải có mô tả trang');
 
-  // 3 Thẻ thống kê
-  assert.ok(html.includes('Tổng số nhân viên'), 'Phải có thẻ Tổng số nhân viên');
-  assert.ok(html.includes('Đang hoạt động'), 'Phải có thẻ Đang hoạt động');
-  assert.ok(html.includes('Phòng ban có nhân viên'), 'Phải có thẻ Phòng ban có nhân viên');
+  // Khối thẻ thống kê đã được loại bỏ theo yêu cầu người dùng
+  assert.ok(!html.includes('id="emp-stats-container"'), 'Đã loại bỏ khối thẻ thống kê theo yêu cầu');
 
   // Toolbar & Search
   assert.ok(html.includes('emp-search-input'), 'Phải có ô tìm kiếm nhân sự');
