@@ -292,6 +292,70 @@ await test('Test 3.3: report_user BỊ TỪ CHỐI các thao tác phá hủy DDL
   }
 });
 
+// -----------------------------------------------------------------------------
+// NHÓM 4: CẤU HÌNH BẢO MẬT LAB 6 (GENERAL QUERY LOG & PASSWORD POLICY MEDIUM)
+// -----------------------------------------------------------------------------
+console.log('\n--- NHÓM 4: KIỂM THỬ BẢO MẬT LAB 6 (GENERAL LOG & PASSWORD POLICY MEDIUM) ---');
+
+await test('Test 4.1: General Query Log được bật và ghi nhận chính xác (general_log = ON, log_output = FILE)', async () => {
+  const [genLogRows] = await rootConn.query("SHOW VARIABLES LIKE 'general_log%'");
+  const [logOutputRows] = await rootConn.query("SHOW VARIABLES LIKE 'log_output'");
+
+  const genLogMap = new Map(genLogRows.map((r) => [r.Variable_name, r.Value]));
+  const logOutputMap = new Map(logOutputRows.map((r) => [r.Variable_name, r.Value]));
+
+  assert.strictEqual(genLogMap.get('general_log'), 'ON', 'general_log phải có giá trị ON');
+  assert.ok(genLogMap.get('general_log_file') && genLogMap.get('general_log_file').length > 0, 'general_log_file phải có đường dẫn hợp lệ');
+  assert.strictEqual(logOutputMap.get('log_output'), 'FILE', 'log_output phải là FILE');
+});
+
+await test('Test 4.2: Component Validate Password được kích hoạt với chính sách mức MEDIUM', async () => {
+  const [valPassRows] = await rootConn.query("SHOW VARIABLES LIKE 'validate_password%'");
+  const passMap = new Map(valPassRows.map((r) => [r.Variable_name, r.Value]));
+
+  assert.ok(passMap.has('validate_password.policy'), 'Biến validate_password.policy phải tồn tại (Component đã được nạp)');
+  assert.strictEqual(passMap.get('validate_password.policy'), 'MEDIUM', 'Policy phải ở mức MEDIUM');
+  assert.strictEqual(passMap.get('validate_password.length'), '8', 'Độ dài tối thiểu phải là 8 ký tự');
+  assert.strictEqual(passMap.get('validate_password.mixed_case_count'), '1', 'Yêu cầu tối thiểu 1 chữ hoa, 1 chữ thường');
+  assert.strictEqual(passMap.get('validate_password.number_count'), '1', 'Yêu cầu tối thiểu 1 chữ số');
+  assert.strictEqual(passMap.get('validate_password.special_char_count'), '1', 'Yêu cầu tối thiểu 1 ký tự đặc biệt');
+  assert.strictEqual(passMap.get('validate_password.check_user_name'), 'ON', 'Yêu cầu kiểm tra không trùng tên đăng nhập');
+});
+
+await test('Test 4.3: MySQL CHẶN tạo tài khoản với mật khẩu yếu (ERROR 1819 ER_NOT_VALID_PASSWORD)', async () => {
+  // Thử tạo tài khoản với mật khẩu yếu '123456'
+  await assert.rejects(
+    async () => {
+      await rootConn.query("CREATE USER 'test_lab6_weak'@'%' IDENTIFIED BY '123456'");
+    },
+    (err) => {
+      assert.ok(
+        err.errno === 1819 || 
+        err.message.includes('does not satisfy the current policy requirements'),
+        `Lỗi mong đợi là 1819, nhận được: ${err.message}`
+      );
+      return true;
+    }
+  );
+});
+
+await test('Test 4.4: MySQL CHẤP NHẬN tạo tài khoản với mật khẩu đạt chuẩn MEDIUM (hoa, thường, số, ký tự đặc biệt)', async () => {
+  const strongPassword = 'Lab6_Secure_Password@2026!';
+  
+  // Dọn dẹp trước nếu có tài khoản cũ
+  await rootConn.query("DROP USER IF EXISTS 'test_lab6_ok'@'%'");
+
+  // Tạo người dùng với mật khẩu đạt chuẩn MEDIUM
+  await rootConn.query(`CREATE USER 'test_lab6_ok'@'%' IDENTIFIED BY '${strongPassword}'`);
+
+  // Xác minh người dùng đã được tạo trong mysql.user
+  const [users] = await rootConn.query("SELECT user FROM mysql.user WHERE user = 'test_lab6_ok'");
+  assert.strictEqual(users.length, 1);
+
+  // Dọn dẹp tài khoản sau test
+  await rootConn.query("DROP USER 'test_lab6_ok'@'%'");
+});
+
 await rootConn.end();
 
 console.log('\n============================================================');

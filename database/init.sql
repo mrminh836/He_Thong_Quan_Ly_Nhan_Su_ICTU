@@ -23,6 +23,41 @@ USE `hrm_db`;
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ------------------------------------------------------------------------------
+-- 1.1 CẤU HÌNH BẢO MẬT LAB 6 (GENERAL QUERY LOG & PASSWORD POLICY MEDIUM)
+-- ------------------------------------------------------------------------------
+-- A. Kích hoạt Component Validate Password trên MySQL 8.0+ (Idempotent)
+USE mysql;
+DROP PROCEDURE IF EXISTS `sys_setup_security_lab6`;
+DELIMITER //
+CREATE PROCEDURE `sys_setup_security_lab6`()
+BEGIN
+    DECLARE comp_count INT DEFAULT 0;
+    SELECT COUNT(*) INTO comp_count FROM mysql.component WHERE component_urn = 'file://component_validate_password';
+    IF comp_count = 0 THEN
+        INSTALL COMPONENT 'file://component_validate_password';
+    END IF;
+END //
+DELIMITER ;
+CALL `sys_setup_security_lab6`();
+DROP PROCEDURE IF EXISTS `sys_setup_security_lab6`;
+
+-- Quay lại schema hrm_db
+USE `hrm_db`;
+
+-- B. Bật General Query Log (Ghi nhận toàn bộ thao tác SQL phục vụ kiểm toán bảo mật)
+SET GLOBAL general_log = 1;
+SET GLOBAL general_log_file = '/var/lib/mysql/mysql_general.log';
+SET GLOBAL log_output = 'FILE';
+
+-- C. Cấu hình chính sách mật khẩu mức MEDIUM (Độ dài >= 8, hoa, thường, số, ký tự đặc biệt)
+SET GLOBAL validate_password.policy = 'MEDIUM';
+SET GLOBAL validate_password.length = 8;
+SET GLOBAL validate_password.mixed_case_count = 1;
+SET GLOBAL validate_password.number_count = 1;
+SET GLOBAL validate_password.special_char_count = 1;
+SET GLOBAL validate_password.check_user_name = ON;
+
+-- ------------------------------------------------------------------------------
 -- 2. TẠO SCHEMA VÀ CÁC BẢNG (TABLE DEFINITIONS & CONSTRAINTS)
 -- Tuân thủ 100% nguyên tắc an toàn: Dùng CREATE TABLE IF NOT EXISTS,
 -- tuyệt đối KHÔNG DÙNG DROP TABLE hay DROP DATABASE.
@@ -353,4 +388,18 @@ INSERT IGNORE INTO `schema_migrations` (`migration_name`, `batch`) VALUES
 --    - report_user cố ý chèn dữ liệu (DML):
 --      INSERT INTO hrm_db.departments (department_code, department_name) VALUES ('X', 'Y');
 --      -> ERROR 1142 (42000): INSERT command denied to user 'report_user'@'%'
+--
+-- 5. Xác minh MySQL General Query Log (Lab 6):
+--    SHOW VARIABLES LIKE 'general_log%';
+--    SHOW VARIABLES LIKE 'log_output%';
+--    -- Kiểm tra 20 dòng log mới nhất trong file log:
+--    -- tail -n 20 /var/lib/mysql/mysql_general.log
+--
+-- 6. Xác minh Password Policy MEDIUM (Lab 6):
+--    SHOW VARIABLES LIKE 'validate_password%';
+--    -- Thử nghiệm mật khẩu yếu (phải nhận lỗi ERROR 1819):
+--    CREATE USER 'test_weak'@'%' IDENTIFIED BY '123456';
+--    -- Thử nghiệm mật khẩu đạt chuẩn MEDIUM (thành công):
+--    CREATE USER 'test_ok'@'%' IDENTIFIED BY 'SecurePass@2026!';
+--    DROP USER 'test_ok'@'%';
 -- ==============================================================================
