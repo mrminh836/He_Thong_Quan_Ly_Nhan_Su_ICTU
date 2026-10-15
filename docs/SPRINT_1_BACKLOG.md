@@ -122,17 +122,17 @@ gantt
 ---
 
 ## 🏁 5. TIÊU CHÍ HOÀN THÀNH SPRINT 1 (SPRINT 1 DEFINITION OF DONE)
-Để đóng Sprint 1 và chuyển sang Sprint 2 (Monitoring Prometheus/Grafana), toàn bộ các điều kiện sau **phải được kiểm chứng thành công**:
+Để đóng Sprint 1 và chuyển sang Sprint 2 (Monitoring Prometheus/Grafana), toàn bộ các điều kiện sau **đã được kiểm chứng thành công 100%**:
 
-1. [ ] Lệnh `docker compose up -d` khởi động thành công cả 4 container: `mysql-db`, `hrm-app`, `phpmyadmin`, `nginx`.
-2. [ ] Container `mysql-db` đạt trạng thái `(healthy)`.
-3. [ ] Truy cập `http://hrm.local` tự động chuyển hướng sang `https://hrm.local` với biểu tượng ổ khóa SSL tự ký.
-4. [ ] Đăng nhập thành công với 3 tài khoản mẫu:
-   - `admin` / `Admin@123` (Toàn quyền)
-   - `hr` / `Hr@123` (Quản lý nhân sự)
-   - `emp1` / `Emp@123` (Nhân viên)
-5. [ ] Thực hiện thêm mới 1 nhân viên, kiểm tra trong phpMyAdmin thấy cột `ssn_encrypted` chứa dữ liệu nhị phân mã hóa (không thấy số CCCD dạng text rõ ràng).
-6. [ ] Thực hiện Check-in / Check-out và xem bảng chấm công thời gian thực.
-7. [ ] Truy cập được trang quản trị CSDL phpMyAdmin tại đường dẫn `https://hrm.local/phpmyadmin/`.
-8. [ ] Repository GitHub có **Commit số 1** với thông điệp rõ ràng:  
+1. [x] Lệnh `docker compose up -d` khởi động thành công cả 5 container: `mysql-db`, `hrm-ictu-backend`, `hrm-ictu-frontend` (alias `hrm-app`), `phpmyadmin`, `hrm-nginx`.
+2. [x] Container `mysql-db` đạt trạng thái `(healthy)` (kiểm tra ping nội bộ `mysqladmin ping`).
+3. [x] Truy cập `http://hrm.local` tự động chuyển hướng 301 sang `https://hrm.local` với biểu tượng ổ khóa SSL tự ký và bộ Security Headers chuẩn DevSecOps.
+4. [x] Đăng nhập thành công với 3 tài khoản mẫu:
+   - `admin` / `Admin@123` (Toàn quyền Quản trị hệ thống)
+   - `hr` / `Hr@123` (Quản lý hồ sơ nhân sự)
+   - `emp1` / `Emp@123` (Nhân viên thường)
+5. [x] Thực hiện thêm mới nhân viên, số CCCD được mã hóa bằng MySQL `AES_ENCRYPT` (trong CSDL là `ssn_encrypted`), tính duy nhất bảo vệ bằng HMAC-SHA-256 (`ssn_hash`), và giải mã chuẩn xác 100% khi có thẩm quyền.
+6. [x] Thực hiện Check-in / Check-out và xem bảng chấm công thời gian thực theo phân quyền RBAC (Nhân viên chỉ xem bản ghi cá nhân, Admin/HR xem bảng toàn công ty + KPI summary).
+7. [x] Truy cập thành công trang quản trị CSDL phpMyAdmin tại đường dẫn `https://hrm.local/phpmyadmin/`.
+8. [x] Repository GitHub hoàn tất **Commit số 1** với thông điệp chuẩn hóa:  
    `feat(core): deploy hrm application, mysql 8.0, phpmyadmin and nginx reverse proxy with https and security headers`
