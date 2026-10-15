@@ -1,0 +1,31 @@
+# ==============================================================================
+# HỆ THỐNG QUẢN LÝ NHÂN SỰ (HRM - ICTU)
+# CẤU HÌNH BẢO MẬT CƠ SỞ DỮ LIỆU MYSQL 8.0 THEO TIÊU CHUẨN LAB 6
+# Đường dẫn mount trong container: /etc/mysql/conf.d/security.cnf
+# ==============================================================================
+
+[mysqld]
+# ------------------------------------------------------------------------------
+# 1. BẬT GENERAL QUERY LOG (LAB 6 / US-16)
+# Ghi lại toàn bộ kết nối và các câu lệnh SQL phục vụ kiểm toán bảo mật và minh chứng lab.
+# ------------------------------------------------------------------------------
+general_log = 1
+general_log_file = /var/lib/mysql/mysql_general.log
+log_output = FILE
+
+# ------------------------------------------------------------------------------
+# 2. CẤU HÌNH CHÍNH SÁCH MẬT KHẨU MỨC MEDIUM (LAB 6 / PASSWORD POLICY)
+# Sử dụng tiền tố 'loose-' để tương thích tối đa với MySQL 8.0+ Component Architecture.
+# Quy định mức MEDIUM:
+#   - Độ dài tối thiểu: 8 ký tự
+#   - Tối thiểu 1 chữ in hoa và 1 chữ thường (mixed_case_count = 1)
+#   - Tối thiểu 1 chữ số (number_count = 1)
+#   - Tối thiểu 1 ký tự đặc biệt (special_char_count = 1)
+#   - Không trùng với tên đăng nhập (check_user_name = ON)
+# ------------------------------------------------------------------------------
+loose-validate_password.policy = MEDIUM
+loose-validate_password.length = 8
+loose-validate_password.mixed_case_count = 1
+loose-validate_password.number_count = 1
+loose-validate_password.special_char_count = 1
+loose-validate_password.check_user_name = ON
