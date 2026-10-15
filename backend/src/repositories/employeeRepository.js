@@ -250,6 +250,51 @@ export async function create(employeeData, cccdEncryptionKey) {
 }
 
 /**
+ * Tìm kiếm nhân viên theo ID kèm giải mã CCCD trực tiếp bằng MySQL AES_DECRYPT()
+ * Áp dụng 100% Prepared Statements / Parameterized Queries chống SQL Injection.
+ * Bảo mật:
+ * - Chỉ SELECT các cột cần thiết, tuyệt đối không dùng SELECT *
+ * - Không trả về ciphertext ssn_encrypted hoặc mã băm ssn_hash
+ * - Khóa mã hóa được truyền qua tham số truy vấn của prepared statement
+ * 
+ * @param {number} employeeId - ID nhân viên (EmployeeID)
+ * @param {string} cccdEncryptionKey - Khóa bảo mật giải mã AES
+ * @returns {Promise<object|null>}
+ */
+export async function findByIdWithDecryptedCccd(employeeId, cccdEncryptionKey) {
+  if (!employeeId || !cccdEncryptionKey) return null;
+
+  const sql = `
+    SELECT 
+      e.employee_id,
+      e.employee_code,
+      e.full_name,
+      e.email,
+      e.phone,
+      e.address,
+      e.gender,
+      e.date_of_birth,
+      CAST(AES_DECRYPT(e.ssn_encrypted, ?) AS CHAR CHARACTER SET utf8mb4) AS cccd,
+      e.department_id,
+      d.department_name,
+      d.department_code,
+      e.position,
+      e.base_salary,
+      e.hire_date,
+      e.employment_status,
+      e.created_at,
+      e.updated_at
+    FROM \`employees\` e
+    LEFT JOIN \`departments\` d ON e.department_id = d.department_id
+    WHERE e.employee_id = ?
+    LIMIT 1
+  `;
+
+  const rows = await query(sql, [cccdEncryptionKey, employeeId]);
+  return rows.length > 0 ? rows[0] : null;
+}
+
+/**
  * Xóa nhân sự theo ID (Chỉ dùng cho mục đích kiểm thử và rollback)
  * @param {number} employeeId
  * @returns {Promise<boolean>}
@@ -265,7 +310,9 @@ export default {
   findBySsnHash,
   findByEmail,
   findById,
+  findByIdWithDecryptedCccd,
   generateNextEmployeeCode,
   create,
   deleteById,
 };
+

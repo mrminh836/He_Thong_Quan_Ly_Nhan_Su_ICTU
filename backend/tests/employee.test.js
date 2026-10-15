@@ -25,8 +25,13 @@ import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { env } from '../src/config/env.js';
 import { ROLES } from '../src/constants/roles.js';
-import { createEmployee } from '../src/controllers/employeeController.js';
-import employeeService, { EmployeeError } from '../src/services/employeeService.js';
+import { createEmployee, getEmployeeById } from '../src/controllers/employeeController.js';
+import employeeService, {
+  EmployeeError,
+  EmployeeNotFoundError,
+  CccdDecryptionError,
+  EncryptionKeyMissingError,
+} from '../src/services/employeeService.js';
 import employeeRepository from '../src/repositories/employeeRepository.js';
 import departmentRepository from '../src/repositories/departmentRepository.js';
 import { validateCccdFormat, maskCccd, computeCccdHmac } from '../src/utils/cccdSecurity.js';
@@ -113,6 +118,7 @@ const origEmployeeFindByCode = employeeRepository.findByCode;
 const origEmployeeFindBySsnHash = employeeRepository.findBySsnHash;
 const origEmployeeFindByEmail = employeeRepository.findByEmail;
 const origEmployeeFindById = employeeRepository.findById;
+const origEmployeeFindByIdWithDecryptedCccd = employeeRepository.findByIdWithDecryptedCccd;
 const origEmployeeGenerateNextCode = employeeRepository.generateNextEmployeeCode;
 const origEmployeeCreate = employeeRepository.create;
 const origEmployeeDeleteById = employeeRepository.deleteById;
@@ -188,6 +194,41 @@ function setupStubs() {
       ...emp,
       department_name: dept ? dept.department_name : null,
       department_code: dept ? dept.department_code : null,
+    };
+  };
+
+  employeeRepository.findByIdWithDecryptedCccd = async (id, key) => {
+    if (!id || !key) return null;
+    const emp = mockEmployees.find((e) => e.employee_id === Number(id));
+    if (!emp) return null;
+    const dept = mockDepartments.find((d) => d.department_id === emp.department_id);
+
+    let decryptedCccd = null;
+    try {
+      decryptedCccd = mysqlAesDecrypt(emp.ssn_encrypted, key);
+    } catch {
+      decryptedCccd = null;
+    }
+
+    return {
+      employee_id: emp.employee_id,
+      employee_code: emp.employee_code,
+      full_name: emp.full_name,
+      email: emp.email || null,
+      phone: emp.phone || null,
+      address: emp.address || null,
+      gender: emp.gender || null,
+      date_of_birth: emp.date_of_birth || null,
+      cccd: decryptedCccd,
+      department_id: emp.department_id,
+      department_name: dept ? dept.department_name : null,
+      department_code: dept ? dept.department_code : null,
+      position: emp.position || null,
+      base_salary: emp.base_salary || 0,
+      hire_date: emp.hire_date,
+      employment_status: emp.employment_status || 'Active',
+      created_at: emp.created_at,
+      updated_at: emp.updated_at,
     };
   };
 
@@ -614,12 +655,291 @@ async function startTestSuite() {
       assert.ok(/^NV\d+$/.test(emp.employeeCode));
     });
 
+    // =============================================================================
+    // PHẦN 2: KIỂM THỬ API LẤY CHI TIẾT NHÂN VIÊN & GIẢI MÃ CCCD (AES_DECRYPT)
+    // Đáp ứng đầy đủ 12 tiêu chí kiểm thử theo yêu cầu nghiệp vụ:
+    // =============================================================================
+
+    // -----------------------------------------------------------------------------
+    // TEST 15 (Req 1): ADMIN lấy chi tiết nhân viên thành công
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 15: ADMIN lấy chi tiết nhân viên thành công kèm giải mã CCCD (200 OK)', async () => {
+      const { req, res, next } = createMockHttp({
+        params: { id: '1' },
+        user: { userId: 1, username: 'admin', role: ROLES.ADMIN },
+      });
+
+      await getEmployeeById(req, res, next);
+
+      assert.strictEqual(res.statusCode, 200);
+      assert.strictEqual(res.responseBody.success, true);
+      assert.strictEqual(res.responseBody.message, 'Lấy chi tiết nhân viên thành công');
+
+      const data = res.responseBody.data;
+      assert.strictEqual(data.employeeId, 1);
+      assert.strictEqual(data.employeeCode, 'NV001');
+      assert.strictEqual(data.fullName, 'Đỗ Quang Minh');
+      assert.strictEqual(data.cccd, '038204001234'); // CCCD đã giải mã chính xác
+      assert.strictEqual(data.departmentId, 1);
+      assert.strictEqual(data.departmentName, 'Phòng Kỹ thuật & Công nghệ');
+      assert.strictEqual(data.status, 'ACTIVE');
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 16 (Req 2): HR_MANAGER lấy chi tiết nhân viên thành công
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 16: HR_MANAGER lấy chi tiết nhân viên thành công kèm giải mã CCCD (200 OK)', async () => {
+      const { req, res, next } = createMockHttp({
+        params: { id: '2' },
+        user: { userId: 2, username: 'hr', role: ROLES.HR_MANAGER },
+      });
+
+      await getEmployeeById(req, res, next);
+
+      assert.strictEqual(res.statusCode, 200);
+      assert.strictEqual(res.responseBody.success, true);
+      assert.strictEqual(res.responseBody.data.employeeId, 2);
+      assert.strictEqual(res.responseBody.data.cccd, '038204000002');
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 17 (Req 3): EMPLOYEE bị từ chối với 403 Forbidden
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 17: Vai trò EMPLOYEE bị từ chối truy cập API chi tiết nhân viên (403 Forbidden)', async () => {
+      const roleMiddleware = requireRole(ROLES.ADMIN, ROLES.HR_MANAGER);
+      const { req, res, next, getNextCalled } = createMockHttp({
+        user: { userId: 3, username: 'emp1', role: ROLES.EMPLOYEE },
+      });
+
+      roleMiddleware(req, res, next);
+
+      assert.strictEqual(res.statusCode, 403);
+      assert.strictEqual(res.responseBody.success, false);
+      assert.strictEqual(res.responseBody.errorCode, 'FORBIDDEN');
+      assert.strictEqual(getNextCalled(), false);
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 18 (Req 4): Người chưa đăng nhập bị từ chối với 401 Unauthorized
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 18: Người chưa đăng nhập (không token hoặc sai token) bị từ chối (401 Unauthorized)', async () => {
+      // 1. Không có Authorization Header
+      const { req: reqNoToken, res: resNoToken, next: nextNoToken, getNextCalled: getNextNoToken } = createMockHttp({
+        headers: {},
+      });
+      await authenticateToken(reqNoToken, resNoToken, nextNoToken);
+      assert.strictEqual(resNoToken.statusCode, 401);
+      assert.strictEqual(resNoToken.responseBody.errorCode, 'TOKEN_REQUIRED');
+      assert.strictEqual(getNextNoToken(), false);
+
+      // 2. Token sai chữ ký / không hợp lệ
+      const { req: reqBadToken, res: resBadToken, next: nextBadToken, getNextCalled: getNextBadToken } = createMockHttp({
+        headers: { authorization: 'Bearer TokenKhongHopLe123456' },
+      });
+      await authenticateToken(reqBadToken, resBadToken, nextBadToken);
+      assert.strictEqual(resBadToken.statusCode, 401);
+      assert.strictEqual(resBadToken.responseBody.errorCode, 'INVALID_TOKEN');
+      assert.strictEqual(getNextBadToken(), false);
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 19 (Req 5): ID không hợp lệ trả 400 Bad Request
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 19: Tham số ID không hợp lệ (chuỗi chữ, số âm, số 0, số thực) trả về 400 Bad Request', async () => {
+      const invalidIds = ['abc', '-1', '0', '3.14', 'null', 'undefined'];
+
+      for (const invId of invalidIds) {
+        const { req, res, next } = createMockHttp({
+          params: { id: invId },
+          user: { userId: 1, role: ROLES.ADMIN },
+        });
+
+        await getEmployeeById(req, res, next);
+
+        assert.strictEqual(res.statusCode, 400, `ID '${invId}' phải trả về mã lỗi 400`);
+        assert.strictEqual(res.responseBody.success, false);
+        assert.strictEqual(res.responseBody.errorCode, 'INVALID_ID');
+      }
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 20 (Req 6): Nhân viên không tồn tại trả 404 Not Found
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 20: Nhân viên không tồn tại trong hệ thống trả về 404 Not Found', async () => {
+      const { req, res, next } = createMockHttp({
+        params: { id: '99999' },
+        user: { userId: 1, role: ROLES.ADMIN },
+      });
+
+      await getEmployeeById(req, res, next);
+
+      assert.strictEqual(res.statusCode, 404);
+      assert.strictEqual(res.responseBody.success, false);
+      assert.strictEqual(res.responseBody.errorCode, 'EMPLOYEE_NOT_FOUND');
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 21 (Req 7): CCCD trả về khớp với dữ liệu test đã mã hóa trước đó
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 21: Số CCCD giải mã khớp chính xác 100% với dữ liệu gốc đã được mã hóa trước đó', async () => {
+      // 1. Tạo một nhân viên mới với số CCCD xác định
+      const sampleCccd = '038204998877';
+      const insertId = await employeeRepository.create(
+        {
+          employeeCode: 'NVTEST99',
+          fullName: 'Nhân Viên Đối Soát CCCD',
+          cccdPlain: sampleCccd,
+          ssnMasked: maskCccd(sampleCccd),
+          ssnHash: computeCccdHmac(sampleCccd, env.cccdHmacSecret),
+          departmentId: 1,
+          hireDate: '2026-10-15',
+        },
+        env.cccdEncryptionKey
+      );
+
+      // 2. Gọi API getEmployeeById để lấy chi tiết và giải mã
+      const { req, res, next } = createMockHttp({
+        params: { id: String(insertId) },
+        user: { userId: 1, role: ROLES.ADMIN },
+      });
+
+      await getEmployeeById(req, res, next);
+
+      assert.strictEqual(res.statusCode, 200);
+      assert.strictEqual(res.responseBody.data.cccd, sampleCccd);
+      assert.strictEqual(res.responseBody.data.employeeCode, 'NVTEST99');
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 22 (Req 8): Khóa giải mã sai hoặc dữ liệu hỏng không trả CCCD rỗng hoặc NULL
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 22: Khóa giải mã sai hoặc dữ liệu lỗi không trả CCCD rỗng/NULL mà báo lỗi 500 DECRYPTION_ERROR', async () => {
+      // Gọi service với khóa sai
+      await assert.rejects(
+        async () => {
+          await employeeService.getEmployeeById(1, { cccdEncryptionKey: 'SAI_KHOA_GIAI_MA_999' });
+        },
+        (err) => {
+          assert.strictEqual(err.statusCode, 500);
+          assert.strictEqual(err.errorCode, 'DECRYPTION_ERROR');
+          return true;
+        }
+      );
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 23 (Req 9): Khóa mã hóa chưa cấu hình thì fail-closed và không trả CCCD
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 23: Khóa mã hóa CCCD_ENCRYPTION_KEY chưa được cấu hình -> API fail-closed và không trả CCCD', async () => {
+      await assert.rejects(
+        async () => {
+          await employeeService.getEmployeeById(1, { cccdEncryptionKey: '' });
+        },
+        (err) => {
+          assert.strictEqual(err.statusCode, 500);
+          assert.strictEqual(err.errorCode, 'CONFIGURATION_ERROR');
+          return true;
+        }
+      );
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 24 (Req 10): SQL Injection qua tham số id không thành công
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 24: Tấn công SQL Injection qua tham số id bị chặn an toàn với mã lỗi 400', async () => {
+      const sqlInjectionPayloads = [
+        '1 OR 1=1',
+        '1; DROP TABLE employees;',
+        '1 UNION SELECT 1,2,3,4',
+        "1' OR '1'='1",
+        '1 AND SLEEP(5)',
+      ];
+
+      for (const payload of sqlInjectionPayloads) {
+        const { req, res, next } = createMockHttp({
+          params: { id: payload },
+          user: { userId: 1, role: ROLES.ADMIN },
+        });
+
+        await getEmployeeById(req, res, next);
+
+        assert.strictEqual(res.statusCode, 400);
+        assert.strictEqual(res.responseBody.errorCode, 'INVALID_ID');
+      }
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 25 (Req 11): Response không chứa ciphertext, CCCDHash hoặc khóa mã hóa
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 25: Response API tuyệt đối không chứa ciphertext, CCCDHash, CCCDEncrypted hoặc khóa mã hóa', async () => {
+      const { req, res, next } = createMockHttp({
+        params: { id: '1' },
+        user: { userId: 1, role: ROLES.ADMIN },
+      });
+
+      await getEmployeeById(req, res, next);
+
+      assert.strictEqual(res.statusCode, 200);
+      const data = res.responseBody.data;
+
+      // Không chứa các thuộc tính nhạy cảm
+      assert.strictEqual(data.ssn_encrypted, undefined);
+      assert.strictEqual(data.ssnEncrypted, undefined);
+      assert.strictEqual(data.CCCDEncrypted, undefined);
+      assert.strictEqual(data.ssn_hash, undefined);
+      assert.strictEqual(data.ssnHash, undefined);
+      assert.strictEqual(data.CCCDHash, undefined);
+      assert.strictEqual(data.cccdEncryptionKey, undefined);
+      assert.strictEqual(data.encryptionKey, undefined);
+
+      // Chuỗi JSON response không xuất hiện các chuỗi nhạy cảm
+      const jsonResponse = JSON.stringify(res.responseBody);
+      assert.strictEqual(jsonResponse.includes('ssn_encrypted'), false);
+      assert.strictEqual(jsonResponse.includes('ssn_hash'), false);
+      assert.strictEqual(jsonResponse.includes(env.cccdEncryptionKey), false);
+    });
+
+    // -----------------------------------------------------------------------------
+    // TEST 26 (Req 12): Log không chứa CCCD rõ hoặc khóa mã hóa
+    // -----------------------------------------------------------------------------
+    await runAsyncTest('Test 26: Log hệ thống tuyệt đối không chứa số CCCD rõ hoặc khóa mã hóa', async () => {
+      const capturedLogs = [];
+      const originalConsoleLog = console.log;
+      const originalConsoleError = console.error;
+
+      console.log = (...args) => capturedLogs.push(args.join(' '));
+      console.error = (...args) => capturedLogs.push(args.join(' '));
+
+      try {
+        const { req, res, next } = createMockHttp({
+          params: { id: '1' },
+          user: { userId: 1, role: ROLES.ADMIN },
+        });
+
+        await getEmployeeById(req, res, next);
+
+        // Kích hoạt cả trường hợp giải mã thất bại
+        try {
+          await employeeService.getEmployeeById(1, { cccdEncryptionKey: 'SAI_KHOA_LOG_TEST' });
+        } catch {}
+
+        const allLogs = capturedLogs.join('\n');
+        assert.strictEqual(allLogs.includes('038204001234'), false, 'Log không được chứa số CCCD dạng rõ');
+        assert.strictEqual(allLogs.includes(env.cccdEncryptionKey), false, 'Log không được chứa khóa CCCD_ENCRYPTION_KEY');
+        assert.strictEqual(allLogs.includes('SAI_KHOA_LOG_TEST'), false, 'Log không được chứa khóa giải mã sai');
+      } finally {
+        console.log = originalConsoleLog;
+        console.error = originalConsoleError;
+      }
+    });
+
   } finally {
     // Khôi phục stub
     employeeRepository.findByCode = origEmployeeFindByCode;
     employeeRepository.findBySsnHash = origEmployeeFindBySsnHash;
     employeeRepository.findByEmail = origEmployeeFindByEmail;
     employeeRepository.findById = origEmployeeFindById;
+    employeeRepository.findByIdWithDecryptedCccd = origEmployeeFindByIdWithDecryptedCccd;
     employeeRepository.generateNextEmployeeCode = origEmployeeGenerateNextCode;
     employeeRepository.create = origEmployeeCreate;
     employeeRepository.deleteById = origEmployeeDeleteById;
@@ -627,7 +947,7 @@ async function startTestSuite() {
   }
 
   console.log('\n============================================================');
-  console.log(`🎉 KẾT QUẢ: ĐÃ VƯỢT QUA ${passedTests}/${totalTests} BÀI KIỂM THỬ THÊM NHÂN VIÊN & MÃ HÓA CCCD!`);
+  console.log(`🎉 KẾT QUẢ: ĐÃ VƯỢT QUA ${passedTests}/${totalTests} BÀI KIỂM THỬ NHÂN VIÊN (MÃ HÓA & GIẢI MÃ CCCD)!`);
   console.log('============================================================\n');
 
   process.exit(0);
