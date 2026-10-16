@@ -113,9 +113,11 @@ export function validateEmployeeEditForm(fields = {}) {
 
 /**
  * Đóng modal chỉnh sửa hồ sơ nhân viên và dọn dẹp bộ nhớ sạch sẽ
+ * @param {boolean} [force=false] - Cưỡng chế đóng modal bỏ qua cờ isSubmitting (dùng khi API đã hoàn tất thành công)
  */
-export function closeEmployeeEditModal() {
-  if (isSubmitting) return; // Ngăn đóng khi đang xử lý request
+export function closeEmployeeEditModal(force = false) {
+  if (isSubmitting && !force) return; // Ngăn đóng khi đang xử lý request
+  isSubmitting = false;
 
   if (escKeyHandler) {
     document.removeEventListener('keydown', escKeyHandler);
@@ -592,8 +594,9 @@ async function handleFormSubmit(overlay, employeeId, onSuccess) {
   try {
     const updatedEmployee = await employeeService.updateEmployee(employeeId, payload);
 
+    setSubmitLoadingState(overlay, false);
     showToast('Cập nhật thông tin nhân viên thành công.', 'success');
-    closeEmployeeEditModal();
+    closeEmployeeEditModal(true);
 
     // Kích hoạt callback tải lại danh sách
     if (typeof onSuccess === 'function') {
