@@ -77,13 +77,21 @@ export async function authenticateToken(req, res, next) {
       });
     }
 
-    // 6. Kiểm tra trạng thái tài khoản
+    // 6. Kiểm tra trạng thái tài khoản và trạng thái nhân sự
     if (user.account_status !== 'Active') {
       const statusText = user.account_status === 'Locked' ? 'đã bị khóa' : 'đã ngừng hoạt động';
       return errorResponse(res, {
         statusCode: 403,
         errorCode: 'ACCOUNT_LOCKED',
         message: `Tài khoản của bạn ${statusText}. Vui lòng liên hệ Quản trị viên để được hỗ trợ.`,
+      });
+    }
+
+    if (user.employment_status === 'Resigned') {
+      return errorResponse(res, {
+        statusCode: 403,
+        errorCode: 'ACCOUNT_LOCKED',
+        message: 'Tài khoản nhân viên đã thôi việc và bị vô hiệu hóa quyền truy cập.',
       });
     }
 

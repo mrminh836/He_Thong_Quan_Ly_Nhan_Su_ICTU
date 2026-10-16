@@ -48,11 +48,19 @@ export async function login({ username, password }) {
     throw new AuthError('Tên đăng nhập hoặc mật khẩu không chính xác.', 401, 'INVALID_CREDENTIALS');
   }
 
-  // 5. Kiểm tra trạng thái tài khoản
+  // 5. Kiểm tra trạng thái tài khoản và trạng thái nhân sự
   if (user.account_status !== 'Active') {
     const statusText = user.account_status === 'Locked' ? 'đã bị khóa' : 'đã ngừng hoạt động';
     throw new AuthError(
       `Tài khoản của bạn ${statusText}. Vui lòng liên hệ Quản trị viên để được hỗ trợ.`,
+      403,
+      'ACCOUNT_LOCKED'
+    );
+  }
+
+  if (user.employment_status === 'Resigned') {
+    throw new AuthError(
+      'Tài khoản nhân viên đã thôi việc và bị vô hiệu hóa quyền truy cập.',
       403,
       'ACCOUNT_LOCKED'
     );

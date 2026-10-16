@@ -4,6 +4,7 @@ import {
   getEmployeeById,
   getEmployees,
   updateEmployee,
+  resignEmployee,
 } from '../controllers/employeeController.js';
 import { authenticateToken } from '../middlewares/auth.js';
 import { requireRole } from '../middlewares/role.js';
@@ -57,6 +58,17 @@ router.put(
   '/:id',
   requireRole(ROLES.ADMIN, ROLES.HR_MANAGER),
   updateEmployee
+);
+
+/**
+ * 5. PATCH /api/employees/:id - Cho nhân viên thôi việc (Resigned) và khóa tài khoản User liên kết
+ * Request body: { action: 'RESIGN' }
+ * Quyền hạn: Chỉ ADMIN và HR_MANAGER được phép thực hiện
+ */
+router.patch(
+  '/:id',
+  requireRole(ROLES.ADMIN, ROLES.HR_MANAGER),
+  resignEmployee
 );
 
 export default router;

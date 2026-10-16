@@ -172,6 +172,14 @@ export async function performCheckOut({ userId, userEmployeeId, currentTime = ne
     });
   }
 
+  if (employee.employment_status === 'Resigned') {
+    throw new AttendanceServiceError({
+      statusCode: 403,
+      errorCode: 'EMPLOYEE_RESIGNED',
+      message: 'Hồ sơ nhân viên đã thôi việc, không thể thực hiện chấm công.',
+    });
+  }
+
   // 3. Lấy thông tin ngày làm việc và giờ check-out hiện tại theo giờ Việt Nam
   const timeInfo = getVietnamAttendanceInfo(currentTime);
   const { workDate, timeString } = timeInfo;

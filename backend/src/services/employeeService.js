@@ -2,6 +2,7 @@ import employeeRepository from '../repositories/employeeRepository.js';
 import departmentRepository from '../repositories/departmentRepository.js';
 import { maskCccd, computeCccdHmac, normalizeCccd, validateCccdFormat } from '../utils/cccdSecurity.js';
 import { env } from '../config/env.js';
+import { withTransaction } from '../config/database.js';
 
 /**
  * Lớp lỗi nghiệp vụ tùy chỉnh cho Employee Module
@@ -373,10 +374,15 @@ export async function updateEmployee(employeeId, updates) {
     throw new EmployeeNotFoundError(`Không tìm thấy nhân viên với ID ${parsedId}.`);
   }
 
-  // 2. Thực thi cập nhật có tham số vào CSDL
+  // 2. Kiểm tra trạng thái nhân sự: Không cho phép cập nhật hồ sơ của nhân viên đã thôi việc
+  if (existing.employment_status === 'Resigned') {
+    throw new EmployeeError('Không thể cập nhật hồ sơ cho nhân viên đã thôi việc.', 400, 'EMPLOYEE_RESIGNED');
+  }
+
+  // 3. Thực thi cập nhật có tham số vào CSDL
   await employeeRepository.update(parsedId, updates);
 
-  // 3. Lấy lại bản ghi sau khi cập nhật
+  // 4. Lấy lại bản ghi sau khi cập nhật
   const updated = await employeeRepository.findById(parsedId);
 
   // Hàm tiện ích format ngày về YYYY-MM-DD
@@ -392,7 +398,7 @@ export async function updateEmployee(employeeId, updates) {
     return String(dateVal).slice(0, 10);
   };
 
-  // 4. Định dạng dữ liệu trả về an toàn: Tuyệt đối KHÔNG trả CCCD thô, ciphertext hay hash
+  // 5. Định dạng dữ liệu trả về an toàn: Tuyệt đối KHÔNG trả CCCD thô, ciphertext hay hash
   return {
     employeeId: updated.employee_id,
     employeeCode: updated.employee_code,
@@ -415,9 +421,155 @@ export async function updateEmployee(employeeId, updates) {
   };
 }
 
+/**
+ * Chuyển nhân viên sang trạng thái thôi việc (Resigned) và khóa tài khoản User tương ứng trong một Transaction
+ * Endpoint: PATCH /api/employees/:id
+ * 
+ * Quy trình xử lý nhất quán (Atomic Transaction):
+ * 1. Bắt đầu transaction.
+ * 2. Đọc và khóa bản ghi nhân viên bằng SELECT ... FOR UPDATE.
+ * 3. Kiểm tra sự tồn tại của nhân viên (nếu không có -> 404 EMPLOYEE_NOT_FOUND).
+ * 4. Đọc và khóa tài khoản User liên kết qua users.employee_id = employees.employee_id (SELECT ... FOR UPDATE).
+ * 5. Xử lý Idempotency: nếu nhân viên đã nghỉ việc (employment_status === 'Resigned'):
+ *    - Đảm bảo tài khoản liên kết (nếu có) đã bị khóa.
+ *    - Trả về kết quả với cờ isAlreadyResigned: true mà không tạo tác dụng phụ lặp lại.
+ * 6. Cập nhật employment_status = 'Resigned' cho nhân viên.
+ * 7. Nếu có tài khoản User liên kết: cập nhật account_status = 'Locked'.
+ *    Nếu không có tài khoản User liên kết: không khóa bất kỳ tài khoản nào khác, ghi nhận rõ trong kết quả.
+ * 8. Commit transaction. Rollback hoàn toàn nếu có bất kỳ lỗi nào xảy ra.
+ * 
+ * @param {number|string} employeeId - ID nhân viên cần cho thôi việc
+ * @returns {Promise<object>} Dữ liệu sau khi cập nhật
+ */
+export async function resignEmployee(employeeId) {
+  const parsedId = Number(employeeId);
+  if (!Number.isInteger(parsedId) || parsedId <= 0) {
+    throw new EmployeeError('Mã định danh nhân viên (ID) phải là số nguyên dương hợp lệ.', 400, 'INVALID_ID');
+  }
+
+  return await withTransaction(async (connection) => {
+    // 1. Đọc và khóa bản ghi nhân viên theo thứ tự nhất quán
+    const [empRows] = await connection.execute(
+      `SELECT 
+        e.employee_id,
+        e.employee_code,
+        e.full_name,
+        e.email,
+        e.phone,
+        e.position,
+        e.department_id,
+        d.department_name,
+        d.department_code,
+        e.employment_status,
+        e.created_at,
+        e.updated_at
+      FROM \`employees\` e
+      LEFT JOIN \`departments\` d ON e.department_id = d.department_id
+      WHERE e.employee_id = ?
+      FOR UPDATE`,
+      [parsedId]
+    );
+
+    if (empRows.length === 0) {
+      throw new EmployeeNotFoundError(`Không tìm thấy nhân viên với ID ${parsedId}.`);
+    }
+
+    const employee = empRows[0];
+
+    // 2. Đọc và khóa bản ghi tài khoản User liên kết (nếu có)
+    const [userRows] = await connection.execute(
+      `SELECT 
+        u.user_id,
+        u.username,
+        u.role,
+        u.account_status,
+        u.employee_id
+      FROM \`users\` u
+      WHERE u.employee_id = ?
+      FOR UPDATE`,
+      [parsedId]
+    );
+
+    const linkedUser = userRows.length > 0 ? userRows[0] : null;
+
+    // 3. Xử lý Idempotency: Nếu nhân viên đã ở trạng thái thôi việc từ trước
+    if (employee.employment_status === 'Resigned') {
+      if (linkedUser && linkedUser.account_status !== 'Locked') {
+        await connection.execute(
+          `UPDATE \`users\` SET account_status = 'Locked', updated_at = CURRENT_TIMESTAMP WHERE user_id = ?`,
+          [linkedUser.user_id]
+        );
+        linkedUser.account_status = 'Locked';
+      }
+
+      return {
+        employeeId: employee.employee_id,
+        employeeCode: employee.employee_code,
+        fullName: employee.full_name,
+        employmentStatus: 'Resigned',
+        departmentId: employee.department_id,
+        departmentName: employee.department_name,
+        hasLinkedAccount: !!linkedUser,
+        accountLocked: linkedUser ? true : false,
+        userId: linkedUser ? linkedUser.user_id : null,
+        username: linkedUser ? linkedUser.username : null,
+        userAccountStatus: linkedUser ? 'Locked' : null,
+        isAlreadyResigned: true,
+      };
+    }
+
+    // 4. Cập nhật trạng thái nhân viên thành 'Resigned'
+    const [empUpdateResult] = await connection.execute(
+      `UPDATE \`employees\` 
+       SET employment_status = 'Resigned', updated_at = CURRENT_TIMESTAMP 
+       WHERE employee_id = ?`,
+      [parsedId]
+    );
+
+    if (empUpdateResult.affectedRows === 0) {
+      throw new EmployeeError('Không thể cập nhật trạng thái nhân viên.', 500, 'UPDATE_FAILED');
+    }
+
+    // 5. Khóa tài khoản User liên kết (nếu có)
+    let accountLocked = false;
+    let userAccountStatus = null;
+    if (linkedUser) {
+      const [userUpdateResult] = await connection.execute(
+        `UPDATE \`users\` 
+         SET account_status = 'Locked', updated_at = CURRENT_TIMESTAMP 
+         WHERE user_id = ?`,
+        [linkedUser.user_id]
+      );
+
+      if (userUpdateResult.affectedRows === 0) {
+        throw new EmployeeError('Không thể khóa tài khoản người dùng liên kết.', 500, 'LOCK_USER_FAILED');
+      }
+
+      accountLocked = true;
+      userAccountStatus = 'Locked';
+    }
+
+    return {
+      employeeId: employee.employee_id,
+      employeeCode: employee.employee_code,
+      fullName: employee.full_name,
+      employmentStatus: 'Resigned',
+      departmentId: employee.department_id,
+      departmentName: employee.department_name,
+      hasLinkedAccount: !!linkedUser,
+      accountLocked,
+      userId: linkedUser ? linkedUser.user_id : null,
+      username: linkedUser ? linkedUser.username : null,
+      userAccountStatus,
+      isAlreadyResigned: false,
+    };
+  });
+}
+
 export default {
   createEmployee,
   getEmployeeById,
   getEmployees,
   updateEmployee,
+  resignEmployee,
 };
