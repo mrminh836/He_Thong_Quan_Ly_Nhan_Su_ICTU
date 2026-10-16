@@ -145,8 +145,62 @@ export async function getToday(req, res, next) {
   }
 }
 
+/**
+ * Lấy lịch sử chấm công theo tháng/năm có phân trang và thống kê tổng hợp (US 19.0)
+ * GET /api/attendance/history hoặc GET /api/attendances/history
+ * Query parameters:
+ * - month: tháng cần xem (1 - 12)
+ * - year: năm cần xem (1900 - 2100)
+ * - employeeId: ID nhân viên (dành cho Admin/HR Manager)
+ * - page: số trang (mặc định 1)
+ * - limit: số bản ghi mỗi trang (mặc định 31)
+ */
+export async function getHistory(req, res, next) {
+  try {
+    // 1. Kiểm tra xác thực token người dùng
+    if (!req.user || !req.user.userId) {
+      return errorResponse(res, {
+        statusCode: 401,
+        errorCode: 'UNAUTHORIZED',
+        message: 'Vui lòng đăng nhập để xem lịch sử chấm công.',
+      });
+    }
+
+    // 2. Gọi service xử lý nghiệp vụ
+    const result = await attendanceService.getAttendanceHistory({
+      user: req.user,
+      queryParams: req.query,
+    });
+
+    // 3. Trả về response JSON chuẩn cấu trúc
+    return res.status(200).json({
+      success: true,
+      status: 'success',
+      statusCode: 200,
+      message: 'Lấy lịch sử chấm công thành công',
+      filters: result.filters,
+      summary: result.summary,
+      pagination: result.pagination,
+      data: result.data,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    if (error instanceof AttendanceServiceError) {
+      return errorResponse(res, {
+        statusCode: error.statusCode,
+        errorCode: error.errorCode,
+        message: error.message,
+        details: error.details,
+      });
+    }
+    next(error);
+  }
+}
+
 export default {
   checkIn,
   checkOut,
   getToday,
+  getHistory,
 };
+

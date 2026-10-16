@@ -9,5 +9,6 @@ export const updateCheckOut = attendanceRepository.updateCheckOut;
 export const getTodayAttendanceBoard = attendanceRepository.getTodayAttendanceBoard;
 export const findById = attendanceRepository.findById;
 export const deleteById = attendanceRepository.deleteById;
+export const getAttendanceHistoryAndSummary = attendanceRepository.getAttendanceHistoryAndSummary;
 
 export default attendanceRepository;
