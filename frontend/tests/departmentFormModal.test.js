@@ -828,6 +828,84 @@ await testAsync('Test 19: Mở modal Thêm sau khi chỉnh sửa có form trốn
   closeDepartmentFormModal();
 });
 
+// -----------------------------------------------------------------------------
+// TEST 20: Chỉnh sửa SĐT phòng ban thành công -> Gửi PUT với phone mới
+// -----------------------------------------------------------------------------
+await testAsync('Test 20: Chỉnh sửa số điện thoại bàn (SĐT) gửi payload phone mới lên API PUT', async () => {
+  let capturedBody = null;
+  mockFetchHandler = async (url, options) => {
+    if (options.method === 'PUT') {
+      capturedBody = JSON.parse(options.body);
+      return {
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ success: true, data: { id: 20, ...capturedBody } }),
+      };
+    }
+    return { ok: true, headers: { get: () => 'application/json' }, json: async () => ({}) };
+  };
+
+  const overlay = await openDepartmentFormModal({
+    mode: 'edit',
+    departmentId: 20,
+    department: {
+      id: 20,
+      departmentName: 'Phòng Tổng Hợp',
+      departmentCode: 'PB-TH',
+      phone: '0208-1111-222',
+    },
+  });
+
+  const form = overlay.querySelector('#department-form');
+  const phoneInput = overlay.querySelector('#dept-form-phone');
+
+  // Đổi SĐT mới
+  phoneInput.value = '0208-3846-999';
+  await form.dispatchEvent({ type: 'submit', preventDefault: () => {} });
+
+  assert.strictEqual(capturedBody.phone, '0208-3846-999');
+  assert.strictEqual(capturedBody.departmentName, 'Phòng Tổng Hợp');
+  closeDepartmentFormModal();
+});
+
+// -----------------------------------------------------------------------------
+// TEST 21: Xóa trắng SĐT phòng ban -> Gửi PUT với phone là null
+// -----------------------------------------------------------------------------
+await testAsync('Test 21: Xóa trắng ô số điện thoại bàn gửi payload phone là null', async () => {
+  let capturedBody = null;
+  mockFetchHandler = async (url, options) => {
+    if (options.method === 'PUT') {
+      capturedBody = JSON.parse(options.body);
+      return {
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ success: true, data: { id: 21, ...capturedBody } }),
+      };
+    }
+    return { ok: true, headers: { get: () => 'application/json' }, json: async () => ({}) };
+  };
+
+  const overlay = await openDepartmentFormModal({
+    mode: 'edit',
+    departmentId: 21,
+    department: {
+      id: 21,
+      departmentName: 'Phòng Tổng Hợp',
+      phone: '0208-1111-222',
+    },
+  });
+
+  const form = overlay.querySelector('#department-form');
+  const phoneInput = overlay.querySelector('#dept-form-phone');
+
+  // Xóa trắng SĐT
+  phoneInput.value = '   ';
+  await form.dispatchEvent({ type: 'submit', preventDefault: () => {} });
+
+  assert.strictEqual(capturedBody.phone, null);
+  closeDepartmentFormModal();
+});
+
 console.log('\n============================================================');
 console.log(`🎉 KẾT QUẢ: ĐÃ VƯỢT QUA ${passedTests}/${totalTests} BÀI KIỂM THỬ DEPARTMENT FORM MODAL!`);
 console.log('============================================================\n');
