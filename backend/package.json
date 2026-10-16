@@ -15,6 +15,7 @@
     "test:department:integration": "node tests/departmentUpdateApi.test.js",
     "test:employee": "node tests/employee.test.js",
     "test:employee:update": "node tests/employeeUpdateApi.test.js",
+    "test:qa:employee:cccd": "node tests/qaEmployeeUpdateCccdIntegrity.test.js",
     "test:attendance": "node tests/attendance.test.js",
     "test:db": "node tests/databaseInitSecurity.test.js",
     "test:e2e:https": "node tests/e2eHttpsIntegration.test.js",
