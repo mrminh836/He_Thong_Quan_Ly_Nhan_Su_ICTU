@@ -103,6 +103,15 @@ export const NAVIGATION_SECTIONS = [
         // Chỉ ADMIN và HR_MANAGER quản trị bảng chấm công công ty. Nhân viên chấm công trọn gói tại Dashboard
         allowedRoles: [ROLES.ADMIN, ROLES.HR_MANAGER],
       },
+      {
+        id: 'nav-attendance-history',
+        label: 'Lịch sử công',
+        title: 'Lịch sử chấm công',
+        path: '/attendance-history',
+        icon: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+        // Cả ADMIN, HR_MANAGER và EMPLOYEE đều có quyền xem lịch sử chấm công
+        allowedRoles: [ROLES.ADMIN, ROLES.HR_MANAGER, ROLES.EMPLOYEE],
+      },
     ],
   },
   {
