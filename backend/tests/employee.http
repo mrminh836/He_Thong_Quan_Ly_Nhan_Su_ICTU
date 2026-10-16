@@ -137,3 +137,99 @@ Authorization: Bearer {{adminToken}}
 GET {{baseUrl}}/employees?departmentId=1%20OR%201=1
 Authorization: Bearer {{adminToken}}
 
+### -----------------------------------------------------------------------------
+### KIỂM THỬ CẬP NHẬT NHÂN VIÊN: PUT /api/employees/:id
+### -----------------------------------------------------------------------------
+
+### Case 22: Cập nhật cả 3 trường chức vụ, mức lương, SĐT thành công (200 OK)
+PUT {{baseUrl}}/employees/1
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "Position": "Senior Tech Lead",
+  "Salary": 35000000,
+  "Phone": "0912345678"
+}
+
+### Case 23: Chỉ cập nhật chức vụ (200 OK)
+PUT {{baseUrl}}/employees/1
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "position": "Trưởng nhóm Giải pháp"
+}
+
+### Case 24: Chỉ cập nhật mức lương (200 OK)
+PUT {{baseUrl}}/employees/1
+Authorization: Bearer {{hrToken}}
+Content-Type: {{contentType}}
+
+{
+  "salary": 38000000
+}
+
+### Case 25: Chỉ cập nhật số điện thoại dạng Việt Nam (200 OK)
+PUT {{baseUrl}}/employees/1
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "phone": "+84988777666"
+}
+
+### Case 26: Xóa trắng số điện thoại (phone: null) (200 OK)
+PUT {{baseUrl}}/employees/1
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "phone": null
+}
+
+### Case 27: Cố tình cập nhật ID không tồn tại (404 Not Found)
+PUT {{baseUrl}}/employees/999999
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "position": "Dev"
+}
+
+### Case 28: Mức lương âm (400 Bad Request)
+PUT {{baseUrl}}/employees/1
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "salary": -5000000
+}
+
+### Case 29: Chức vụ rỗng (400 Bad Request)
+PUT {{baseUrl}}/employees/1
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "position": "   "
+}
+
+### Case 30: EMPLOYEE cố tình cập nhật mức lương (403 Forbidden)
+PUT {{baseUrl}}/employees/1
+Authorization: Bearer {{empToken}}
+Content-Type: {{contentType}}
+
+{
+  "salary": 99000000
+}
+
+### Case 31: Không có token (401 Unauthorized)
+PUT {{baseUrl}}/employees/1
+Content-Type: {{contentType}}
+
+{
+  "salary": 20000000
+}
+
+

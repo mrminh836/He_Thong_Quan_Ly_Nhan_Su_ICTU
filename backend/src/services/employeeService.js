@@ -351,8 +351,73 @@ export async function getEmployees({ page = 1, limit = 10, departmentId = null, 
   };
 }
 
+/**
+ * Cập nhật thông tin nhân viên (chức vụ, mức lương, số điện thoại)
+ * 
+ * @param {number} employeeId - ID nhân viên
+ * @param {object} updates - Dữ liệu cập nhật đã qua validation
+ * @param {string} [updates.position] - Chức vụ
+ * @param {number} [updates.baseSalary] - Mức lương
+ * @param {string|null} [updates.phone] - Số điện thoại
+ * @returns {Promise<object>} Thông tin nhân viên sau khi cập nhật (Không chứa CCCD)
+ */
+export async function updateEmployee(employeeId, updates) {
+  const parsedId = Number(employeeId);
+  if (!Number.isInteger(parsedId) || parsedId <= 0) {
+    throw new EmployeeError('Mã định danh nhân viên (ID) phải là số nguyên dương hợp lệ.', 400, 'INVALID_ID');
+  }
+
+  // 1. Kiểm tra sự tồn tại của nhân viên trong CSDL
+  const existing = await employeeRepository.findById(parsedId);
+  if (!existing) {
+    throw new EmployeeNotFoundError(`Không tìm thấy nhân viên với ID ${parsedId}.`);
+  }
+
+  // 2. Thực thi cập nhật có tham số vào CSDL
+  await employeeRepository.update(parsedId, updates);
+
+  // 3. Lấy lại bản ghi sau khi cập nhật
+  const updated = await employeeRepository.findById(parsedId);
+
+  // Hàm tiện ích format ngày về YYYY-MM-DD
+  const formatDate = (dateVal) => {
+    if (!dateVal) return null;
+    if (typeof dateVal === 'string') return dateVal.slice(0, 10);
+    if (dateVal instanceof Date && !isNaN(dateVal.getTime())) {
+      const year = dateVal.getFullYear();
+      const month = String(dateVal.getMonth() + 1).padStart(2, '0');
+      const day = String(dateVal.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    return String(dateVal).slice(0, 10);
+  };
+
+  // 4. Định dạng dữ liệu trả về an toàn: Tuyệt đối KHÔNG trả CCCD thô, ciphertext hay hash
+  return {
+    employeeId: updated.employee_id,
+    employeeCode: updated.employee_code,
+    fullName: updated.full_name,
+    email: updated.email || null,
+    phone: updated.phone || null,
+    position: updated.position || null,
+    baseSalary: Number(updated.base_salary || 0),
+    departmentId: updated.department_id,
+    departmentName: updated.department_name || null,
+    departmentCode: updated.department_code || null,
+    address: updated.address || null,
+    gender: updated.gender || null,
+    dateOfBirth: formatDate(updated.date_of_birth),
+    hireDate: formatDate(updated.hire_date),
+    status: updated.employment_status ? updated.employment_status.toUpperCase() : 'ACTIVE',
+    employmentStatus: updated.employment_status || 'Active',
+    createdAt: updated.created_at,
+    updatedAt: updated.updated_at,
+  };
+}
+
 export default {
   createEmployee,
   getEmployeeById,
   getEmployees,
+  updateEmployee,
 };

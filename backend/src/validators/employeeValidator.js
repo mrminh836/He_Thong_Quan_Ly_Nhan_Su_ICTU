@@ -344,7 +344,150 @@ export function validateEmployeeQueryParams(query = {}) {
   };
 }
 
+/**
+ * Kiểm tra tính hợp lệ của Employee ID từ URL params
+ * @param {any} rawId 
+ * @returns {{ isValid: boolean, error?: string, parsedId?: number }}
+ */
+export function validateEmployeeId(rawId) {
+  if (rawId === undefined || rawId === null || String(rawId).trim() === '') {
+    return {
+      isValid: false,
+      error: 'Mã định danh nhân viên (ID) là bắt buộc.',
+    };
+  }
+
+  const strId = String(rawId).trim();
+  if (!/^\d+$/.test(strId)) {
+    return {
+      isValid: false,
+      error: 'Mã định danh nhân viên (ID) phải là số nguyên dương hợp lệ.',
+    };
+  }
+
+  const parsedId = Number(strId);
+  if (!Number.isSafeInteger(parsedId) || parsedId <= 0) {
+    return {
+      isValid: false,
+      error: 'Mã định danh nhân viên (ID) phải là số nguyên dương lớn hơn 0.',
+    };
+  }
+
+  return {
+    isValid: true,
+    parsedId,
+  };
+}
+
+/**
+ * Kiểm tra và chuẩn hóa dữ liệu khi cập nhật nhân viên (PUT /api/employees/:id)
+ * Chỉ cho phép cập nhật 3 trường nghiệp vụ:
+ * 1. position / Position
+ * 2. salary / Salary / baseSalary / base_salary
+ * 3. phone / Phone
+ * 
+ * @param {object} body - Request body từ client
+ * @returns {{ isValid: boolean, error?: string, errors?: Record<string, string>, updates?: object }}
+ */
+export function validateUpdateEmployee(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return {
+      isValid: false,
+      error: 'Dữ liệu đầu vào phải là một đối tượng JSON hợp lệ.',
+    };
+  }
+
+  const updates = {};
+  const errors = {};
+  let fieldCount = 0;
+
+  // 1. Kiểm tra Chức vụ (position / Position)
+  const rawPosition = body.position ?? body.Position;
+  if (rawPosition !== undefined) {
+    if (typeof rawPosition !== 'string') {
+      errors.position = 'Chức vụ phải là chuỗi ký tự.';
+    } else {
+      const cleanPosition = rawPosition.trim();
+      if (cleanPosition.length === 0) {
+        errors.position = 'Chức vụ không được để trống hoặc chỉ chứa khoảng trắng.';
+      } else if (cleanPosition.length > 50) {
+        errors.position = 'Chức vụ không được vượt quá 50 ký tự.';
+      } else {
+        updates.position = cleanPosition;
+        fieldCount++;
+      }
+    }
+  }
+
+  // 2. Kiểm tra Mức lương (salary / Salary / baseSalary / base_salary)
+  const rawSalary = body.salary ?? body.Salary ?? body.baseSalary ?? body.base_salary;
+  if (rawSalary !== undefined) {
+    if (rawSalary === null || rawSalary === '' || typeof rawSalary === 'boolean') {
+      errors.salary = 'Mức lương phải là số không âm hợp lệ.';
+    } else {
+      const numSalary = typeof rawSalary === 'number' ? rawSalary : Number(String(rawSalary).trim());
+      if (isNaN(numSalary) || !isFinite(numSalary)) {
+        errors.salary = 'Mức lương phải là số không âm hợp lệ.';
+      } else if (numSalary < 0) {
+        errors.salary = 'Mức lương không được là số âm.';
+      } else if (numSalary > 9999999999.99) {
+        errors.salary = 'Mức lương vượt quá giới hạn tối đa cho phép (tối đa 9,999,999,999.99 VNĐ).';
+      } else {
+        // Làm tròn tối đa 2 chữ số thập phân cho DECIMAL(12, 2)
+        updates.baseSalary = Number(numSalary.toFixed(2));
+        fieldCount++;
+      }
+    }
+  }
+
+  // 3. Kiểm tra Số điện thoại (phone / Phone)
+  const rawPhone = body.phone ?? body.Phone;
+  if (rawPhone !== undefined) {
+    if (rawPhone === null || (typeof rawPhone === 'string' && rawPhone.trim() === '')) {
+      updates.phone = null;
+      fieldCount++;
+    } else if (typeof rawPhone !== 'string' && typeof rawPhone !== 'number') {
+      errors.phone = 'Số điện thoại không đúng định dạng.';
+    } else {
+      const cleanPhone = String(rawPhone).trim();
+      if (cleanPhone.length > 20) {
+        errors.phone = 'Số điện thoại không được vượt quá 20 ký tự.';
+      } else if (!PHONE_REGEX.test(cleanPhone)) {
+        errors.phone = 'Số điện thoại không đúng định dạng.';
+      } else {
+        updates.phone = cleanPhone;
+        fieldCount++;
+      }
+    }
+  }
+
+  // Nếu có lỗi validation ở bất kỳ trường nào
+  const errorKeys = Object.keys(errors);
+  if (errorKeys.length > 0) {
+    return {
+      isValid: false,
+      error: errors[errorKeys[0]],
+      errors,
+    };
+  }
+
+  // Nếu không có trường nào hợp lệ để cập nhật
+  if (fieldCount === 0) {
+    return {
+      isValid: false,
+      error: 'Vui lòng cung cấp ít nhất một trường thông tin hợp lệ để cập nhật (chức vụ, mức lương, số điện thoại).',
+    };
+  }
+
+  return {
+    isValid: true,
+    updates,
+  };
+}
+
 export default {
   validateCreateEmployee,
   validateEmployeeQueryParams,
+  validateEmployeeId,
+  validateUpdateEmployee,
 };
