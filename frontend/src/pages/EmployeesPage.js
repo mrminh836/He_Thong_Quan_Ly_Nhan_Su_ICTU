@@ -7,6 +7,7 @@ import { showToast } from '../components/Toast.js';
 import { qs, qsa, sanitizeHTML } from '../utils/dom.js';
 import { openEmployeeDetailModal } from '../components/EmployeeDetailModal.js';
 import { openEmployeeFormModal } from '../components/EmployeeFormModal.js';
+import { openEmployeeEditModal } from '../components/EmployeeEditModal.js';
 
 // State nội bộ của trang Quản lý nhân sự
 let pageState = {
@@ -717,7 +718,15 @@ function handleTableActionClick(e) {
   if (action === 'view') {
     openEmployeeDetailModal(id, btn);
   } else if (action === 'edit') {
-    showToast(`Chức năng cập nhật nhân viên #${id} sẽ sẵn sàng ở giai đoạn tiếp theo.`, 'info');
+    const targetEmp = pageState.employees.find((e) => String(e.employeeId) === String(id));
+    openEmployeeEditModal({
+      employeeId: id,
+      employee: targetEmp,
+      triggerEl: btn,
+      onSuccess: () => {
+        loadEmployeeData();
+      },
+    });
   }
 }
 
