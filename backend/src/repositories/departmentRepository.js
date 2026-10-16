@@ -155,7 +155,7 @@ export async function findByName(name) {
 
   const sql = `
     SELECT * FROM \`departments\`
-    WHERE LOWER(department_name) = LOWER(?)
+    WHERE \`department_name\` = ?
     LIMIT 1
   `;
   const rows = await query(sql, [name.trim()]);
@@ -173,7 +173,7 @@ export async function findByNameExcludingId(name, excludeId) {
 
   const sql = `
     SELECT * FROM \`departments\`
-    WHERE LOWER(department_name) = LOWER(?) AND department_id != ?
+    WHERE \`department_name\` = ? AND \`department_id\` <> ?
     LIMIT 1
   `;
   const rows = await query(sql, [name.trim(), excludeId]);
@@ -182,6 +182,7 @@ export async function findByNameExcludingId(name, excludeId) {
 
 /**
  * Tìm phòng ban theo Mã (department_code)
+ * Sử dụng chỉ mục uk_departments_code trong MySQL
  * @param {string} code
  * @returns {Promise<object|null>}
  */
@@ -190,7 +191,7 @@ export async function findByCode(code) {
 
   const sql = `
     SELECT * FROM \`departments\`
-    WHERE LOWER(department_code) = LOWER(?)
+    WHERE \`department_code\` = ?
     LIMIT 1
   `;
   const rows = await query(sql, [code.trim()]);
@@ -198,7 +199,8 @@ export async function findByCode(code) {
 }
 
 /**
- * Tìm phòng ban theo Mã ngoại trừ một ID xác định (dùng khi cập nhật)
+ * Tìm phòng ban theo Mã ngoại trừ một ID xác định (dùng khi cập nhật để validate trùng mã)
+ * Sử dụng parameterized query và B-Tree Index uk_departments_code
  * @param {string} code
  * @param {number} excludeId
  * @returns {Promise<object|null>}
@@ -208,7 +210,7 @@ export async function findByCodeExcludingId(code, excludeId) {
 
   const sql = `
     SELECT * FROM \`departments\`
-    WHERE LOWER(department_code) = LOWER(?) AND department_id != ?
+    WHERE \`department_code\` = ? AND \`department_id\` <> ?
     LIMIT 1
   `;
   const rows = await query(sql, [code.trim(), excludeId]);
