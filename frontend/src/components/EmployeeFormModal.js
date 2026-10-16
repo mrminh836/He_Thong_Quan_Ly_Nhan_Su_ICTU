@@ -143,9 +143,11 @@ export function validateEmployeeForm(fields = {}) {
 
 /**
  * Đóng modal thêm nhân viên và dọn dẹp form khỏi DOM
+ * @param {boolean} [force=false]
  */
-export function closeEmployeeFormModal() {
-  if (isSubmitting) return; // Không đóng khi đang gửi API
+export function closeEmployeeFormModal(force = false) {
+  if (isSubmitting && !force) return; // Không đóng khi đang gửi API
+  isSubmitting = false;
 
   if (escKeyHandler) {
     document.removeEventListener('keydown', escKeyHandler);
@@ -608,10 +610,11 @@ async function handleSubmitEmployeeForm(overlay, onSuccess) {
   try {
     const createdEmployee = await employeeService.createEmployee(payload);
 
+    setSubmittingState(overlay, false);
     showToast(`Thêm nhân viên "${payload.fullName}" thành công!`, 'success');
 
     // Đóng modal và reset form
-    closeEmployeeFormModal();
+    closeEmployeeFormModal(true);
 
     // Trigger callback làm mới danh sách
     if (typeof onSuccess === 'function') {
