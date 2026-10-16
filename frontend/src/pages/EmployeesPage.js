@@ -1,13 +1,14 @@
 import { renderPageHeader } from '../components/PageHeader.js';
 import { employeeService } from '../services/employeeService.js';
 import { departmentService } from '../services/departmentService.js';
-import { getCurrentUserRole } from '../services/authService.js';
+import { getCurrentUser, getCurrentUserRole } from '../services/authService.js';
 import { ROLES } from '../utils/rbac.js';
 import { showToast } from '../components/Toast.js';
 import { qs, qsa, sanitizeHTML } from '../utils/dom.js';
 import { openEmployeeDetailModal } from '../components/EmployeeDetailModal.js';
 import { openEmployeeFormModal } from '../components/EmployeeFormModal.js';
 import { openEmployeeEditModal } from '../components/EmployeeEditModal.js';
+import { openEmployeeResignModal } from '../components/EmployeeResignModal.js';
 
 // State nội bộ của trang Quản lý nhân sự
 let pageState = {
@@ -127,7 +128,7 @@ export function renderEmployeesPage() {
             <th style="width: 140px;">Số điện thoại</th>
             <th style="width: 130px;">Ngày vào làm</th>
             <th style="width: 140px; text-align: center;">Trạng thái</th>
-            <th style="width: 110px; text-align: right;">Thao tác</th>
+            <th style="width: 120px; text-align: right;">Thao tác</th>
           </tr>
         </thead>
         <tbody id="emp-table-body">
@@ -495,6 +496,8 @@ function renderSuccessState() {
   // 2. Render các hàng dữ liệu nhân viên
   const userRole = getCurrentUserRole();
   const canEdit = userRole === ROLES.ADMIN || userRole === ROLES.HR_MANAGER;
+  const currentUser = getCurrentUser();
+  const currentEmpId = currentUser?.employeeId;
 
   tbody.innerHTML = pageState.employees
     .map((emp) => {
@@ -509,7 +512,7 @@ function renderSuccessState() {
 
       // Phân loại trạng thái (ACTIVE, ONLEAVE, RESIGNED, INACTIVE)
       let statusHtml = '';
-      const rawStatus = (emp.status || '').toUpperCase();
+      const rawStatus = (emp.status || emp.employmentStatus || '').toUpperCase();
       if (rawStatus === 'ACTIVE') {
         statusHtml = `<span class="badge-status-active"><span class="status-indicator-dot dot-active"></span> Đang làm việc</span>`;
       } else if (rawStatus === 'ONLEAVE') {
@@ -519,6 +522,11 @@ function renderSuccessState() {
       } else {
         statusHtml = `<span class="badge-status-inactive"><span class="status-indicator-dot dot-inactive"></span> Tạm dừng</span>`;
       }
+
+      // Kiểm tra quyền và điều kiện cho thôi việc
+      const isResigned = rawStatus === 'RESIGNED';
+      const isSelf = currentEmpId && String(currentEmpId) === String(id);
+      const canResign = canEdit && !isResigned && !isSelf;
 
       // TUYỆT ĐỐI KHÔNG HIỂN THỊ CCCD TRONG BẢNG DANH SÁCH
       return `
@@ -576,6 +584,26 @@ function renderSuccessState() {
                   aria-label="Chỉnh sửa"
                 >
                   <svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                </button>
+              `
+                  : ''
+              }
+              ${
+                canResign
+                  ? `
+                <button 
+                  type="button" 
+                  class="emp-action-icon-btn btn-resign" 
+                  data-action="resign" 
+                  data-id="${id}" 
+                  title="Cho thôi việc nhân viên"
+                  aria-label="Cho thôi việc"
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <line x1="17" y1="11" x2="23" y2="11"/>
+                  </svg>
                 </button>
               `
                   : ''
@@ -721,6 +749,16 @@ function handleTableActionClick(e) {
     const targetEmp = pageState.employees.find((e) => String(e.employeeId) === String(id));
     openEmployeeEditModal({
       employeeId: id,
+      employee: targetEmp,
+      triggerEl: btn,
+      onSuccess: () => {
+        loadEmployeeData();
+      },
+    });
+  } else if (action === 'resign') {
+    const targetEmp = pageState.employees.find((e) => String(e.employeeId) === String(id));
+    if (!targetEmp) return;
+    openEmployeeResignModal({
       employee: targetEmp,
       triggerEl: btn,
       onSuccess: () => {

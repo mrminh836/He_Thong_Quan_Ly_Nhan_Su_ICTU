@@ -105,6 +105,21 @@ export const employeeService = {
   },
 
   /**
+   * Chuyển nhân viên sang trạng thái thôi việc (Resigned) và khóa tài khoản User liên kết
+   * Kết nối endpoint: PATCH /api/employees/:id
+   * @param {number|string} id - ID nhân viên
+   * @returns {Promise<object>} Dữ liệu sau khi cập nhật trạng thái thôi việc
+   */
+  async resignEmployee(id) {
+    if (!id || isNaN(Number(id))) {
+      throw new Error('Mã định danh nhân viên (ID) không hợp lệ.');
+    }
+
+    const res = await api.patch(`/employees/${id}`, { action: 'RESIGN' });
+    return res.data || res;
+  },
+
+  /**
    * Lấy số liệu thống kê nhân viên toàn diện từ Backend
    * @returns {Promise<{ totalEmployees: number, activeEmployees: number, deptsWithEmployees: number }>}
    */
