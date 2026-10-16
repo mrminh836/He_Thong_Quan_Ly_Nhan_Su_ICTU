@@ -86,6 +86,8 @@ export const api = {
     request(endpoint, { ...options, method: 'POST', body: JSON.stringify(body) }),
   put: (endpoint, body, options = {}) =>
     request(endpoint, { ...options, method: 'PUT', body: JSON.stringify(body) }),
+  patch: (endpoint, body, options = {}) =>
+    request(endpoint, { ...options, method: 'PATCH', body: JSON.stringify(body) }),
   delete: (endpoint, options = {}) => request(endpoint, { ...options, method: 'DELETE' }),
 
   // Endpoints kiểm tra sức khỏe

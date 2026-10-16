@@ -250,6 +250,46 @@ export const attendanceService = {
       endIndex,
     };
   },
+
+  /**
+   * Lấy lịch sử chấm công theo tháng/năm có phân trang và thống kê tổng hợp (US 19.0)
+   * Kết nối endpoint: GET /api/attendance/history
+   * @param {object} params
+   * @param {number|string} [params.month] - Tháng (1 - 12)
+   * @param {number|string} [params.year] - Năm (1900 - 2100)
+   * @param {number|string} [params.employeeId] - ID nhân viên (dành cho Admin/HR)
+   * @param {number} [params.page=1] - Số trang
+   * @param {number} [params.limit=31] - Số bản ghi mỗi trang
+   * @returns {Promise<object>}
+   */
+  async getAttendanceHistory({ month, year, employeeId, page = 1, limit = 31 } = {}) {
+    const query = new URLSearchParams();
+    if (month !== undefined && month !== null && String(month).trim() !== '') {
+      query.append('month', String(month));
+    }
+    if (year !== undefined && year !== null && String(year).trim() !== '') {
+      query.append('year', String(year));
+    }
+    if (employeeId !== undefined && employeeId !== null && employeeId !== 'all' && String(employeeId).trim() !== '') {
+      query.append('employeeId', String(employeeId));
+    }
+    if (page) {
+      query.append('page', String(page));
+    }
+    if (limit) {
+      query.append('limit', String(limit));
+    }
+    const qs = query.toString() ? `?${query.toString()}` : '';
+
+    try {
+      return await api.get(`/attendance/history${qs}`);
+    } catch (err) {
+      if (err.status === 404) {
+        return await api.get(`/attendances/history${qs}`);
+      }
+      throw err;
+    }
+  },
 };
 
 export default attendanceService;

@@ -34,6 +34,7 @@ router.get('/', (req, res) => {
       attendanceCheckIn: '/api/attendance/check-in',
       attendanceCheckOut: '/api/attendance/check-out',
       attendanceToday: '/api/attendance/today',
+      attendanceHistory: '/api/attendance/history',
       rbacAdminUsers: '/api/rbac/admin/users',
       rbacHrEmployees: '/api/rbac/hr/employees',
       rbacEmployeeAttendance: '/api/rbac/employees/:id/attendances',

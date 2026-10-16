@@ -178,6 +178,127 @@ export async function deleteById(attendanceId) {
   return result.affectedRows > 0;
 }
 
+/**
+ * Lấy lịch sử chấm công theo khoảng ngày (tháng/năm) có phân trang và tính toán số liệu thống kê tổng hợp
+ * Sử dụng parameterized query 100%, bảo vệ bằng JOIN với employees loại bỏ bản ghi mồ côi nếu có.
+ * Đảm bảo chỉ mục idx_attendances_date / idx_attendances_emp_date được tận dụng tối đa qua ranh giới >= và <.
+ * 
+ * @param {object} params
+ * @param {string} params.startDate - Ngày bắt đầu (YYYY-MM-01, inclusive)
+ * @param {string} params.endDate - Ngày kết thúc (YYYY-MM-01 tháng sau, exclusive)
+ * @param {number|null} [params.employeeId=null] - ID nhân viên cần lọc (nếu có)
+ * @param {number} [params.page=1] - Số trang
+ * @param {number} [params.limit=31] - Số bản ghi mỗi trang
+ * @returns {Promise<{
+ *   summary: { totalWorkDays: number, lateCount: number, earlyLeaveCount: number },
+ *   rows: Array<object>,
+ *   totalRecords: number,
+ *   totalPages: number,
+ *   page: number,
+ *   limit: number
+ * }>}
+ */
+export async function getAttendanceHistoryAndSummary({
+  startDate,
+  endDate,
+  employeeId = null,
+  page = 1,
+  limit = 31,
+}) {
+  const pageNum = Math.max(1, Number.parseInt(page, 10) || 1);
+  const limitNum = Math.max(1, Math.min(100, Number.parseInt(limit, 10) || 31));
+  const offsetNum = (pageNum - 1) * limitNum;
+
+  const hasEmployeeFilter = employeeId !== null && employeeId !== undefined && !Number.isNaN(Number(employeeId));
+  const filterParams = hasEmployeeFilter
+    ? [startDate, endDate, Number(employeeId)]
+    : [startDate, endDate];
+
+  const employeeWhereClause = hasEmployeeFilter ? 'AND a.employee_id = ?' : '';
+
+  // 1. Truy vấn thống kê tổng hợp (summary) và tổng số bản ghi (toàn bộ kết quả theo bộ lọc, không bị ảnh hưởng bởi phân trang)
+  const summarySql = `
+    SELECT 
+      COUNT(a.attendance_id) AS total_records,
+      COUNT(DISTINCT CASE 
+        WHEN (a.check_in IS NOT NULL OR a.check_out IS NOT NULL) 
+             AND UPPER(a.attendance_status) != 'ABSENT' 
+        THEN CONCAT(a.employee_id, '_', a.attendance_date) 
+      END) AS total_work_days,
+      COUNT(DISTINCT CASE 
+        WHEN a.check_in IS NOT NULL 
+             AND a.check_in <= '08:30:00' 
+             AND UPPER(a.attendance_status) NOT IN ('LATE', 'ABSENT') 
+        THEN CONCAT(a.employee_id, '_', a.attendance_date) 
+      END) AS on_time_count,
+      COUNT(DISTINCT CASE 
+        WHEN UPPER(a.attendance_status) = 'LATE' 
+             OR (a.check_in IS NOT NULL AND a.check_in > '08:30:00') 
+        THEN CONCAT(a.employee_id, '_', a.attendance_date) 
+      END) AS late_count,
+      COUNT(DISTINCT CASE 
+        WHEN UPPER(a.attendance_status) IN ('EARLYLEAVE', 'EARLY_LEAVE') 
+             OR (a.check_out IS NOT NULL AND a.check_out < '17:30:00') 
+        THEN CONCAT(a.employee_id, '_', a.attendance_date) 
+      END) AS early_leave_count
+    FROM \`attendances\` a
+    JOIN \`employees\` e ON a.employee_id = e.employee_id
+    WHERE a.attendance_date >= ? AND a.attendance_date < ?
+      ${employeeWhereClause}
+  `;
+
+  const summaryRows = await query(summarySql, filterParams);
+  const summaryRow = summaryRows[0] || {};
+
+  const totalRecords = Number.parseInt(summaryRow.total_records, 10) || 0;
+  const totalWorkDays = Number.parseInt(summaryRow.total_work_days, 10) || 0;
+  const onTimeCount = Number.parseInt(summaryRow.on_time_count, 10) || 0;
+  const lateCount = Number.parseInt(summaryRow.late_count, 10) || 0;
+  const earlyLeaveCount = Number.parseInt(summaryRow.early_leave_count, 10) || 0;
+
+  const totalPages = totalRecords > 0 ? Math.ceil(totalRecords / limitNum) : 1;
+
+  // 2. Truy vấn danh sách dữ liệu có phân trang
+  // Sắp xếp ổn định theo ngày mới nhất trước, nếu cùng ngày thì theo attendance_id giảm dần
+  const dataSql = `
+    SELECT 
+      a.attendance_id,
+      a.employee_id,
+      e.employee_code,
+      e.full_name AS employee_name,
+      d.department_name,
+      DATE_FORMAT(a.attendance_date, '%Y-%m-%d') AS attendance_date,
+      a.check_in,
+      a.check_out,
+      a.attendance_status,
+      a.note
+    FROM \`attendances\` a
+    JOIN \`employees\` e ON a.employee_id = e.employee_id
+    LEFT JOIN \`departments\` d ON e.department_id = d.department_id
+    WHERE a.attendance_date >= ? AND a.attendance_date < ?
+      ${employeeWhereClause}
+    ORDER BY a.attendance_date DESC, a.attendance_id DESC
+    LIMIT ? OFFSET ?
+  `;
+
+  const dataParams = [...filterParams, limitNum, offsetNum];
+  const rows = await query(dataSql, dataParams);
+
+  return {
+    summary: {
+      totalWorkDays,
+      onTimeCount,
+      lateCount,
+      earlyLeaveCount,
+    },
+    rows,
+    totalRecords,
+    totalPages,
+    page: pageNum,
+    limit: limitNum,
+  };
+}
+
 export default {
   findByEmployeeAndDate,
   createCheckIn,
@@ -185,4 +306,6 @@ export default {
   getTodayAttendanceBoard,
   findById,
   deleteById,
+  getAttendanceHistoryAndSummary,
 };
+
