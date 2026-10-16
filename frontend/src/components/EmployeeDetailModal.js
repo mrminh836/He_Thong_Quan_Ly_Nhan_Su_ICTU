@@ -3,6 +3,7 @@ import { employeeService } from '../services/employeeService.js';
 import { getCurrentUser, getCurrentUserRole } from '../services/authService.js';
 import { ROLES } from '../utils/rbac.js';
 import { showToast } from './Toast.js';
+import { openEmployeeEditModal } from './EmployeeEditModal.js';
 
 /**
  * ==============================================================================
@@ -434,6 +435,34 @@ function renderEmployeeProfileContent(overlay, employee) {
 
   // Render khu vực CCCD theo quyền hạn và gán sự kiện nút Ẩn/Hiện
   updateCccdCardDisplay(overlay, employee, canViewCccd);
+
+  // Cập nhật nút Chỉnh sửa trong Modal Footer cho Admin/HR
+  const footerEl = overlay.querySelector('.modal-footer');
+  if (footerEl && canViewCccd) {
+    footerEl.innerHTML = `
+      <button type="button" class="btn btn-secondary" id="btn-footer-close-detail">Đóng</button>
+      <button type="button" class="btn btn-primary" id="btn-footer-edit-detail">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+        <span>Chỉnh sửa hồ sơ</span>
+      </button>
+    `;
+
+    footerEl.querySelector('#btn-footer-close-detail')?.addEventListener('click', () => closeEmployeeDetailModal());
+    footerEl.querySelector('#btn-footer-edit-detail')?.addEventListener('click', (e) => {
+      const empId = employee.employeeId;
+      const cachedEmp = { ...employee };
+      closeEmployeeDetailModal();
+      openEmployeeEditModal({
+        employeeId: empId,
+        employee: cachedEmp,
+        triggerEl: e.currentTarget,
+        onSuccess: () => {
+          const refreshBtn = document.querySelector('#btn-refresh-emp');
+          if (refreshBtn) refreshBtn.click();
+        },
+      });
+    });
+  }
 }
 
 /**
