@@ -485,9 +485,57 @@ export function validateUpdateEmployee(body) {
   };
 }
 
+/**
+ * Xác thực dữ liệu đầu vào khi cho nhân viên nghỉ việc (PATCH /api/employees/:id)
+ * Chỉ chấp nhận action: 'RESIGN'
+ * 
+ * @param {object} body - Request body từ client
+ * @returns {{ isValid: boolean, error?: string, action?: string }}
+ */
+export function validateResignEmployee(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return {
+      isValid: false,
+      error: 'Dữ liệu đầu vào phải là một đối tượng JSON hợp lệ.',
+    };
+  }
+
+  const action = body.action ?? body.Action;
+  if (!action || typeof action !== 'string') {
+    return {
+      isValid: false,
+      error: 'Hành động (action) là bắt buộc và phải là chuỗi ký tự.',
+    };
+  }
+
+  const cleanAction = action.trim().toUpperCase();
+  if (cleanAction !== 'RESIGN') {
+    return {
+      isValid: false,
+      error: 'Hành động (action) không hợp lệ. Chỉ chấp nhận hành động "RESIGN".',
+    };
+  }
+
+  // Chống client gửi các trường nội bộ khác (role, account_status, employment_status, etc.)
+  const allowedKeys = ['action', 'Action'];
+  const disallowedKeys = Object.keys(body).filter((k) => !allowedKeys.includes(k));
+  if (disallowedKeys.length > 0) {
+    return {
+      isValid: false,
+      error: `Không được phép gửi kèm các trường ngoài hành động: ${disallowedKeys.join(', ')}.`,
+    };
+  }
+
+  return {
+    isValid: true,
+    action: cleanAction,
+  };
+}
+
 export default {
   validateCreateEmployee,
   validateEmployeeQueryParams,
   validateEmployeeId,
   validateUpdateEmployee,
+  validateResignEmployee,
 };

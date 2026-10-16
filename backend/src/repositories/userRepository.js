@@ -136,9 +136,61 @@ export async function createUser({
   return result.insertId;
 }
 
+/**
+ * Tìm kiếm tài khoản User theo Employee ID
+ * @param {number} employeeId
+ * @returns {Promise<object|null>}
+ */
+export async function findByEmployeeId(employeeId) {
+  if (!employeeId) {
+    return null;
+  }
+
+  const sql = `
+    SELECT 
+      u.user_id,
+      u.employee_id,
+      u.username,
+      u.role,
+      u.account_status,
+      u.last_login_at,
+      u.created_at,
+      u.updated_at
+    FROM \`users\` u
+    WHERE u.employee_id = ?
+    LIMIT 1
+  `;
+
+  const rows = await query(sql, [employeeId]);
+  return rows.length > 0 ? rows[0] : null;
+}
+
+/**
+ * Cập nhật trạng thái tài khoản người dùng
+ * @param {number} userId
+ * @param {string} status - 'Active' | 'Locked' | 'Inactive'
+ * @returns {Promise<boolean>}
+ */
+export async function updateAccountStatus(userId, status) {
+  if (!userId || !status) {
+    return false;
+  }
+
+  const sql = `
+    UPDATE \`users\`
+    SET account_status = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE user_id = ?
+  `;
+
+  const result = await query(sql, [status, userId]);
+  return result.affectedRows > 0;
+}
+
 export default {
   findByUsernameOrEmail,
   findById,
+  findByEmployeeId,
   updateLastLogin,
+  updateAccountStatus,
   createUser,
 };

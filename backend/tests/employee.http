@@ -232,4 +232,62 @@ Content-Type: {{contentType}}
   "salary": 20000000
 }
 
+### -----------------------------------------------------------------------------
+### KIỂM THỬ THÔI VIỆC NHÂN VIÊN & KHÓA TÀI KHOẢN (PATCH /api/employees/:id)
+### -----------------------------------------------------------------------------
+
+### Case 32: ADMIN cho nhân viên nghỉ việc thành công (200 OK)
+PATCH {{baseUrl}}/employees/3
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "action": "RESIGN"
+}
+
+### Case 33: HR_MANAGER cho nhân viên nghỉ việc thành công (200 OK)
+PATCH {{baseUrl}}/employees/3
+Authorization: Bearer {{hrToken}}
+Content-Type: {{contentType}}
+
+{
+  "action": "RESIGN"
+}
+
+### Case 34: EMPLOYEE cố tình gọi API thôi việc (403 Forbidden)
+PATCH {{baseUrl}}/employees/3
+Authorization: Bearer {{empToken}}
+Content-Type: {{contentType}}
+
+{
+  "action": "RESIGN"
+}
+
+### Case 35: Hành động sai / không phải RESIGN (400 Bad Request)
+PATCH {{baseUrl}}/employees/3
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "action": "FIRE"
+}
+
+### Case 36: Gửi kèm trường nội bộ bị cấm (400 Bad Request)
+PATCH {{baseUrl}}/employees/3
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "action": "RESIGN",
+  "account_status": "Active"
+}
+
+### Case 37: Không có token (401 Unauthorized)
+PATCH {{baseUrl}}/employees/3
+Content-Type: {{contentType}}
+
+{
+  "action": "RESIGN"
+}
+
 
