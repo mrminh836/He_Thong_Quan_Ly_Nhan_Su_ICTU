@@ -142,7 +142,7 @@ export async function openDepartmentFormModal({
   const targetId = departmentId || initialData.id || initialData.departmentId;
 
   // Nếu là chế độ Edit mà chưa có thông tin phòng ban, gọi API GET /api/departments/:id để lấy dữ liệu mới nhất
-  if (isEdit && targetId && !initialData.departmentName) {
+  if (isEdit && targetId && !initialData.departmentName && !initialData.department_name) {
     try {
       initialData = await departmentService.getDepartmentById(targetId);
     } catch (err) {
@@ -151,14 +151,24 @@ export async function openDepartmentFormModal({
     }
   }
 
+  // Chuẩn hóa dữ liệu prefill (hỗ trợ cả camelCase và snake_case)
+  const initialName = initialData.departmentName || initialData.department_name || '';
+  const initialCode = initialData.departmentCode || initialData.department_code || '';
+  const initialDesc = initialData.description || '';
+  const initialLoc = initialData.location || '';
+  const initialPhone = initialData.phone || '';
+  const initialActive = initialData.isActive !== undefined
+    ? Boolean(initialData.isActive)
+    : (initialData.is_active !== undefined ? Boolean(initialData.is_active) : true);
+
   // Cấu hình nội dung theo chế độ Add/Edit chuẩn đặc tả
   const modalTitle = isEdit ? 'Chỉnh sửa phòng ban' : 'Thêm phòng ban';
   const modalSubtitle = isEdit
     ? 'Cập nhật thông tin phòng ban.'
     : 'Nhập thông tin để tạo phòng ban mới trong hệ thống.';
-  const submitBtnText = isEdit ? 'Cập nhật phòng ban' : 'Lưu phòng ban';
+  const submitBtnText = isEdit ? 'Lưu thay đổi' : 'Lưu phòng ban';
   const submitBtnIcon = isEdit
-    ? '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+    ? '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>'
     : '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 
   // Tạo phần tử DOM Overlay
@@ -200,7 +210,7 @@ export async function openDepartmentFormModal({
               class="form-input" 
               placeholder="Ví dụ: Phòng Công nghệ thông tin" 
               maxlength="100" 
-              value="${escapeHtml(initialData.departmentName || '')}" 
+              value="${escapeHtml(initialName)}" 
               required 
             />
             <div class="form-error-msg" id="dept-name-error"></div>
@@ -216,7 +226,7 @@ export async function openDepartmentFormModal({
               name="description" 
               class="form-textarea" 
               placeholder="Nhập mô tả về chức năng, nhiệm vụ của phòng ban..."
-            >${escapeHtml(initialData.description || '')}</textarea>
+            >${escapeHtml(initialDesc)}</textarea>
             <div class="form-error-msg" id="dept-desc-error"></div>
           </div>
 
@@ -232,7 +242,7 @@ export async function openDepartmentFormModal({
               class="form-input" 
               placeholder="Ví dụ: PB-CNTT (Tự động tạo nếu để trống)" 
               maxlength="20" 
-              value="${escapeHtml(initialData.departmentCode || '')}" 
+              value="${escapeHtml(initialCode)}" 
             />
             <div class="form-error-msg" id="dept-code-error"></div>
             <span class="form-hint">Mã viết tắt duy nhất của phòng ban (từ 2 đến 20 ký tự chữ và số).</span>
@@ -249,7 +259,7 @@ export async function openDepartmentFormModal({
                 class="form-input" 
                 placeholder="Tầng 4 - Tòa nhà A" 
                 maxlength="255" 
-                value="${escapeHtml(initialData.location || '')}" 
+                value="${escapeHtml(initialLoc)}" 
               />
             </div>
             <div class="form-group">
@@ -261,7 +271,7 @@ export async function openDepartmentFormModal({
                 class="form-input" 
                 placeholder="0208-3846-xxx" 
                 maxlength="20" 
-                value="${escapeHtml(initialData.phone || '')}" 
+                value="${escapeHtml(initialPhone)}" 
               />
             </div>
           </div>
@@ -273,7 +283,7 @@ export async function openDepartmentFormModal({
               id="dept-form-active" 
               name="isActive" 
               class="form-checkbox" 
-              ${initialData.isActive !== false ? 'checked' : ''} 
+              ${initialActive ? 'checked' : ''} 
             />
             <label for="dept-form-active" class="form-checkbox-label">
               Kích hoạt hoạt động
@@ -435,21 +445,31 @@ export async function openDepartmentFormModal({
 
       const isDuplicateCode =
         errorCode === 'DUPLICATE_DEPARTMENT_CODE' ||
-        (status === 409 && (errorMsg.includes('Mã phòng ban') || errorMsg.toLowerCase().includes('departmentcode')));
+        (status === 409 && (errorMsg.includes('Mã phòng ban') || errorMsg.toLowerCase().includes('departmentcode') || errorMsg.toLowerCase().includes('mã')));
 
       if (isDuplicateName) {
         nameInput.classList.add('is-invalid');
-        nameError.textContent = errorMsg || `Tên phòng ban '${departmentName}' đã tồn tại trong hệ thống.`;
+        const displayMsg = errorMsg || `Tên phòng ban '${departmentName}' đã tồn tại trong hệ thống.`;
+        nameError.textContent = displayMsg;
         nameError.classList.add('visible');
         nameInput.focus();
-        bannerErrorText.textContent = errorMsg || `Tên phòng ban '${departmentName}' đã tồn tại trong hệ thống. Vui lòng chọn tên khác.`;
+        bannerErrorText.textContent = displayMsg;
         bannerError.classList.add('visible');
       } else if (isDuplicateCode) {
         codeInput.classList.add('is-invalid');
-        codeError.textContent = errorMsg || `Mã phòng ban '${departmentCode}' đã được sử dụng.`;
+        const displayMsg = (errorMsg && errorMsg.includes('Mã phòng ban'))
+          ? (errorMsg.includes('khác') ? errorMsg : `${errorMsg} Vui lòng nhập mã khác.`)
+          : 'Mã phòng ban đã tồn tại. Vui lòng nhập mã khác.';
+        codeError.textContent = displayMsg;
         codeError.classList.add('visible');
         codeInput.focus();
-        bannerErrorText.textContent = errorMsg || `Mã phòng ban '${departmentCode}' đã được sử dụng. Vui lòng chọn mã khác.`;
+        bannerErrorText.textContent = displayMsg;
+        bannerError.classList.add('visible');
+      } else if (status === 409) {
+        bannerErrorText.textContent = errorMsg || 'Mã hoặc tên phòng ban đã tồn tại. Vui lòng nhập thông tin khác.';
+        bannerError.classList.add('visible');
+      } else if (status === 400) {
+        bannerErrorText.textContent = errorMsg || 'Dữ liệu đầu vào không hợp lệ. Vui lòng kiểm tra lại các trường thông tin.';
         bannerError.classList.add('visible');
       } else if (status === 404) {
         bannerErrorText.textContent = errorMsg || 'Phòng ban không tồn tại hoặc đã bị xóa khỏi hệ thống.';
@@ -459,6 +479,10 @@ export async function openDepartmentFormModal({
         bannerErrorText.textContent = 'Bạn không có quyền thực hiện thao tác này. Vui lòng kiểm tra lại quyền tài khoản.';
         bannerError.classList.add('visible');
         showToast('Từ chối truy cập: Bạn không có quyền thực hiện thao tác này.', 'error');
+      } else if (status >= 500) {
+        bannerErrorText.textContent = 'Lỗi hệ thống: Không thể xử lý yêu cầu lúc này. Vui lòng thử lại sau.';
+        bannerError.classList.add('visible');
+        showToast('Lỗi máy chủ nội bộ. Vui lòng thử lại sau.', 'error');
       } else {
         bannerErrorText.textContent = errorMsg || 'Không thể kết nối máy chủ. Vui lòng thử lại sau.';
         bannerError.classList.add('visible');
