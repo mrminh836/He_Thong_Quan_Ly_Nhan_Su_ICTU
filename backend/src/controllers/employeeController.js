@@ -1,5 +1,10 @@
 import employeeService, { EmployeeError } from '../services/employeeService.js';
-import { validateCreateEmployee, validateEmployeeQueryParams } from '../validators/employeeValidator.js';
+import {
+  validateCreateEmployee,
+  validateEmployeeQueryParams,
+  validateEmployeeId,
+  validateUpdateEmployee,
+} from '../validators/employeeValidator.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 
 /**
@@ -174,8 +179,66 @@ export async function getEmployees(req, res, next) {
   }
 }
 
+/**
+ * Controller cập nhật thông tin nhân viên (Chức vụ, Mức lương, Số điện thoại)
+ * Endpoint: PUT /api/employees/:id
+ * Phân quyền: ADMIN, HR_MANAGER
+ * 
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function updateEmployee(req, res, next) {
+  try {
+    // 1. Kiểm tra ID từ URL
+    const idValidation = validateEmployeeId(req.params.id);
+    if (!idValidation.isValid) {
+      return errorResponse(res, {
+        statusCode: 400,
+        errorCode: 'INVALID_ID',
+        message: idValidation.error,
+      });
+    }
+
+    // 2. Kiểm tra dữ liệu đầu vào (Input Validation)
+    const bodyValidation = validateUpdateEmployee(req.body);
+    if (!bodyValidation.isValid) {
+      return errorResponse(res, {
+        statusCode: 400,
+        errorCode: 'VALIDATION_ERROR',
+        message: bodyValidation.error,
+        errors: bodyValidation.errors || undefined,
+      });
+    }
+
+    // 3. Thực hiện cập nhật thông tin nhân viên
+    const updatedEmployee = await employeeService.updateEmployee(
+      idValidation.parsedId,
+      bodyValidation.updates
+    );
+
+    // 4. Phản hồi thành công HTTP 200 OK
+    return successResponse(res, {
+      statusCode: 200,
+      message: 'Cập nhật thông tin nhân viên thành công',
+      data: updatedEmployee,
+    });
+  } catch (error) {
+    if (error instanceof EmployeeError) {
+      return errorResponse(res, {
+        statusCode: error.statusCode,
+        errorCode: error.errorCode,
+        message: error.message,
+      });
+    }
+
+    next(error);
+  }
+}
+
 export default {
   createEmployee,
   getEmployeeById,
   getEmployees,
+  updateEmployee,
 };

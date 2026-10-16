@@ -400,6 +400,51 @@ export async function deleteById(employeeId) {
   return result.affectedRows > 0;
 }
 
+/**
+ * Cập nhật thông tin nhân viên theo ID (chỉ cập nhật các trường được truyền)
+ * Áp dụng 100% Prepared Statements / Parameterized Queries chống SQL Injection
+ * 
+ * @param {number} employeeId - ID nhân viên (employee_id)
+ * @param {object} updates - Dữ liệu cần cập nhật
+ * @param {string} [updates.position] - Chức vụ mới
+ * @param {number} [updates.baseSalary] - Mức lương mới
+ * @param {string|null} [updates.phone] - Số điện thoại mới
+ * @returns {Promise<number>} Số dòng bị ảnh hưởng (affectedRows)
+ */
+export async function update(employeeId, updates = {}) {
+  if (!employeeId) return 0;
+
+  const setClauses = [];
+  const params = [];
+
+  if (updates.position !== undefined) {
+    setClauses.push('`position` = ?');
+    params.push(updates.position);
+  }
+
+  if (updates.baseSalary !== undefined) {
+    setClauses.push('`base_salary` = ?');
+    params.push(updates.baseSalary);
+  }
+
+  if (updates.phone !== undefined) {
+    setClauses.push('`phone` = ?');
+    params.push(updates.phone);
+  }
+
+  if (setClauses.length === 0) return 0;
+
+  const sql = `
+    UPDATE \`employees\`
+    SET ${setClauses.join(', ')}
+    WHERE \`employee_id\` = ?
+  `;
+  params.push(employeeId);
+
+  const result = await query(sql, params);
+  return result.affectedRows;
+}
+
 export default {
   findByCode,
   findBySsnHash,
@@ -408,6 +453,7 @@ export default {
   findByIdWithDecryptedCccd,
   generateNextEmployeeCode,
   create,
+  update,
   deleteById,
   findAll,
   countAll,
