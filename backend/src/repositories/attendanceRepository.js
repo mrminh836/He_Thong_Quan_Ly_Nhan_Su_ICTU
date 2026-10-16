@@ -220,16 +220,27 @@ export async function getAttendanceHistoryAndSummary({
   const summarySql = `
     SELECT 
       COUNT(a.attendance_id) AS total_records,
-      COUNT(DISTINCT CONCAT(a.employee_id, '_', a.attendance_date)) AS total_work_days,
-      COALESCE(SUM(CASE 
-        WHEN UPPER(a.attendance_status) = 'LATE' OR a.check_in > '08:30:00' THEN 1 
-        ELSE 0 
-      END), 0) AS late_count,
-      COALESCE(SUM(CASE 
-        WHEN UPPER(a.attendance_status) = 'EARLYLEAVE' 
-             OR (a.check_out IS NOT NULL AND a.check_out < '17:30:00') THEN 1 
-        ELSE 0 
-      END), 0) AS early_leave_count
+      COUNT(DISTINCT CASE 
+        WHEN (a.check_in IS NOT NULL OR a.check_out IS NOT NULL) 
+             AND UPPER(a.attendance_status) != 'ABSENT' 
+        THEN CONCAT(a.employee_id, '_', a.attendance_date) 
+      END) AS total_work_days,
+      COUNT(DISTINCT CASE 
+        WHEN a.check_in IS NOT NULL 
+             AND a.check_in <= '08:30:00' 
+             AND UPPER(a.attendance_status) NOT IN ('LATE', 'ABSENT') 
+        THEN CONCAT(a.employee_id, '_', a.attendance_date) 
+      END) AS on_time_count,
+      COUNT(DISTINCT CASE 
+        WHEN UPPER(a.attendance_status) = 'LATE' 
+             OR (a.check_in IS NOT NULL AND a.check_in > '08:30:00') 
+        THEN CONCAT(a.employee_id, '_', a.attendance_date) 
+      END) AS late_count,
+      COUNT(DISTINCT CASE 
+        WHEN UPPER(a.attendance_status) IN ('EARLYLEAVE', 'EARLY_LEAVE') 
+             OR (a.check_out IS NOT NULL AND a.check_out < '17:30:00') 
+        THEN CONCAT(a.employee_id, '_', a.attendance_date) 
+      END) AS early_leave_count
     FROM \`attendances\` a
     JOIN \`employees\` e ON a.employee_id = e.employee_id
     WHERE a.attendance_date >= ? AND a.attendance_date < ?
@@ -241,6 +252,7 @@ export async function getAttendanceHistoryAndSummary({
 
   const totalRecords = Number.parseInt(summaryRow.total_records, 10) || 0;
   const totalWorkDays = Number.parseInt(summaryRow.total_work_days, 10) || 0;
+  const onTimeCount = Number.parseInt(summaryRow.on_time_count, 10) || 0;
   const lateCount = Number.parseInt(summaryRow.late_count, 10) || 0;
   const earlyLeaveCount = Number.parseInt(summaryRow.early_leave_count, 10) || 0;
 
@@ -275,6 +287,7 @@ export async function getAttendanceHistoryAndSummary({
   return {
     summary: {
       totalWorkDays,
+      onTimeCount,
       lateCount,
       earlyLeaveCount,
     },

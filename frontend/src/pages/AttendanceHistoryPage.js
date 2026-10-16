@@ -228,7 +228,9 @@ function renderDynamicSections() {
  */
 function renderSummaryCardsHTML() {
   const { totalWorkDays, lateCount, earlyLeaveCount } = state.summary;
-  const onTimeCount = Math.max(0, totalWorkDays - lateCount);
+  const onTimeCount = state.summary.onTimeCount !== undefined
+    ? Number(state.summary.onTimeCount)
+    : Math.max(0, totalWorkDays - lateCount);
 
   return `
     <div class="history-summary-grid">

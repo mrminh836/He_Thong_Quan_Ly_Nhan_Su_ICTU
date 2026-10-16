@@ -244,7 +244,11 @@ export function evaluateAttendanceRecord({ checkInTime, checkOutTime, status }) 
 
   // 3. Chuẩn hóa trạng thái hiển thị
   let displayStatus = 'ON_TIME';
-  if (isLate) {
+  if (rawStatus === 'ABSENT' || (!checkInTime && !checkOutTime)) {
+    displayStatus = 'ABSENT';
+  } else if (isLate && isEarlyLeave) {
+    displayStatus = 'LATE_AND_EARLY_LEAVE';
+  } else if (isLate) {
     displayStatus = 'LATE';
   } else if (isEarlyLeave) {
     displayStatus = 'EARLY_LEAVE';

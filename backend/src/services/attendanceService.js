@@ -553,6 +553,7 @@ export async function getAttendanceHistory({ user, queryParams = {} }) {
     },
     summary: {
       totalWorkDays: repoResult.summary.totalWorkDays,
+      onTimeCount: repoResult.summary.onTimeCount,
       lateCount: repoResult.summary.lateCount,
       earlyLeaveCount: repoResult.summary.earlyLeaveCount,
     },
