@@ -50,7 +50,7 @@ services:
       retries: 5
       start_period: 15s
     networks:
-      hrm-network:
+      app-network:
         aliases:
           - mysql-db
           - db
@@ -92,7 +92,7 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - hrm-network
+      - app-network
 
   # ----------------------------------------------------------------------------
   # SERVICE 3: Frontend SPA Nginx (frontend / hrm-app)
@@ -118,7 +118,7 @@ services:
       retries: 3
       start_period: 5s
     networks:
-      hrm-network:
+      app-network:
         aliases:
           - hrm-app
           - frontend
@@ -147,7 +147,7 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - hrm-network
+      - app-network
 
   # ----------------------------------------------------------------------------
   # SERVICE 5: Nginx Reverse Proxy (HTTPS hrm.local Gateway)
@@ -180,7 +180,7 @@ services:
       retries: 3
       start_period: 5s
     networks:
-      - hrm-network
+      - app-network
 
 # ------------------------------------------------------------------------------
 # VOLUMES & NETWORKS
@@ -190,6 +190,10 @@ volumes:
     name: hrm_ictu_mysql_data
 
 networks:
-  hrm-network:
-    name: hrm-ictu-network
+  app-network:
+    name: hrm-app-network
+    driver: bridge
+
+  monitoring:
+    name: hrm-monitoring-network
     driver: bridge
