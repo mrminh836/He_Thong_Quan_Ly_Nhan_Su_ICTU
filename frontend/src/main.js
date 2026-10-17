@@ -11,6 +11,8 @@ import './styles/employee-edit-modal.css';
 import './styles/attendance-widget.css';
 import './styles/attendance-board.css';
 import './styles/attendance-history.css';
+import './styles/dashboard.css';
+import './styles/change-password-modal.css';
 
 import { initApp } from './app.js';
 

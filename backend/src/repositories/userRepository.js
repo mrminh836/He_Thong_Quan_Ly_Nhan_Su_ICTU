@@ -186,11 +186,68 @@ export async function updateAccountStatus(userId, status) {
   return result.affectedRows > 0;
 }
 
+/**
+ * Tìm kiếm tài khoản kèm mật khẩu băm để phục vụ xác thực bảo mật (ví dụ: đổi mật khẩu)
+ * Tuyệt đối chỉ dùng cho các tầng dịch vụ xác thực nội bộ, không expose ra response
+ * @param {number} userId - ID người dùng
+ * @returns {Promise<object|null>}
+ */
+export async function findAuthById(userId) {
+  if (!userId) {
+    return null;
+  }
+
+  const sql = `
+    SELECT 
+      u.user_id,
+      u.employee_id,
+      u.username,
+      u.password_hash,
+      u.role,
+      u.account_status,
+      u.last_login_at,
+      u.created_at,
+      u.updated_at,
+      e.employment_status
+    FROM \`users\` u
+    LEFT JOIN \`employees\` e ON u.employee_id = e.employee_id
+    WHERE u.user_id = ?
+    LIMIT 1
+  `;
+
+  const rows = await query(sql, [userId]);
+  return rows.length > 0 ? rows[0] : null;
+}
+
+/**
+ * Cập nhật mật khẩu băm mới cho tài khoản người dùng
+ * Sử dụng Parameterized Query an toàn chống SQL Injection
+ * @param {number} userId - ID người dùng cần cập nhật
+ * @param {string} newPasswordHash - Mật khẩu mới đã được băm bằng Bcrypt
+ * @returns {Promise<boolean>} True nếu cập nhật thành công 1 bản ghi
+ */
+export async function updatePassword(userId, newPasswordHash) {
+  if (!userId || !newPasswordHash) {
+    return false;
+  }
+
+  const sql = `
+    UPDATE \`users\`
+    SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE user_id = ?
+  `;
+
+  const result = await query(sql, [newPasswordHash, userId]);
+  return result.affectedRows > 0;
+}
+
 export default {
   findByUsernameOrEmail,
   findById,
+  findAuthById,
   findByEmployeeId,
   updateLastLogin,
   updateAccountStatus,
+  updatePassword,
   createUser,
 };

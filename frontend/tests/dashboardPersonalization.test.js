@@ -214,8 +214,8 @@ runTest('7. Sidebar & Header phân quyền gộp: Nhân viên chỉ thấy duy n
 
   const sidebarHtml = renderSidebarMenu('EMPLOYEE');
   assert.ok(sidebarHtml.includes('data-nav-path="/dashboard"'), 'Sidebar phải có Tổng quan');
-  assert.ok(!sidebarHtml.includes('data-nav-path="/attendances"'), 'Sidebar Nhân viên KHÔNG ĐƯỢC có Chấm công');
-  assert.ok(!sidebarHtml.includes('QUẢN LÝ NHÂN SỰ'), 'Section Quản lý nhân sự phải bị ẩn hoàn toàn khi không có item nào');
+  assert.ok(!sidebarHtml.includes('data-nav-path="/departments"'), 'Sidebar Nhân viên KHÔNG ĐƯỢC có Phòng ban');
+  assert.ok(!sidebarHtml.includes('data-nav-path="/employees"'), 'Sidebar Nhân viên KHÔNG ĐƯỢC có Nhân viên');
 
   const headerHtml = renderHeader();
   assert.ok(!headerHtml.includes('href="/attendances"'), 'Dropdown Header của Nhân viên không trỏ vào /attendances');

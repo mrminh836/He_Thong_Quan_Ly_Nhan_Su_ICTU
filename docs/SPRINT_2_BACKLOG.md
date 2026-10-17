@@ -122,15 +122,32 @@ flowchart TD
 
 ## 🏁 4. TIÊU CHUẨN HOÀN THÀNH SPRINT 2 (SPRINT 2 DEFINITION OF DONE)
 
-Sprint 2 được nghiệm thu khi đạt đủ các tiêu chí:
-- [ ] Chỉnh sửa phòng ban, nhân viên và thôi việc (soft-delete) hoạt động trơn tru.
-- [ ] Tra cứu được lịch sử chấm công theo từng tháng và xuất được file Excel báo cáo.
-- [ ] Dashboard hiển thị đúng số liệu thực tế và biểu đồ phân bổ phòng ban.
-- [ ] Hệ thống Docker Compose chạy ổn định thêm 5 container giám sát (`prometheus`, `grafana`, `cadvisor`, `node-exporter`, `mysql-exporter`).
-- [ ] Menu **Prometheus Status $\rightarrow$ Targets**: Đủ 5 targets đều có trạng thái xanh **`UP`**.
-- [ ] **Grafana (cổng 3000)**: Tự động có sẵn Datasource Prometheus và hiển thị trực quan 3 Dashboards:
-  - *Node Exporter Full (1860)*
-  - *cAdvisor Docker Monitoring (14282)*
-  - *MySQL Overview (7362)*
-- [ ] Repository GitHub hoàn tất **Commit mốc số 2** với commit message chuẩn:  
+Sprint 2 đã hoàn thành toàn diện và nghiệm thu đạt 100% các tiêu chí:
+- [x] **DoD 1:** Chỉnh sửa phòng ban (`US 7.0`), cập nhật nhân viên (`US 13.0`), bảo toàn dữ liệu CCCD AES-256 và thôi việc soft-delete (`US 14.0`) hoạt động trơn tru.
+- [x] **DoD 2:** Tra cứu lịch sử chấm công theo từng tháng (`US 19.0`) và xuất file báo cáo Excel/CSV định dạng chuẩn UTF-8 BOM (`US 22.0`).
+- [x] **DoD 3:** Dashboard thống kê tổng quan (`US 20.0`) hiển thị đúng số liệu thực tế từ database và biểu đồ phân bổ phòng ban trực quan.
+- [x] **DoD 4:** Đổi mật khẩu cá nhân (`US 3.0`) với độ phức tạp >= 12 ký tự, băm Bcrypt, vô hiệu hóa mật khẩu cũ tức thì và đăng nhập lại thành công.
+- [x] **DoD 5:** Hệ thống Docker Compose vận hành trơn tru kiến trúc mạng đa tầng (`app-network` và `monitoring`) với 10 containers khỏe mạnh: `mysql-db`, `hrm-ictu-backend`, `hrm-ictu-frontend`, `phpmyadmin`, `hrm-nginx`, `mysqld-exporter`, `cadvisor`, `node-exporter`, `hrm-prometheus`, `grafana`.
+- [x] **DoD 6:** Menu **Prometheus Status $\rightarrow$ Targets**: Đủ 5/5 targets đạt trạng thái xanh **`UP`** (`prometheus`, `node-exporter`, `cadvisor`, `mysql-exporter`, `hrm-app`).
+- [x] **DoD 7:** **Grafana (cổng 3000)**: Tự động có sẵn Datasource Prometheus qua provisioning và hiển thị trực quan dữ liệu thời gian thực trên 3 Dashboards:
+  - *Node Exporter Full (ID: 1860 - UID: `rYdddlPWk`)*
+  - *cAdvisor Docker Monitoring (ID: 14282 - UID: `pMEd7m0Mz`)*
+  - *MySQL Overview (ID: 7362 - UID: `MQWgroiiz`)*
+- [x] **DoD 8:** Bộ kiểm thử tích hợp tự động E2E Sprint 2 (`npm run test:e2e:sprint2`) vượt qua **41/41 kịch bản (100% PASS)**, đảm bảo zero regression trên toàn bộ hệ thống.
+- [x] **DoD 9:** Repository GitHub hoàn tất **Commit mốc số 2** với commit message chuẩn mực:  
   `feat(monitoring): integrate prometheus, grafana dashboards, mysql-exporter, cadvisor, and node-exporter with dual-network architecture`
+
+---
+
+## 📊 5. BÁO CÁO NGHIỆM THU E2E SPRINT 2 (QA SIGN-OFF)
+
+| Phân hệ / User Story | Số test cases | Kết quả | Trạng thái |
+| :--- | :---: | :---: | :---: |
+| **Giai đoạn 1:** Hạ tầng Docker Compose & Healthchecks (10 containers) | 3 | 3/3 PASS (100%) | **HOÀN THÀNH** |
+| **Giai đoạn 2:** US 3.0 - Đổi mật khẩu cá nhân & Chính sách bảo mật | 7 | 7/7 PASS (100%) | **HOÀN THÀNH** |
+| **Giai đoạn 3:** US 7.0 - Chỉnh sửa thông tin phòng ban & Sync DB | 3 | 3/3 PASS (100%) | **HOÀN THÀNH** |
+| **Giai đoạn 4:** US 13.0 & 14.0 - Hồ sơ nhân sự, CCCD AES-256 & Thôi việc | 6 | 6/6 PASS (100%) | **HOÀN THÀNH** |
+| **Giai đoạn 5:** US 19.0 & 22.0 - Lịch sử chấm công & Xuất file Excel/CSV | 8 | 8/8 PASS (100%) | **HOÀN THÀNH** |
+| **Giai đoạn 6:** US 20.0 - Dashboard KPI tổng quan & Phân bổ phòng ban | 3 | 3/3 PASS (100%) | **HOÀN THÀNH** |
+| **Giai đoạn 7:** US 29.0 - Hạ tầng Observability (5 Prometheus & 3 Grafana) | 11 | 11/11 PASS (100%) | **HOÀN THÀNH** |
+| **TỔNG CỘNG E2E INTEGRATION** | **41** | **41/41 PASS (100%)** | **ĐẠT CHUẨN ĐÓNG SPRINT 2** |

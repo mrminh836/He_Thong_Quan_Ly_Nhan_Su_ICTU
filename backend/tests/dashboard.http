@@ -1,0 +1,74 @@
+### ==============================================================================
+### BỘ KIỂM THỬ REST CLIENT - DASHBOARD STATS API (HRM-211)
+### GET /api/dashboard/stats
+### ==============================================================================
+
+@baseUrl = http://localhost:3005/api
+@contentType = application/json
+
+### ------------------------------------------------------------------------------
+### PHẦN 1: ĐĂNG NHẬP LẤY TOKEN
+### ------------------------------------------------------------------------------
+
+### 1.1 Đăng nhập tài khoản Quản trị viên (Admin)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "admin",
+  "password": "Admin@123"
+}
+
+### Trích xuất Token của Admin
+@adminToken = {{loginAdmin.response.body.data.accessToken}}
+
+### 1.2 Đăng nhập tài khoản Quản lý Nhân sự (HR)
+# @name loginHr
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "hr",
+  "password": "Hr@123"
+}
+
+### Trích xuất Token của HR
+@hrToken = {{loginHr.response.body.data.accessToken}}
+
+### 1.3 Đăng nhập tài khoản Nhân viên (Employee)
+# @name loginEmp
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "emp1",
+  "password": "Emp@123"
+}
+
+### Trích xuất Token của Employee
+@empToken = {{loginEmp.response.body.data.accessToken}}
+
+
+### ------------------------------------------------------------------------------
+### PHẦN 2: KIỂM THỬ GET /api/dashboard/stats
+### ------------------------------------------------------------------------------
+
+### 2.1 ADMIN truy cập thống kê Dashboard thành công -> HTTP 200 OK
+GET {{baseUrl}}/dashboard/stats
+Authorization: Bearer {{adminToken}}
+
+### 2.2 HR_MANAGER truy cập thống kê Dashboard thành công -> HTTP 200 OK
+GET {{baseUrl}}/dashboard/stats
+Authorization: Bearer {{hrToken}}
+
+### 2.3 EMPLOYEE cố tình truy cập thống kê Dashboard -> Kỳ vọng HTTP 403 Forbidden
+GET {{baseUrl}}/dashboard/stats
+Authorization: Bearer {{empToken}}
+
+### 2.4 Không có JWT Authorization header -> Kỳ vọng HTTP 401 Unauthorized
+GET {{baseUrl}}/dashboard/stats
+
+### 2.5 Token rác / sai chữ ký -> Kỳ vọng HTTP 401 Unauthorized
+GET {{baseUrl}}/dashboard/stats
+Authorization: Bearer invalid-garbage-token

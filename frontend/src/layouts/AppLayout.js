@@ -4,6 +4,7 @@ import { qs } from '../utils/dom.js';
 import { showToast } from '../components/Toast.js';
 import { authService } from '../services/authService.js';
 import { navigateTo } from '../router/router.js';
+import { openChangePasswordModal } from '../components/ChangePasswordModal.js';
 
 /**
  * Layout Quản trị chính (AppLayout)
@@ -86,7 +87,19 @@ export function initAppLayoutEvents() {
     });
   }
 
-  // 5. Xử lý Đăng xuất (Logout)
+  // 5. Mở Modal Đổi mật khẩu cá nhân (HRM-217)
+  const changePasswordBtn = qs('#change-password-btn');
+  if (changePasswordBtn) {
+    changePasswordBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (userDropdown) {
+        userDropdown.classList.remove('show');
+      }
+      openChangePasswordModal();
+    });
+  }
+
+  // 6. Xử lý Đăng xuất (Logout)
   const logoutBtn = qs('#logout-btn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', (e) => {

@@ -1,0 +1,15 @@
+# ==============================================================================
+# GRAFANA DASHBOARDS PROVISIONING (HRM - ICTU)
+# Tự động nạp 3 Dashboards: Node Exporter, cAdvisor, MySQL Overview
+# ==============================================================================
+apiVersion: 1
+
+providers:
+  - name: "HRM Monitoring"
+    orgId: 1
+    folder: "Infrastructure Monitoring"
+    type: file
+    disableDeletion: true
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

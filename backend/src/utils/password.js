@@ -60,8 +60,56 @@ export function validatePasswordStrength(password) {
   return { isValid: true };
 }
 
+/**
+ * Kiểm tra mật khẩu mới theo chính sách an toàn thông tin hệ thống HRM:
+ * 1. Tối thiểu 12 ký tự (theo chuẩn NIST & yêu cầu nghiệp vụ)
+ * 2. Không chấp nhận mật khẩu chỉ chứa khoảng trắng
+ * 3. Tối đa 72 byte (giới hạn bảo mật phần cứng / thuật toán của Bcrypt)
+ * 4. Không tự động cắt ngắn hoặc biến đổi mật khẩu
+ * 
+ * @param {string} password - Mật khẩu mới cần kiểm tra
+ * @returns {{ isValid: boolean, errorCode?: string, message?: string }}
+ */
+export function validateNewPasswordPolicy(password) {
+  if (!password || typeof password !== 'string') {
+    return {
+      isValid: false,
+      errorCode: 'VALIDATION_ERROR',
+      message: 'Mật khẩu mới là bắt buộc và phải là chuỗi ký tự hợp lệ.',
+    };
+  }
+
+  if (password.trim().length === 0) {
+    return {
+      isValid: false,
+      errorCode: 'INVALID_NEW_PASSWORD',
+      message: 'Mật khẩu mới không được để trống hoặc chỉ chứa khoảng trắng.',
+    };
+  }
+
+  if (password.length < 12) {
+    return {
+      isValid: false,
+      errorCode: 'WEAK_PASSWORD',
+      message: 'Mật khẩu mới phải có độ dài tối thiểu 12 ký tự.',
+    };
+  }
+
+  const byteLength = Buffer.byteLength(password, 'utf8');
+  if (byteLength > 72) {
+    return {
+      isValid: false,
+      errorCode: 'PASSWORD_TOO_LONG',
+      message: 'Mật khẩu mới không được vượt quá 72 byte (giới hạn an toàn của thuật toán Bcrypt).',
+    };
+  }
+
+  return { isValid: true };
+}
+
 export default {
   hashPassword,
   comparePassword,
   validatePasswordStrength,
+  validateNewPasswordPolicy,
 };

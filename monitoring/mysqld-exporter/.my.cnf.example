@@ -1,0 +1,9 @@
+# ==============================================================================
+# PROMETHEUS MYSQL EXPORTER CLIENT CONFIGURATION EXAMPLE
+# Copy file này thành .my.cnf và cấu hình mật khẩu thực tế (KHÔNG COMMIT .my.cnf)
+# ==============================================================================
+[client]
+user=exporter
+password=REPLACE_WITH_SECRET
+host=mysql-db
+port=3306

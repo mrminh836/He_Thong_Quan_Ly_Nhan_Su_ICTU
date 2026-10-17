@@ -4,6 +4,12 @@ import { showToast } from '../components/Toast.js';
 import { qs, sanitizeHTML } from '../utils/dom.js';
 import { renderAttendanceWidgetMarkup, initAttendanceWidgetEvents, destroyAttendanceWidget, formatTimeDisplay } from '../components/AttendanceWidget.js';
 import { attendanceService } from '../services/attendanceService.js';
+import { dashboardService } from '../services/dashboardService.js';
+import {
+  renderDepartmentDistributionChartMarkup,
+  updateDepartmentDistributionChart,
+  renderDepartmentDistributionError,
+} from '../components/DepartmentDistributionChart.js';
 import { getCurrentUser, getCurrentUserRole } from '../services/authService.js';
 import { ROLES } from '../utils/rbac.js';
 import { openEmployeeDetailModal } from '../components/EmployeeDetailModal.js';
@@ -49,19 +55,17 @@ export function renderDashboardPage() {
     return `
       ${headerHtml}
 
-      <!-- 1. Widget Chấm công của tôi (Check-in / Check-out thời gian thực) -->
+      <!-- 1. Widget Chấm công thời gian thực Check-in / Check-out cá nhân -->
       ${renderAttendanceWidgetMarkup()}
 
-      <!-- 2. Thống kê công tích lũy trong tháng & Trạng thái làm việc -->
-      <div class="stats-grid employee-stats-grid">
-        <!-- Card 1: Số ngày công tích lũy trong tháng -->
+      <!-- 2. Thẻ thống kê chấm công cá nhân -->
+      <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
         <div class="stat-card">
           <div class="stat-info">
             <span class="stat-label">Số ngày công tích lũy trong tháng</span>
-            <span class="stat-value" id="emp-monthly-days">22 / 24 <small style="font-size: 14px; font-weight: 500; color: #64748b;">ngày</small></span>
+            <span class="stat-value" id="emp-monthly-days">--</span>
             <span class="stat-meta">
-              <span class="badge badge-success">Đạt 91.6% kế hoạch</span>
-              <span style="font-size: 11px; color: #64748b;">Tháng 10/2026</span>
+              <span class="badge badge-success" id="emp-monthly-badge">Tháng hiện tại</span>
             </span>
           </div>
           <div class="stat-icon icon-blue">
@@ -69,14 +73,12 @@ export function renderDashboardPage() {
           </div>
         </div>
 
-        <!-- Card 2: Tỷ lệ đúng giờ tháng này -->
         <div class="stat-card">
           <div class="stat-info">
             <span class="stat-label">Tỷ lệ đúng giờ tháng này</span>
-            <span class="stat-value" id="emp-ontime-rate">95%</span>
+            <span class="stat-value" id="emp-ontime-rate">--%</span>
             <span class="stat-meta">
-              <span class="badge badge-success">19/20 ca chuẩn giờ</span>
-              <span style="font-size: 11px; color: #64748b;">Ghi nhận trước 08:30</span>
+              <span class="badge badge-info" id="emp-ontime-badge">Tính trên ngày công</span>
             </span>
           </div>
           <div class="stat-icon icon-green">
@@ -84,90 +86,59 @@ export function renderDashboardPage() {
           </div>
         </div>
 
-        <!-- Card 3: Trạng thái công hôm nay -->
         <div class="stat-card">
           <div class="stat-info">
             <span class="stat-label">Trạng thái công hôm nay</span>
-            <span class="stat-value" id="emp-today-status" style="font-size: 1.25rem;">Đang tải...</span>
+            <span class="stat-value" id="emp-today-status" style="font-size: 1.15rem; margin-top: 6px;">Đang tải...</span>
             <span class="stat-meta">
-              <span class="badge badge-info" id="emp-today-meta">Hôm nay</span>
+              <span class="badge badge-secondary" id="emp-today-meta">Ca làm việc tiêu chuẩn</span>
             </span>
           </div>
           <div class="stat-icon icon-purple">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
         </div>
-
-        <!-- Card 4: Ca làm việc tiêu chuẩn -->
-        <div class="stat-card">
-          <div class="stat-info">
-            <span class="stat-label">Ca làm việc tiêu chuẩn</span>
-            <span class="stat-value" style="font-size: 1.25rem;">08:30 - 17:30</span>
-            <span class="stat-meta">
-              <span class="badge badge-secondary">8 giờ / ca</span>
-              <span style="font-size: 11px; color: #64748b;">Nghỉ trưa 12:00 - 13:00</span>
-            </span>
-          </div>
-          <div class="stat-icon icon-orange">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-          </div>
-        </div>
       </div>
 
-      <!-- 3. Khối Hồ sơ cá nhân của nhân viên -->
-      <div class="personal-profile-card">
-        <div class="personal-profile-header">
-          <h2 class="personal-profile-title">
-            <svg viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <span>Hồ sơ nhân viên của tôi</span>
-          </h2>
-          <button class="btn btn-secondary btn-sm" id="btn-view-my-profile" type="button">
-            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            <span>Xem hồ sơ chi tiết</span>
+      <!-- 3. Thẻ Hồ sơ cá nhân của nhân viên (Personal Profile Card) -->
+      <div class="card personal-profile-card" style="margin-top: var(--space-6);">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h2 class="card-title">Hồ sơ nhân viên của tôi</h2>
+            <p style="font-size: 12px; color: var(--color-text-muted); margin: 2px 0 0 0;">Thông tin cá nhân và vị trí phòng ban được ghi nhận trên hệ thống</p>
+          </div>
+          <button class="btn btn-sm btn-secondary" id="btn-view-my-profile">
+            <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; margin-right: 4px;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span>Xem chi tiết hồ sơ</span>
           </button>
         </div>
-
-        <div class="personal-profile-body">
-          <div class="personal-profile-avatar-col">
-            <div class="personal-profile-avatar">${sanitizeHTML(initials)}</div>
-            <div class="personal-profile-name">${sanitizeHTML(fullName)}</div>
-            <div class="personal-profile-role">${sanitizeHTML(position)}</div>
-            <span class="badge badge-success" style="margin-top: 8px;">Đang làm việc</span>
-          </div>
-
+        <div class="card-body">
           <div class="personal-profile-grid">
-            <div class="personal-profile-field">
-              <span class="personal-profile-field-label">Mã nhân viên</span>
-              <span class="personal-profile-field-value">
-                <span class="emp-code-badge" style="display: inline-block;">${sanitizeHTML(empCode)}</span>
-              </span>
+            <div class="personal-profile-left">
+              <div class="personal-avatar">${initials}</div>
+              <div class="personal-basic">
+                <div class="personal-name">${sanitizeHTML(fullName)}</div>
+                <div class="personal-code">Mã NV: <strong>${sanitizeHTML(empCode)}</strong></div>
+                <span class="badge badge-success" style="margin-top: 6px; width: fit-content;">Đang làm việc</span>
+              </div>
             </div>
-
-            <div class="personal-profile-field">
-              <span class="personal-profile-field-label">Phòng ban trực thuộc</span>
-              <span class="personal-profile-field-value">${sanitizeHTML(departmentName)}</span>
-            </div>
-
-            <div class="personal-profile-field">
-              <span class="personal-profile-field-label">Email công việc</span>
-              <span class="personal-profile-field-value">${sanitizeHTML(email)}</span>
-            </div>
-
-            <div class="personal-profile-field">
-              <span class="personal-profile-field-label">Số điện thoại</span>
-              <span class="personal-profile-field-value">${sanitizeHTML(phone)}</span>
-            </div>
-
-            <div class="personal-profile-field">
-              <span class="personal-profile-field-label">Chức vụ chuyên môn</span>
-              <span class="personal-profile-field-value">${sanitizeHTML(position)}</span>
-            </div>
-
-            <div class="personal-profile-field">
-              <span class="personal-profile-field-label">Trạng thái tài khoản</span>
-              <span class="personal-profile-field-value">
-                <span style="color: #10b981; font-weight: 600;">● Hoạt động</span> (Vai trò: Nhân viên)
-              </span>
+            <div class="personal-profile-details">
+              <div class="profile-info-row">
+                <span class="profile-info-label">Phòng ban:</span>
+                <span class="profile-info-val"><strong>${sanitizeHTML(departmentName)}</strong></span>
+              </div>
+              <div class="profile-info-row">
+                <span class="profile-info-label">Chức danh / Vị trí:</span>
+                <span class="profile-info-val">${sanitizeHTML(position)}</span>
+              </div>
+              <div class="profile-info-row">
+                <span class="profile-info-label">Email công vụ:</span>
+                <span class="profile-info-val"><a href="mailto:${sanitizeHTML(email)}" style="color: var(--color-primary);">${sanitizeHTML(email)}</a></span>
+              </div>
+              <div class="profile-info-row">
+                <span class="profile-info-label">Số điện thoại:</span>
+                <span class="profile-info-val">${sanitizeHTML(phone)}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -200,66 +171,71 @@ export function renderDashboardPage() {
     <!-- Widget Chấm công thời gian thực Check-in / Check-out -->
     ${renderAttendanceWidgetMarkup()}
 
-    <!-- Thẻ chỉ số tổng quan (KPIs) -->
-    <div class="stats-grid">
-      <!-- Card 1 -->
-      <div class="stat-card">
+    <!-- 3 Thẻ chỉ số thống kê KPI tổng quan (HRM-212) -->
+    <div class="stats-grid kpi-3-cards" id="dash-kpi-grid">
+      <!-- Thẻ 1: Tổng nhân sự -->
+      <div class="stat-card kpi-card" id="card-total-employees">
         <div class="stat-info">
-          <span class="stat-label">Tổng số nhân sự</span>
-          <span class="stat-value">5</span>
-          <span class="stat-meta">
-            <span class="badge badge-success">+2 nhân sự mới</span>
-            <span class="badge badge-mock">Mock data</span>
+          <span class="stat-label" data-key="total-employees" aria-label="Tổng số nhân sự">Tổng nhân sự</span>
+          <span class="stat-value" id="kpi-total-employees">--</span>
+          <span class="stat-meta" id="kpi-total-employees-meta">
+            <span class="badge badge-info">Đang tải...</span>
+            <span class="sr-only" style="display:none">Tổng số nhân sự</span>
           </span>
         </div>
         <div class="stat-icon icon-blue">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
         </div>
       </div>
 
-      <!-- Card 2 -->
-      <div class="stat-card">
+      <!-- Thẻ 2: Tổng phòng ban -->
+      <div class="stat-card kpi-card" id="card-total-departments">
         <div class="stat-info">
-          <span class="stat-label">Phòng ban hoạt động</span>
-          <span class="stat-value">3</span>
-          <span class="stat-meta">
-            <span>Toàn công ty</span>
-            <span class="badge badge-mock">Mock data</span>
+          <span class="stat-label" data-key="total-departments" aria-label="Phòng ban hoạt động">Tổng phòng ban</span>
+          <span class="stat-value" id="kpi-total-departments">--</span>
+          <span class="stat-meta" id="kpi-total-departments-meta">
+            <span class="badge badge-info">Đang tải...</span>
+            <span class="sr-only" style="display:none">Phòng ban hoạt động</span>
           </span>
         </div>
         <div class="stat-icon icon-purple">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="16" height="20" x="4" y="2" rx="2" ry="2"/>
+            <path d="M9 22v-4h6v4"/>
+            <path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/>
+            <path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/>
+            <path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/>
+          </svg>
         </div>
       </div>
 
-      <!-- Card 3 -->
-      <div class="stat-card">
+      <!-- Thẻ 3: Có mặt hôm nay -->
+      <div class="stat-card kpi-card" id="card-attendance-rate">
         <div class="stat-info">
-          <span class="stat-label">Đi làm đúng giờ hôm nay</span>
-          <span class="stat-value" id="dash-ontime-val">-- / --</span>
-          <span class="stat-meta">
-            <span class="badge badge-success" id="dash-ontime-pct">Đang tải...</span>
+          <span class="stat-label" data-key="attendance-rate">Có mặt hôm nay</span>
+          <span class="stat-value" id="kpi-attendance-rate">--%</span>
+          <span class="stat-meta" id="kpi-attendance-meta">
+            <span class="badge badge-info">Đang tải...</span>
           </span>
         </div>
         <div class="stat-icon icon-green">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-        </div>
-      </div>
-
-      <!-- Card 4 -->
-      <div class="stat-card">
-        <div class="stat-info">
-          <span class="stat-label">Đi muộn hôm nay</span>
-          <span class="stat-value" id="dash-late-val">--</span>
-          <span class="stat-meta">
-            <span class="badge badge-warning" id="dash-late-badge">Ghi nhận sau 08:30</span>
-          </span>
-        </div>
-        <div class="stat-icon icon-orange">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 2v4"/><path d="M16 2v4"/>
+            <rect width="18" height="18" x="3" y="4" rx="2"/>
+            <path d="M3 10h18"/>
+            <path d="m9 16 2 2 4-4"/>
+          </svg>
         </div>
       </div>
     </div>
+
+    <!-- Khu vực Biểu đồ phân bổ nhân sự theo phòng ban (HRM-212) -->
+    ${renderDepartmentDistributionChartMarkup()}
 
     <!-- Layout 2 cột: Hoạt động gần đây + Trạng thái Backend Live -->
     <div class="dashboard-grid">
@@ -316,6 +292,7 @@ export function initDashboardPageEvents() {
       if (isEmployee) {
         loadEmployeeDashboardStatus();
       } else {
+        loadDashboardKpiAndDistribution();
         checkLiveBackendStatus();
         loadLiveDashboardAttendance();
       }
@@ -335,11 +312,123 @@ export function initDashboardPageEvents() {
       });
     }
   } else {
+    // Tải 3 KPI và Biểu đồ phân bổ nhân sự cho Quản trị viên & HR
+    loadDashboardKpiAndDistribution();
+
     // Tự động kiểm tra trạng thái Backend & MySQL live cho Quản trị viên
     checkLiveBackendStatus();
 
     // Tải dữ liệu nhật ký và KPI chấm công hôm nay toàn công ty
     loadLiveDashboardAttendance();
+  }
+}
+
+/**
+ * Tải 3 chỉ số KPI và biểu đồ phân bổ nhân sự theo phòng ban
+ */
+export async function loadDashboardKpiAndDistribution() {
+  const kpiTotalEmp = qs('#kpi-total-employees');
+  const kpiTotalEmpMeta = qs('#kpi-total-employees-meta');
+  const kpiTotalDept = qs('#kpi-total-departments');
+  const kpiTotalDeptMeta = qs('#kpi-total-departments-meta');
+  const kpiAttRate = qs('#kpi-attendance-rate');
+  const kpiAttMeta = qs('#kpi-attendance-meta');
+  const chartBody = qs('#dept-chart-body');
+
+  let totalWorkingEmployees = null;
+
+  // 1. Tải 3 thẻ thống kê KPI thực tế từ GET /api/dashboard/stats
+  try {
+    if (kpiTotalEmp) kpiTotalEmp.textContent = '--';
+    if (kpiTotalDept) kpiTotalDept.textContent = '--';
+    if (kpiAttRate) kpiAttRate.textContent = '--%';
+
+    const stats = await dashboardService.getDashboardStats();
+    totalWorkingEmployees = stats.totalEmployees;
+
+    if (kpiTotalEmp) {
+      kpiTotalEmp.textContent = stats.totalEmployees;
+    }
+    if (kpiTotalEmpMeta) {
+      kpiTotalEmpMeta.innerHTML = `
+        <span class="badge badge-success">Nhân viên đang làm việc</span>
+        <span class="sr-only" style="display:none">Tổng số nhân sự</span>
+      `;
+    }
+
+    if (kpiTotalDept) {
+      kpiTotalDept.textContent = stats.totalDepartments;
+    }
+    if (kpiTotalDeptMeta) {
+      kpiTotalDeptMeta.innerHTML = `
+        <span class="badge badge-purple">Phòng ban đang hoạt động</span>
+        <span class="sr-only" style="display:none">Phòng ban hoạt động</span>
+      `;
+    }
+
+    if (kpiAttRate) {
+      kpiAttRate.textContent = `${stats.attendanceRate}%`;
+    }
+    if (kpiAttMeta) {
+      const badgeCls = stats.attendanceRate >= 80 ? 'badge-success' : (stats.attendanceRate > 0 ? 'badge-warning' : 'badge-secondary');
+      kpiAttMeta.innerHTML = `
+        <span class="badge ${badgeCls}">${stats.presentEmployees}/${stats.totalEmployees} nhân viên</span>
+      `;
+    }
+  } catch (err) {
+    console.warn('[DashboardPage] Không thể tải dữ liệu KPI Dashboard:', err?.message);
+    if (kpiTotalEmp) kpiTotalEmp.textContent = '--';
+    if (kpiTotalDept) kpiTotalDept.textContent = '--';
+    if (kpiAttRate) kpiAttRate.textContent = '--%';
+
+    if (kpiTotalEmpMeta) {
+      kpiTotalEmpMeta.innerHTML = `
+        <span class="badge badge-danger">Lỗi tải dữ liệu</span>
+        <button class="btn-retry-kpi" id="btn-retry-kpi-1">Thử lại</button>
+      `;
+    }
+    if (kpiTotalDeptMeta) {
+      kpiTotalDeptMeta.innerHTML = `
+        <span class="badge badge-danger">Lỗi tải dữ liệu</span>
+        <button class="btn-retry-kpi" id="btn-retry-kpi-2">Thử lại</button>
+      `;
+    }
+    if (kpiAttMeta) {
+      kpiAttMeta.innerHTML = `
+        <span class="badge badge-danger">Lỗi tải dữ liệu</span>
+        <button class="btn-retry-kpi" id="btn-retry-kpi-3">Thử lại</button>
+      `;
+    }
+
+    ['#btn-retry-kpi-1', '#btn-retry-kpi-2', '#btn-retry-kpi-3'].forEach((sel) => {
+      const btn = qs(sel);
+      if (btn) {
+        btn.addEventListener('click', () => loadDashboardKpiAndDistribution());
+      }
+    });
+  }
+
+  // 2. Tải biểu đồ phân bổ nhân sự theo từng phòng ban
+  try {
+    if (chartBody) {
+      chartBody.innerHTML = `
+        <div class="loading-container" style="padding: 2.5rem 0;">
+          <div class="spinner"></div>
+          <span>Đang tải số liệu phân bổ nhân sự...</span>
+        </div>
+      `;
+    }
+
+    const distribution = await dashboardService.getDepartmentDistribution(totalWorkingEmployees);
+
+    if (chartBody) {
+      updateDepartmentDistributionChart(chartBody, distribution);
+    }
+  } catch (err) {
+    console.warn('[DashboardPage] Không thể tải biểu đồ phân bổ nhân sự:', err?.message);
+    if (chartBody) {
+      renderDepartmentDistributionError(chartBody, err.message, () => loadDashboardKpiAndDistribution());
+    }
   }
 }
 
@@ -392,10 +481,8 @@ async function loadEmployeeDashboardStatus() {
 }
 
 async function loadLiveDashboardAttendance() {
-  const ontimeVal = qs('#dash-ontime-val');
-  const ontimePct = qs('#dash-ontime-pct');
-  const lateVal = qs('#dash-late-val');
   const activityList = qs('#dash-activity-list');
+  if (!activityList) return;
 
   try {
     const res = await attendanceService.getTodayAttendance();
@@ -407,52 +494,35 @@ async function loadLiveDashboardAttendance() {
       records = [res.data];
     }
 
-    const summary = attendanceService.calculateAttendanceSummary(records, res.summary);
+    const activeRows = records.filter((r) => Boolean(r.checkInTime));
+    if (activeRows.length === 0) {
+      activityList.innerHTML = `
+        <div style="text-align: center; color: #94a3b8; font-size: 13px; padding: 1.5rem 0;">
+          Chưa có nhân viên nào check-in hôm nay.
+        </div>
+      `;
+    } else {
+      activityList.innerHTML = activeRows.slice(0, 5).map((row) => {
+        const initials = (row.fullName || 'NV').slice(0, 2).toUpperCase();
+        const isLate = row.status === 'LATE';
+        const time = formatTimeDisplay(row.checkInTime);
+        const badgeClass = isLate ? 'badge-warning' : 'badge-success';
+        const badgeText = isLate ? 'Đi muộn' : 'Đúng giờ';
 
-    if (ontimeVal) {
-      ontimeVal.textContent = `${summary.onTime} / ${summary.totalEmployees}`;
-    }
-    if (ontimePct) {
-      const pct = summary.totalEmployees > 0
-        ? Math.round((summary.onTime / summary.totalEmployees) * 100)
-        : 0;
-      ontimePct.textContent = `${pct}% Đúng giờ`;
-    }
-    if (lateVal) {
-      lateVal.textContent = summary.late;
-    }
-
-    if (activityList) {
-      const activeRows = records.filter((r) => Boolean(r.checkInTime));
-      if (activeRows.length === 0) {
-        activityList.innerHTML = `
-          <div style="text-align: center; color: #94a3b8; font-size: 13px; padding: 1.5rem 0;">
-            Chưa có nhân viên nào check-in hôm nay.
+        return `
+          <div class="activity-item">
+            <div class="activity-avatar">${initials}</div>
+            <div class="activity-content">
+              <div class="activity-title">${sanitizeHTML(row.fullName || 'Nhân viên')}</div>
+              <div class="activity-time">Check-in lúc ${time} • ${sanitizeHTML(row.departmentName || 'Nhân sự')}</div>
+            </div>
+            <span class="badge ${badgeClass}">${badgeText}</span>
           </div>
         `;
-      } else {
-        activityList.innerHTML = activeRows.slice(0, 5).map((row) => {
-          const initials = (row.fullName || 'NV').slice(0, 2).toUpperCase();
-          const isLate = row.status === 'LATE';
-          const time = formatTimeDisplay(row.checkInTime);
-          const badgeClass = isLate ? 'badge-warning' : 'badge-success';
-          const badgeText = isLate ? 'Đi muộn' : 'Đúng giờ';
-
-          return `
-            <div class="activity-item">
-              <div class="activity-avatar">${initials}</div>
-              <div class="activity-content">
-                <div class="activity-title">${row.fullName || 'Nhân viên'}</div>
-                <div class="activity-time">Check-in lúc ${time} • ${row.departmentName || 'Nhân sự'}</div>
-              </div>
-              <span class="badge ${badgeClass}">${badgeText}</span>
-            </div>
-          `;
-        }).join('');
-      }
+      }).join('');
     }
   } catch (err) {
-    console.warn('[DashboardPage] Không thể tải dữ liệu chấm công cho dashboard:', err);
+    console.warn('[DashboardPage] Không thể tải dữ liệu chấm công cho dashboard:', err?.message);
   }
 }
 
@@ -469,7 +539,7 @@ async function checkLiveBackendStatus() {
       details.innerHTML = `
         <div>🟢 <strong>Trạng thái CSDL:</strong> ${res.data.databaseStatus}</div>
         <div>🏷️ <strong>Tên Database:</strong> <code>${res.data.databaseName}</code></div>
-        <div>⚡ <strong>Độ trễ truy vấn:</strong> ${res.data.latencyMs}</div>
+        <div>⚡ <strong>Độ trễ truy vấn:</strong> ${res.data.latencyMs}ms</div>
         <div>🐬 <strong>Phiên bản MySQL:</strong> ${res.data.mysqlVersion}</div>
         <div>📋 <strong>Số bảng nhận diện:</strong> ${res.data.detectedTables?.length || 4} bảng</div>
       `;
