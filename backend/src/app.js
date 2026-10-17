@@ -4,6 +4,7 @@ import { env } from './config/env.js';
 import { requestLogger } from './middlewares/logger.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { notFoundHandler } from './middlewares/notFoundHandler.js';
+import { metricsMiddleware, metricsHandler } from './utils/metrics.js';
 import apiRoutes from './routes/index.js';
 
 const app = express();
@@ -30,14 +31,20 @@ app.use((req, res, next) => {
   next();
 });
 
-// 3. Body parsers
+// 3. Prometheus Metrics Middleware (Đo lường thời gian phản hồi & số lượng requests)
+app.use(metricsMiddleware);
+
+// 4. Body parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// 4. Request Logging
+// 5. Request Logging
 app.use(requestLogger);
 
-// 5. Khai báo Root redirect & API routes
+// 6. Prometheus Metrics Scrape Endpoint
+app.get('/metrics', metricsHandler);
+
+// 7. Khai báo Root redirect & API routes
 app.get('/', (req, res) => {
   res.redirect('/api');
 });

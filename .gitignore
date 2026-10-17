@@ -64,3 +64,9 @@ certs/*.key
 *.key
 certs/*.crt
 !certs/hrm.local.cnf
+
+# Monitoring Credentials & Secrets (MySQL Exporter / Prometheus)
+*.my.cnf
+monitoring/**/.my.cnf
+!monitoring/**/.my.cnf.example
+

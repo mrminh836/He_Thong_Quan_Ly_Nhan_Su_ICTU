@@ -80,7 +80,54 @@ export async function getProfile(req, res, next) {
   }
 }
 
+/**
+ * Controller xử lý đổi mật khẩu cho người dùng hiện tại
+ * Endpoint: PUT /api/auth/change-password
+ * 
+ * Bảo mật:
+ * 1. Chỉ lấy định danh người dùng từ JWT đã xác thực (req.user), ngăn chặn IDOR
+ * 2. Không trả về mật khẩu hay password_hash trong response
+ * 3. Không ghi log mật khẩu hoặc thông tin nhạy cảm
+ */
+export async function changePassword(req, res, next) {
+  try {
+    const userId = req.user?.id || req.user?.userId || req.user?.sub;
+    if (!userId) {
+      return errorResponse(res, {
+        statusCode: 401,
+        errorCode: 'UNAUTHORIZED',
+        message: 'Vui lòng đăng nhập để thực hiện đổi mật khẩu.',
+      });
+    }
+
+    const { currentPassword, newPassword, confirmPassword } = req.body || {};
+
+    const result = await authService.changePassword({
+      userId,
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    });
+
+    return successResponse(res, {
+      statusCode: 200,
+      message: result.message || 'Đổi mật khẩu thành công.',
+    });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return errorResponse(res, {
+        statusCode: error.statusCode,
+        errorCode: error.errorCode,
+        message: error.message,
+      });
+    }
+
+    next(error);
+  }
+}
+
 export default {
   login,
   getProfile,
+  changePassword,
 };

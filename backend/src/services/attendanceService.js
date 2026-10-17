@@ -1,7 +1,13 @@
 import attendanceRepository from '../repositories/attendanceRepository.js';
 import employeeRepository from '../repositories/employeeRepository.js';
 import userRepository from '../repositories/userRepository.js';
-import { getVietnamAttendanceInfo, formatToVietnamIso } from '../utils/attendanceTime.js';
+import { 
+  getVietnamAttendanceInfo, 
+  formatToVietnamIso,
+  getCurrentVietnamMonthYear,
+  getMonthDateRange,
+  evaluateAttendanceRecord,
+} from '../utils/attendanceTime.js';
 
 /**
  * Service xử lý nghiệp vụ Chấm công (Attendance Service)
@@ -169,6 +175,14 @@ export async function performCheckOut({ userId, userEmployeeId, currentTime = ne
       statusCode: 404,
       errorCode: 'EMPLOYEE_NOT_FOUND',
       message: 'Không tìm thấy hồ sơ nhân viên tương ứng trong hệ thống.',
+    });
+  }
+
+  if (employee.employment_status === 'Resigned') {
+    throw new AttendanceServiceError({
+      statusCode: 403,
+      errorCode: 'EMPLOYEE_RESIGNED',
+      message: 'Hồ sơ nhân viên đã thôi việc, không thể thực hiện chấm công.',
     });
   }
 
@@ -354,9 +368,210 @@ export async function getTodayAttendance({ userId, userEmployeeId, userRole, cur
   };
 }
 
+/**
+ * Lấy lịch sử chấm công theo tháng/năm có phân trang và tính toán thống kê tổng hợp (US 19.0)
+ * Hỗ trợ phân quyền RBAC:
+ * - EMPLOYEE: Chỉ xem của chính mình, không cho phép đổi employeeId
+ * - ADMIN / HR_MANAGER: Xem toàn công ty hoặc lọc theo bất kỳ nhân viên nào
+ * 
+ * @param {object} params
+ * @param {object} params.user - Đối tượng người dùng đã xác thực (req.user)
+ * @param {object} params.queryParams - Query parameters (month, year, employeeId, page, limit)
+ * @returns {Promise<object>} Dữ liệu lịch sử và thống kê tổng hợp
+ */
+export async function getAttendanceHistory({ user, queryParams = {} }) {
+  // 1. Kiểm tra xác thực
+  if (!user || !user.userId) {
+    throw new AttendanceServiceError({
+      statusCode: 401,
+      errorCode: 'UNAUTHORIZED',
+      message: 'Vui lòng đăng nhập để xem lịch sử chấm công.',
+    });
+  }
+
+  const { month, year, employeeId, page, limit } = queryParams;
+
+  // 2. Xác định tháng và năm cần lọc
+  let selectedMonth;
+  let selectedYear;
+
+  const hasMonth = month !== undefined && month !== null && String(month).trim() !== '';
+  const hasYear = year !== undefined && year !== null && String(year).trim() !== '';
+
+  if (!hasMonth && !hasYear) {
+    // Mặc định: Lấy tháng và năm hiện tại theo múi giờ Việt Nam (Asia/Ho_Chi_Minh)
+    const current = getCurrentVietnamMonthYear();
+    selectedMonth = current.month;
+    selectedYear = current.year;
+  } else if (!hasMonth || !hasYear) {
+    throw new AttendanceServiceError({
+      statusCode: 400,
+      errorCode: 'INVALID_PARAMS',
+      message: 'Vui lòng cung cấp đầy đủ cả hai tham số month và year hoặc để trống cả hai để lấy tháng hiện tại.',
+    });
+  } else {
+    // Kiểm tra định dạng tháng
+    const parsedMonth = Number(month);
+    if (!Number.isInteger(parsedMonth) || parsedMonth < 1 || parsedMonth > 12) {
+      throw new AttendanceServiceError({
+        statusCode: 400,
+        errorCode: 'INVALID_MONTH',
+        message: 'Tháng không hợp lệ. Tháng phải là số nguyên từ 1 đến 12.',
+      });
+    }
+    selectedMonth = parsedMonth;
+
+    // Kiểm tra định dạng năm
+    const parsedYear = Number(year);
+    if (!Number.isInteger(parsedYear) || parsedYear < 1900 || parsedYear > 2100) {
+      throw new AttendanceServiceError({
+        statusCode: 400,
+        errorCode: 'INVALID_YEAR',
+        message: 'Năm không hợp lệ. Năm phải là số nguyên trong khoảng 1900 đến 2100.',
+      });
+    }
+    selectedYear = parsedYear;
+  }
+
+  // 3. Kiểm tra phân trang page và limit
+  let parsedPage = 1;
+  if (page !== undefined && page !== null && String(page).trim() !== '') {
+    parsedPage = Number(page);
+    if (!Number.isInteger(parsedPage) || parsedPage < 1) {
+      throw new AttendanceServiceError({
+        statusCode: 400,
+        errorCode: 'INVALID_PAGE',
+        message: 'Số trang (page) phải là số nguyên lớn hơn hoặc bằng 1.',
+      });
+    }
+  }
+
+  let parsedLimit = 31;
+  if (limit !== undefined && limit !== null && String(limit).trim() !== '') {
+    parsedLimit = Number(limit);
+    if (!Number.isInteger(parsedLimit) || parsedLimit < 1 || parsedLimit > 100) {
+      throw new AttendanceServiceError({
+        statusCode: 400,
+        errorCode: 'INVALID_LIMIT',
+        message: 'Giới hạn bản ghi mỗi trang (limit) phải là số nguyên từ 1 đến 100.',
+      });
+    }
+  }
+
+  // 4. Phân quyền và xác định EmployeeID lọc
+  let filterEmployeeId = null;
+  const userRole = user.role;
+
+  if (userRole === 'EMPLOYEE') {
+    let employeeIdSelf = user.employeeId;
+    if (!employeeIdSelf) {
+      const dbUser = await userRepository.findById(user.userId);
+      if (!dbUser || !dbUser.employee_id) {
+        throw new AttendanceServiceError({
+          statusCode: 403,
+          errorCode: 'EMPLOYEE_NOT_LINKED',
+          message: 'Tài khoản chưa được liên kết với hồ sơ nhân viên để xem lịch sử chấm công.',
+        });
+      }
+      employeeIdSelf = dbUser.employee_id;
+    }
+
+    // Nếu người dùng vai trò EMPLOYEE cố tình truyền employeeId khác trên query -> Chặn ngay 403
+    if (employeeId !== undefined && employeeId !== null && String(employeeId).trim() !== '') {
+      if (String(employeeId) !== String(employeeIdSelf)) {
+        throw new AttendanceServiceError({
+          statusCode: 403,
+          errorCode: 'FORBIDDEN',
+          message: 'Bạn chỉ có quyền xem lịch sử chấm công của chính mình.',
+        });
+      }
+    }
+
+    // Luôn áp đặt ID nhân viên của chính người dùng
+    filterEmployeeId = employeeIdSelf;
+  } else if (userRole === 'ADMIN' || userRole === 'HR_MANAGER') {
+    if (employeeId !== undefined && employeeId !== null && String(employeeId).trim() !== '') {
+      const parsedEmpId = Number(employeeId);
+      if (!Number.isInteger(parsedEmpId) || parsedEmpId <= 0) {
+        throw new AttendanceServiceError({
+          statusCode: 400,
+          errorCode: 'INVALID_EMPLOYEE_ID',
+          message: 'Mã nhân viên (employeeId) phải là số nguyên dương hợp lệ.',
+        });
+      }
+      filterEmployeeId = parsedEmpId;
+    }
+  } else {
+    throw new AttendanceServiceError({
+      statusCode: 403,
+      errorCode: 'FORBIDDEN',
+      message: 'Vai trò người dùng không có quyền tra cứu lịch sử chấm công.',
+    });
+  }
+
+  // 5. Tính ranh giới tháng ngày bắt đầu/kết thúc [startDate, endDate)
+  const { startDate, endDate } = getMonthDateRange(selectedYear, selectedMonth);
+
+  // 6. Truy vấn repository
+  const repoResult = await attendanceRepository.getAttendanceHistoryAndSummary({
+    startDate,
+    endDate,
+    employeeId: filterEmployeeId,
+    page: parsedPage,
+    limit: parsedLimit,
+  });
+
+  // 7. Chuẩn hóa và ánh xạ kết quả trả về
+  const formattedData = repoResult.rows.map((row) => {
+    const flags = evaluateAttendanceRecord({
+      checkInTime: row.check_in,
+      checkOutTime: row.check_out,
+      status: row.attendance_status,
+    });
+
+    return {
+      attendanceId: row.attendance_id,
+      employeeId: row.employee_id,
+      employeeCode: row.employee_code,
+      employeeName: row.employee_name,
+      departmentName: row.department_name || null,
+      date: row.attendance_date,
+      checkInTime: row.check_in || null,
+      checkOutTime: row.check_out || null,
+      status: flags.status,
+      isLate: flags.isLate,
+      isEarlyLeave: flags.isEarlyLeave,
+      note: row.note || null,
+    };
+  });
+
+  return {
+    filters: {
+      month: selectedMonth,
+      year: selectedYear,
+      employeeId: filterEmployeeId,
+    },
+    summary: {
+      totalWorkDays: repoResult.summary.totalWorkDays,
+      onTimeCount: repoResult.summary.onTimeCount,
+      lateCount: repoResult.summary.lateCount,
+      earlyLeaveCount: repoResult.summary.earlyLeaveCount,
+    },
+    pagination: {
+      page: repoResult.page,
+      limit: repoResult.limit,
+      totalRecords: repoResult.totalRecords,
+      totalPages: repoResult.totalPages,
+    },
+    data: formattedData,
+  };
+}
+
 export default {
   performCheckIn,
   performCheckOut,
   getTodayAttendance,
+  getAttendanceHistory,
   AttendanceServiceError,
 };
+

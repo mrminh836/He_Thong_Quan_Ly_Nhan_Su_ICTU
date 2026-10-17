@@ -552,13 +552,15 @@ async function startTestSuite() {
     });
 
     // -------------------------------------------------------------------------
-    // TEST 8: PUT cập nhật hợp lệ -> 200 OK
     // -------------------------------------------------------------------------
-    await runAsyncTest('Test 8: PUT cập nhật thông tin hợp lệ -> 200 OK', async () => {
+    // TEST 8.1: Cập nhật thành công với mã phòng ban mới chưa tồn tại -> 200 OK
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 8.1: Cập nhật thành công với mã phòng ban mới chưa tồn tại -> 200 OK', async () => {
       const { req, res, next } = createMockHttp({
         params: { id: '3' },
         body: {
-          departmentName: 'Phòng Nghiên cứu & Sáng tạo mới',
+          departmentCode: 'PB-INNOVATION',
+          departmentName: 'Phòng Đổi mới & Sáng tạo',
           location: 'Tầng 5 - Tòa nhà C',
         },
       });
@@ -567,8 +569,252 @@ async function startTestSuite() {
 
       assert.strictEqual(res.statusCode, 200);
       assert.strictEqual(res.responseBody.success, true);
-      assert.strictEqual(res.responseBody.data.departmentName, 'Phòng Nghiên cứu & Sáng tạo mới');
+      assert.strictEqual(res.responseBody.data.departmentCode, 'PB-INNOVATION');
+      assert.strictEqual(res.responseBody.data.departmentName, 'Phòng Đổi mới & Sáng tạo');
       assert.strictEqual(res.responseBody.data.location, 'Tầng 5 - Tòa nhà C');
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 8.2: Cập nhật tên/mô tả nhưng giữ nguyên mã hiện tại -> 200 OK
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 8.2: Cập nhật tên/mô tả nhưng giữ nguyên mã hiện tại của chính phòng ban -> 200 OK', async () => {
+      const { req, res, next } = createMockHttp({
+        params: { id: '3' },
+        body: {
+          departmentCode: 'PB-INNOVATION', // Giữ nguyên mã của chính nó
+          description: 'Mô tả nghiên cứu và ứng dụng AI',
+        },
+      });
+
+      await updateDepartment(req, res, next);
+
+      assert.strictEqual(res.statusCode, 200);
+      assert.strictEqual(res.responseBody.success, true);
+      assert.strictEqual(res.responseBody.data.departmentCode, 'PB-INNOVATION');
+      assert.strictEqual(res.responseBody.data.description, 'Mô tả nghiên cứu và ứng dụng AI');
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 8.3: Cập nhật sang mã của phòng ban khác -> 409 Conflict
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 8.3: Cập nhật sang mã của phòng ban khác -> 409 Conflict', async () => {
+      const { req, res, next } = createMockHttp({
+        params: { id: '3' },
+        body: {
+          departmentCode: 'PB-TECH', // Trùng với ID 1
+        },
+      });
+
+      await updateDepartment(req, res, next);
+
+      assert.strictEqual(res.statusCode, 409);
+      assert.strictEqual(res.responseBody.success, false);
+      assert.strictEqual(res.responseBody.errorCode, 'DUPLICATE_DEPARTMENT_CODE');
+      assert.ok(res.responseBody.message.includes('PB-TECH') || res.responseBody.message.includes('Mã phòng ban'));
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 8.4: Cập nhật ID không tồn tại -> 404 Not Found
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 8.4: Cập nhật ID không tồn tại -> 404 Not Found', async () => {
+      const { req, res, next } = createMockHttp({
+        params: { id: '99999' },
+        body: {
+          departmentName: 'Phòng Không Tồn Tại',
+        },
+      });
+
+      await updateDepartment(req, res, next);
+
+      assert.strictEqual(res.statusCode, 404);
+      assert.strictEqual(res.responseBody.success, false);
+      assert.strictEqual(res.responseBody.errorCode, 'DEPARTMENT_NOT_FOUND');
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 8.5: ID sai định dạng -> 400 Bad Request
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 8.5: ID sai định dạng (chuỗi ký tự / số âm) -> 400 Bad Request', async () => {
+      // 8.5a: ID là chuỗi
+      const { req: r1, res: s1, next: n1 } = createMockHttp({
+        params: { id: 'invalid-id' },
+        body: { departmentName: 'Tên hợp lệ' },
+      });
+      await updateDepartment(r1, s1, n1);
+      assert.strictEqual(s1.statusCode, 400);
+      assert.strictEqual(s1.responseBody.errorCode, 'INVALID_ID');
+
+      // 8.5b: ID là số âm
+      const { req: r2, res: s2, next: n2 } = createMockHttp({
+        params: { id: '-5' },
+        body: { departmentName: 'Tên hợp lệ' },
+      });
+      await updateDepartment(r2, s2, n2);
+      assert.strictEqual(s2.statusCode, 400);
+      assert.strictEqual(s2.responseBody.errorCode, 'INVALID_ID');
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 8.6: Thiếu trường bắt buộc hoặc dữ liệu sai kiểu -> 400 Bad Request
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 8.6: Thiếu trường bắt buộc hoặc dữ liệu sai kiểu -> 400 Bad Request', async () => {
+      // 8.6a: Body rỗng không có trường nào
+      const { req: r1, res: s1, next: n1 } = createMockHttp({
+        params: { id: '3' },
+        body: {},
+      });
+      await updateDepartment(r1, s1, n1);
+      assert.strictEqual(s1.statusCode, 400);
+      assert.strictEqual(s1.responseBody.errorCode, 'VALIDATION_ERROR');
+
+      // 8.6b: Mã phòng ban quá ngắn (< 2 ký tự)
+      const { req: r2, res: s2, next: n2 } = createMockHttp({
+        params: { id: '3' },
+        body: { departmentCode: 'A' },
+      });
+      await updateDepartment(r2, s2, n2);
+      assert.strictEqual(s2.statusCode, 400);
+      assert.strictEqual(s2.responseBody.errorCode, 'VALIDATION_ERROR');
+
+      // 8.6c: Mã phòng ban chứa ký tự đặc biệt
+      const { req: r3, res: s3, next: n3 } = createMockHttp({
+        params: { id: '3' },
+        body: { departmentCode: 'PB@TECH!' },
+      });
+      await updateDepartment(r3, s3, n3);
+      assert.strictEqual(s3.statusCode, 400);
+      assert.strictEqual(s3.responseBody.errorCode, 'VALIDATION_ERROR');
+
+      // 8.6d: Mã phòng ban sai kiểu (số thay vì chuỗi)
+      const { req: r4, res: s4, next: n4 } = createMockHttp({
+        params: { id: '3' },
+        body: { departmentCode: 12345 },
+      });
+      await updateDepartment(r4, s4, n4);
+      assert.strictEqual(s4.statusCode, 400);
+      assert.strictEqual(s4.responseBody.errorCode, 'VALIDATION_ERROR');
+
+      // 8.6e: Tên phòng ban rỗng chỉ chứa khoảng trắng
+      const { req: r5, res: s5, next: n5 } = createMockHttp({
+        params: { id: '3' },
+        body: { departmentName: '   ' },
+      });
+      await updateDepartment(r5, s5, n5);
+      assert.strictEqual(s5.statusCode, 400);
+      assert.strictEqual(s5.responseBody.errorCode, 'VALIDATION_ERROR');
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 8.7: Không gửi token -> 401 Unauthorized
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 8.7: Không gửi token khi gọi API -> 401 Unauthorized', async () => {
+      const { req, res, next, getNextCalled } = createMockHttp({
+        headers: {},
+      });
+
+      await authenticateToken(req, res, next);
+
+      assert.strictEqual(getNextCalled(), false);
+      assert.strictEqual(res.statusCode, 401);
+      assert.strictEqual(res.responseBody.errorCode, 'TOKEN_REQUIRED');
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 8.8: Role không đủ quyền -> 403 Forbidden
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 8.8: Role EMPLOYEE không đủ quyền cập nhật phòng ban -> 403 Forbidden', async () => {
+      const guardUpdate = requireRole(ROLES.ADMIN, ROLES.HR_MANAGER);
+
+      // 8.8a: EMPLOYEE cố cập nhật -> 403 Forbidden
+      const { req: reqEmp, res: resEmp, next: nextEmp, getNextCalled: calledEmp } = createMockHttp({
+        user: { role: ROLES.EMPLOYEE },
+      });
+      guardUpdate(reqEmp, resEmp, nextEmp);
+      assert.strictEqual(calledEmp(), false);
+      assert.strictEqual(resEmp.statusCode, 403);
+      assert.strictEqual(resEmp.responseBody.errorCode, 'FORBIDDEN');
+
+      // 8.8b: HR_MANAGER được phép cập nhật -> next() được gọi
+      const { req: reqHr, res: resHr, next: nextHr, getNextCalled: calledHr } = createMockHttp({
+        user: { role: ROLES.HR_MANAGER },
+      });
+      guardUpdate(reqHr, resHr, nextHr);
+      assert.strictEqual(calledHr(), true);
+
+      // 8.8c: ADMIN được phép cập nhật -> next() được gọi
+      const { req: reqAdmin, res: resAdmin, next: nextAdmin, getNextCalled: calledAdmin } = createMockHttp({
+        user: { role: ROLES.ADMIN },
+      });
+      guardUpdate(reqAdmin, resAdmin, nextAdmin);
+      assert.strictEqual(calledAdmin(), true);
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 8.9: Gửi trường không được phép cập nhật -> Bỏ qua an toàn hoặc từ chối
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 8.9: Gửi trường không được phép cập nhật (DepartmentID) -> Bị bỏ qua, không ghi đè dữ liệu hệ thống', async () => {
+      // 8.9a: Gửi kèm DepartmentID giả mạo + trường hợp lệ location
+      const { req: r1, res: s1, next: n1 } = createMockHttp({
+        params: { id: '3' },
+        body: {
+          departmentId: 9999,
+          department_id: 8888,
+          location: 'Tòa nhà D - Tầng 2',
+        },
+      });
+
+      await updateDepartment(r1, s1, n1);
+
+      assert.strictEqual(s1.statusCode, 200);
+      assert.strictEqual(s1.responseBody.success, true);
+      assert.strictEqual(s1.responseBody.data.id, 3, 'ID phòng ban không được phép bị thay đổi');
+      assert.strictEqual(s1.responseBody.data.location, 'Tòa nhà D - Tầng 2');
+
+      // 8.9b: Chỉ gửi mỗi trường không được phép cập nhật -> Từ chối với 400 Bad Request
+      const { req: r2, res: s2, next: n2 } = createMockHttp({
+        params: { id: '3' },
+        body: {
+          departmentId: 9999,
+          created_at: '2020-01-01',
+        },
+      });
+
+      await updateDepartment(r2, s2, n2);
+
+      assert.strictEqual(s2.statusCode, 400);
+      assert.strictEqual(s2.responseBody.errorCode, 'VALIDATION_ERROR');
+    });
+
+    // -------------------------------------------------------------------------
+    // TEST 8.10: Database kích hoạt UNIQUE key khi trùng lặp đồng thời (ER_DUP_ENTRY) -> 409 Conflict
+    // -------------------------------------------------------------------------
+    await runAsyncTest('Test 8.10: Xử lý race condition đồng thời qua UNIQUE key MySQL (ER_DUP_ENTRY) -> 409 Conflict', async () => {
+      const originalServiceUpdate = departmentService.updateDepartment;
+
+      try {
+        // Giả lập MySQL ném lỗi duplicate key do 2 request ghi đồng thời cùng một mã phòng ban
+        departmentService.updateDepartment = async () => {
+          const dupError = new Error("Duplicate entry 'PB-RACE' for key 'departments.uk_departments_code'");
+          dupError.code = 'ER_DUP_ENTRY';
+          dupError.errno = 1062;
+          dupError.sqlMessage = "Duplicate entry 'PB-RACE' for key 'departments.uk_departments_code'";
+          throw dupError;
+        };
+
+        const { req, res, next } = createMockHttp({
+          params: { id: '3' },
+          body: { departmentCode: 'PB-RACE' },
+        });
+
+        await updateDepartment(req, res, next);
+
+        assert.strictEqual(res.statusCode, 409);
+        assert.strictEqual(res.responseBody.success, false);
+        assert.strictEqual(res.responseBody.errorCode, 'DUPLICATE_DEPARTMENT_CODE');
+        assert.strictEqual(res.responseBody.message, 'Mã phòng ban đã tồn tại trong hệ thống.');
+      } finally {
+        departmentService.updateDepartment = originalServiceUpdate;
+      }
     });
 
     // -------------------------------------------------------------------------

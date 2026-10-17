@@ -73,15 +73,42 @@ class MockElement {
 
   set innerHTML(val) {
     this.innerHTMLValue = val;
-    // Tự động phân tích các phần tử ID cơ bản được render trong HTML template
+    this._elementsById = new Map();
     const idRegex = /id="([^"]+)"/g;
     let match;
-    this._elementsById = new Map();
     while ((match = idRegex.exec(val)) !== null) {
       const id = match[1];
       const el = new MockElement();
       el.id = id;
       el.parentNode = this;
+
+      const tagMatch = val.match(new RegExp(`<([a-zA-Z0-9]+)[^>]*\\bid="${id}"[^>]*>`, 'i'));
+      if (tagMatch) {
+        const fullTag = tagMatch[0];
+        const tag = tagMatch[1].toLowerCase();
+        el.tagName = tag.toUpperCase();
+
+        const valueMatch = fullTag.match(/\bvalue="([^"]*)"/i);
+        if (valueMatch) {
+          el.value = valueMatch[1];
+        }
+        if (/\bchecked\b/i.test(fullTag)) {
+          el.checked = true;
+        }
+
+        if (tag === 'textarea') {
+          const areaMatch = val.match(new RegExp(`<textarea[^>]*\\bid="${id}"[^>]*>([\\s\\S]*?)<\\/textarea>`, 'i'));
+          if (areaMatch) {
+            el.value = areaMatch[1];
+          }
+        } else {
+          const contentMatch = val.match(new RegExp(`<${tag}[^>]*\\bid="${id}"[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'));
+          if (contentMatch) {
+            el.textContent = contentMatch[1].replace(/<[^>]+>/g, '').trim();
+          }
+        }
+      }
+
       this._elementsById.set(id, el);
     }
   }
@@ -321,7 +348,7 @@ await testAsync('Test 7: openDepartmentFormModal ở chế độ Edit hiển th�
 
   assert.ok(overlay.innerHTML.includes('Chỉnh sửa phòng ban'));
   assert.ok(overlay.innerHTML.includes('Cập nhật thông tin phòng ban.'));
-  assert.ok(overlay.innerHTML.includes('Cập nhật phòng ban'));
+  assert.ok(overlay.innerHTML.includes('Lưu thay đổi'));
   assert.ok(overlay.innerHTML.includes('Phòng Đảm bảo chất lượng'));
   assert.ok(overlay.innerHTML.includes('PB-QA'));
   assert.ok(overlay.innerHTML.includes('Kiểm thử phần mềm và đảm bảo quy trình'));
@@ -598,6 +625,284 @@ await testAsync('Test 15: Mở lại modal Add sau khi đóng sẽ có form tr�
   assert.strictEqual(nameInput2.value, '');
   assert.strictEqual(nameInput2.classList.contains('is-invalid'), false);
   assert.strictEqual(nameError2.classList.contains('visible'), false);
+  closeDepartmentFormModal();
+});
+
+// -----------------------------------------------------------------------------
+// TEST 16: Chỉnh sửa phòng ban A, đóng lại, mở phòng ban B -> Không còn dữ liệu của A
+// -----------------------------------------------------------------------------
+await testAsync('Test 16: Mở phòng ban A rồi đóng, sau đó mở phòng ban B không bị sót dữ liệu của A', async () => {
+  const deptA = {
+    id: 1,
+    departmentName: 'Phòng Kế Toán',
+    departmentCode: 'PB-KT',
+    description: 'Quản lý tài chính',
+    location: 'Tầng 2',
+    phone: '0208-1111',
+    isActive: true,
+  };
+  const deptB = {
+    id: 2,
+    departmentName: 'Phòng Nhân Sự',
+    departmentCode: 'PB-NS',
+    description: 'Quản trị nhân lực',
+    location: 'Tầng 5',
+    phone: '0208-2222',
+    isActive: false,
+  };
+
+  // Mở A
+  const overlayA = await openDepartmentFormModal({ mode: 'edit', department: deptA });
+  const nameInputA = overlayA.querySelector('#dept-form-name');
+  const codeInputA = overlayA.querySelector('#dept-form-code');
+  assert.strictEqual(nameInputA.value, 'Phòng Kế Toán');
+  assert.strictEqual(codeInputA.value, 'PB-KT');
+  closeDepartmentFormModal();
+
+  // Mở B
+  const overlayB = await openDepartmentFormModal({ mode: 'edit', department: deptB });
+  const nameInputB = overlayB.querySelector('#dept-form-name');
+  const codeInputB = overlayB.querySelector('#dept-form-code');
+  const descInputB = overlayB.querySelector('#dept-form-desc');
+  const locInputB = overlayB.querySelector('#dept-form-location');
+  const phoneInputB = overlayB.querySelector('#dept-form-phone');
+
+  assert.strictEqual(nameInputB.value, 'Phòng Nhân Sự');
+  assert.strictEqual(codeInputB.value, 'PB-NS');
+  assert.strictEqual(descInputB.value, 'Quản trị nhân lực');
+  assert.strictEqual(locInputB.value, 'Tầng 5');
+  assert.strictEqual(phoneInputB.value, '0208-2222');
+  assert.ok(!overlayB.innerHTML.includes('Phòng Kế Toán'));
+  assert.ok(!overlayB.innerHTML.includes('PB-KT'));
+  closeDepartmentFormModal();
+});
+
+// -----------------------------------------------------------------------------
+// TEST 17: Sửa mã phòng ban bị trùng -> Backend trả 409 Conflict -> Hiện đúng thông báo lỗi
+// -----------------------------------------------------------------------------
+await testAsync('Test 17: Nhập mã phòng ban đã tồn tại trả 409 -> Hiển thị "Mã phòng ban đã tồn tại. Vui lòng nhập mã khác.", giữ nguyên modal và dữ liệu', async () => {
+  mockFetchHandler = async (url, options) => {
+    if (options.method === 'PUT') {
+      return {
+        ok: false,
+        status: 409,
+        headers: { get: () => 'application/json' },
+        json: async () => ({
+          success: false,
+          errorCode: 'DUPLICATE_DEPARTMENT_CODE',
+          message: "Mã phòng ban 'PB-IT' đã tồn tại trong hệ thống.",
+        }),
+      };
+    }
+    return { ok: true, headers: { get: () => 'application/json' }, json: async () => ({}) };
+  };
+
+  const overlay = await openDepartmentFormModal({
+    mode: 'edit',
+    departmentId: 5,
+    department: {
+      id: 5,
+      departmentName: 'Phòng Phát Triển',
+      departmentCode: 'PB-DEV',
+      description: 'Phát triển sản phẩm',
+    },
+  });
+
+  const form = overlay.querySelector('#department-form');
+  const codeInput = overlay.querySelector('#dept-form-code');
+  const codeError = overlay.querySelector('#dept-code-error');
+  const bannerError = overlay.querySelector('#dept-form-banner-error');
+  const submitBtn = overlay.querySelector('#dept-form-submit-btn');
+
+  // Đổi mã thành PB-IT đã tồn tại
+  codeInput.value = 'PB-IT';
+  await form.dispatchEvent({ type: 'submit', preventDefault: () => {} });
+
+  // Kiểm tra lỗi 409 duplicate code
+  assert.strictEqual(codeInput.classList.contains('is-invalid'), true);
+  assert.strictEqual(codeError.classList.contains('visible'), true);
+  assert.ok(codeError.textContent.includes('Mã phòng ban') && codeError.textContent.includes('đã tồn tại'));
+  assert.ok(codeError.textContent.includes('Vui lòng nhập mã khác'));
+  assert.strictEqual(bannerError.classList.contains('visible'), true);
+
+  // Modal vẫn mở, dữ liệu nhập giữ nguyên, submit button được mở lại
+  assert.strictEqual(codeInput.value, 'PB-IT');
+  assert.strictEqual(submitBtn.disabled, false);
+  closeDepartmentFormModal();
+});
+
+// -----------------------------------------------------------------------------
+// TEST 18: API trả các lỗi 400, 401, 403, 404, 500 -> Hiển thị banner lỗi phù hợp, không mất dữ liệu
+// -----------------------------------------------------------------------------
+await testAsync('Test 18: Xử lý đúng các HTTP status code 400, 401, 403, 404, 500 khi submit Edit', async () => {
+  const errorCases = [
+    { status: 400, message: 'Dữ liệu đầu vào không hợp lệ.', expectedMatch: 'không hợp lệ' },
+    { status: 401, message: 'Unauthorized', expectedMatch: 'không có quyền' },
+    { status: 403, message: 'Forbidden', expectedMatch: 'không có quyền' },
+    { status: 404, message: 'Phòng ban không tồn tại hoặc đã bị xóa.', expectedMatch: 'không tồn tại' },
+    { status: 500, message: 'Internal Server Error', expectedMatch: 'Lỗi hệ thống' },
+  ];
+
+  for (const tc of errorCases) {
+    mockFetchHandler = async () => {
+      return {
+        ok: false,
+        status: tc.status,
+        headers: { get: () => 'application/json' },
+        json: async () => ({
+          success: false,
+          message: tc.message,
+        }),
+      };
+    };
+
+    const overlay = await openDepartmentFormModal({
+      mode: 'edit',
+      departmentId: 10,
+      department: { id: 10, departmentName: 'Phòng Test Status', description: 'Kiểm tra lỗi HTTP' },
+    });
+
+    const form = overlay.querySelector('#department-form');
+    const nameInput = overlay.querySelector('#dept-form-name');
+    const bannerError = overlay.querySelector('#dept-form-banner-error');
+    const bannerText = overlay.querySelector('#dept-form-banner-error-text');
+    const submitBtn = overlay.querySelector('#dept-form-submit-btn');
+
+    nameInput.value = 'Phòng Test Status Sửa';
+    await form.dispatchEvent({ type: 'submit', preventDefault: () => {} });
+
+    assert.strictEqual(bannerError.classList.contains('visible'), true, `Status ${tc.status} phải hiển thị banner`);
+    assert.ok(
+      bannerText.textContent.toLowerCase().includes(tc.expectedMatch.toLowerCase()),
+      `Status ${tc.status} phải chứa "${tc.expectedMatch}" nhưng nhận: "${bannerText.textContent}"`
+    );
+    assert.strictEqual(nameInput.value, 'Phòng Test Status Sửa');
+    assert.strictEqual(submitBtn.disabled, false);
+    closeDepartmentFormModal();
+  }
+});
+
+// -----------------------------------------------------------------------------
+// TEST 19: Mở modal Thêm sau khi chỉnh sửa -> Form trống và gọi API POST tạo mới
+// -----------------------------------------------------------------------------
+await testAsync('Test 19: Mở modal Thêm sau khi chỉnh sửa có form trống và gọi đúng API POST (không gọi PUT)', async () => {
+  let methodCalled = '';
+  mockFetchHandler = async (url, options) => {
+    methodCalled = options.method;
+    return {
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({
+        success: true,
+        data: { id: 999, departmentName: 'Phòng Mới Tạo' },
+      }),
+    };
+  };
+
+  // 1. Mở modal Sửa trước
+  const overlayEdit = await openDepartmentFormModal({
+    mode: 'edit',
+    departmentId: 7,
+    department: { id: 7, departmentName: 'Phòng Sắp Sửa', departmentCode: 'PB-OLD' },
+  });
+  closeDepartmentFormModal();
+
+  // 2. Mở modal Thêm
+  const overlayAdd = await openDepartmentFormModal({ mode: 'create' });
+  const titleEl = overlayAdd.querySelector('#dept-modal-title');
+  const nameInput = overlayAdd.querySelector('#dept-form-name');
+  const codeInput = overlayAdd.querySelector('#dept-form-code');
+  const submitText = overlayAdd.querySelector('#dept-form-submit-text');
+
+  assert.strictEqual(titleEl.textContent, 'Thêm phòng ban');
+  assert.strictEqual(submitText.textContent, 'Lưu phòng ban');
+  assert.strictEqual(nameInput.value, '');
+  assert.strictEqual(codeInput.value, '');
+
+  // Submit tạo mới
+  nameInput.value = 'Phòng Mới Tạo';
+  const form = overlayAdd.querySelector('#department-form');
+  await form.dispatchEvent({ type: 'submit', preventDefault: () => {} });
+
+  assert.strictEqual(methodCalled, 'POST');
+  closeDepartmentFormModal();
+});
+
+// -----------------------------------------------------------------------------
+// TEST 20: Chỉnh sửa SĐT phòng ban thành công -> Gửi PUT với phone mới
+// -----------------------------------------------------------------------------
+await testAsync('Test 20: Chỉnh sửa số điện thoại bàn (SĐT) gửi payload phone mới lên API PUT', async () => {
+  let capturedBody = null;
+  mockFetchHandler = async (url, options) => {
+    if (options.method === 'PUT') {
+      capturedBody = JSON.parse(options.body);
+      return {
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ success: true, data: { id: 20, ...capturedBody } }),
+      };
+    }
+    return { ok: true, headers: { get: () => 'application/json' }, json: async () => ({}) };
+  };
+
+  const overlay = await openDepartmentFormModal({
+    mode: 'edit',
+    departmentId: 20,
+    department: {
+      id: 20,
+      departmentName: 'Phòng Tổng Hợp',
+      departmentCode: 'PB-TH',
+      phone: '0208-1111-222',
+    },
+  });
+
+  const form = overlay.querySelector('#department-form');
+  const phoneInput = overlay.querySelector('#dept-form-phone');
+
+  // Đổi SĐT mới
+  phoneInput.value = '0208-3846-999';
+  await form.dispatchEvent({ type: 'submit', preventDefault: () => {} });
+
+  assert.strictEqual(capturedBody.phone, '0208-3846-999');
+  assert.strictEqual(capturedBody.departmentName, 'Phòng Tổng Hợp');
+  closeDepartmentFormModal();
+});
+
+// -----------------------------------------------------------------------------
+// TEST 21: Xóa trắng SĐT phòng ban -> Gửi PUT với phone là null
+// -----------------------------------------------------------------------------
+await testAsync('Test 21: Xóa trắng ô số điện thoại bàn gửi payload phone là null', async () => {
+  let capturedBody = null;
+  mockFetchHandler = async (url, options) => {
+    if (options.method === 'PUT') {
+      capturedBody = JSON.parse(options.body);
+      return {
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ success: true, data: { id: 21, ...capturedBody } }),
+      };
+    }
+    return { ok: true, headers: { get: () => 'application/json' }, json: async () => ({}) };
+  };
+
+  const overlay = await openDepartmentFormModal({
+    mode: 'edit',
+    departmentId: 21,
+    department: {
+      id: 21,
+      departmentName: 'Phòng Tổng Hợp',
+      phone: '0208-1111-222',
+    },
+  });
+
+  const form = overlay.querySelector('#department-form');
+  const phoneInput = overlay.querySelector('#dept-form-phone');
+
+  // Xóa trắng SĐT
+  phoneInput.value = '   ';
+  await form.dispatchEvent({ type: 'submit', preventDefault: () => {} });
+
+  assert.strictEqual(capturedBody.phone, null);
   closeDepartmentFormModal();
 });
 

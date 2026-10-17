@@ -28,4 +28,11 @@ router.post('/check-out', attendanceController.checkOut);
  */
 router.get('/today', attendanceController.getToday);
 
+/**
+ * @route   GET /api/attendance/history hoặc GET /api/attendances/history
+ * @desc    Lấy lịch sử chấm công theo tháng/năm, tính tổng ngày công, đi muộn, về sớm (US 19.0)
+ * @access  Đã đăng nhập (RBAC: Employee xem cá nhân, Admin/HR xem toàn công ty hoặc theo nhân viên)
+ */
+router.get('/history', attendanceController.getHistory);
+
 export default router;

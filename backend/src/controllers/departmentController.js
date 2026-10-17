@@ -161,10 +161,22 @@ export async function updateDepartment(req, res, next) {
     }
 
     if (error.code === 'ER_DUP_ENTRY') {
+      const sqlMsg = String(error.sqlMessage || error.message || '');
+      let msg = 'Tên hoặc mã phòng ban cập nhật bị trùng với phòng ban khác.';
+      let code = 'DUPLICATE_ENTRY';
+
+      if (sqlMsg.includes('uk_departments_code') || sqlMsg.includes('department_code')) {
+        msg = 'Mã phòng ban đã tồn tại trong hệ thống.';
+        code = 'DUPLICATE_DEPARTMENT_CODE';
+      } else if (sqlMsg.includes('uk_departments_name') || sqlMsg.includes('department_name')) {
+        msg = 'Tên phòng ban đã tồn tại trong hệ thống.';
+        code = 'DUPLICATE_DEPARTMENT_NAME';
+      }
+
       return errorResponse(res, {
         statusCode: 409,
-        errorCode: 'DUPLICATE_ENTRY',
-        message: 'Tên hoặc mã phòng ban cập nhật bị trùng với phòng ban khác.',
+        errorCode: code,
+        message: msg,
       });
     }
 

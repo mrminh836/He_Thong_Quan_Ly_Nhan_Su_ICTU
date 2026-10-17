@@ -1,5 +1,11 @@
 import employeeService, { EmployeeError } from '../services/employeeService.js';
-import { validateCreateEmployee, validateEmployeeQueryParams } from '../validators/employeeValidator.js';
+import {
+  validateCreateEmployee,
+  validateEmployeeQueryParams,
+  validateEmployeeId,
+  validateUpdateEmployee,
+  validateResignEmployee,
+} from '../validators/employeeValidator.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 
 /**
@@ -174,8 +180,139 @@ export async function getEmployees(req, res, next) {
   }
 }
 
+/**
+ * Controller cập nhật thông tin nhân viên (Chức vụ, Mức lương, Số điện thoại)
+ * Endpoint: PUT /api/employees/:id
+ * Phân quyền: ADMIN, HR_MANAGER
+ * 
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function updateEmployee(req, res, next) {
+  try {
+    // 1. Kiểm tra ID từ URL
+    const idValidation = validateEmployeeId(req.params.id);
+    if (!idValidation.isValid) {
+      return errorResponse(res, {
+        statusCode: 400,
+        errorCode: 'INVALID_ID',
+        message: idValidation.error,
+      });
+    }
+
+    // 2. Kiểm tra dữ liệu đầu vào (Input Validation)
+    const bodyValidation = validateUpdateEmployee(req.body);
+    if (!bodyValidation.isValid) {
+      return errorResponse(res, {
+        statusCode: 400,
+        errorCode: 'VALIDATION_ERROR',
+        message: bodyValidation.error,
+        errors: bodyValidation.errors || undefined,
+      });
+    }
+
+    // 3. Thực hiện cập nhật thông tin nhân viên
+    const updatedEmployee = await employeeService.updateEmployee(
+      idValidation.parsedId,
+      bodyValidation.updates
+    );
+
+    // 4. Phản hồi thành công HTTP 200 OK
+    return successResponse(res, {
+      statusCode: 200,
+      message: 'Cập nhật thông tin nhân viên thành công',
+      data: updatedEmployee,
+    });
+  } catch (error) {
+    if (error instanceof EmployeeError) {
+      return errorResponse(res, {
+        statusCode: error.statusCode,
+        errorCode: error.errorCode,
+        message: error.message,
+      });
+    }
+
+    next(error);
+  }
+}
+
+/**
+ * Controller cho nhân viên nghỉ việc và khóa tài khoản người dùng tương ứng
+ * Endpoint: PATCH /api/employees/:id
+ * Phân quyền: ADMIN, HR_MANAGER
+ * 
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function resignEmployee(req, res, next) {
+  try {
+    // 1. Kiểm tra ID từ URL
+    const idValidation = validateEmployeeId(req.params.id);
+    if (!idValidation.isValid) {
+      return errorResponse(res, {
+        statusCode: 400,
+        errorCode: 'INVALID_ID',
+        message: idValidation.error,
+      });
+    }
+
+    // 2. Kiểm tra hành động action trong Request Body
+    const bodyValidation = validateResignEmployee(req.body);
+    if (!bodyValidation.isValid) {
+      return errorResponse(res, {
+        statusCode: 400,
+        errorCode: 'VALIDATION_ERROR',
+        message: bodyValidation.error,
+      });
+    }
+
+    // 3. Thực thi nghiệp vụ thôi việc & khóa tài khoản trong Transaction MySQL
+    const result = await employeeService.resignEmployee(idValidation.parsedId);
+
+    // 4. Xác định thông điệp phản hồi
+    let message = 'Đã chuyển nhân viên sang trạng thái nghỉ việc và khóa tài khoản';
+    if (result.isAlreadyResigned) {
+      message = 'Nhân viên đã ở trạng thái nghỉ việc trước đó.';
+    } else if (!result.hasLinkedAccount) {
+      message = 'Đã chuyển nhân viên sang trạng thái nghỉ việc (nhân viên không có tài khoản User liên kết)';
+    }
+
+    // 5. Phản hồi thành công HTTP 200 OK
+    return successResponse(res, {
+      statusCode: 200,
+      message,
+      data: {
+        employeeId: result.employeeId,
+        employeeCode: result.employeeCode,
+        fullName: result.fullName,
+        employmentStatus: result.employmentStatus,
+        hasLinkedAccount: result.hasLinkedAccount,
+        accountLocked: result.accountLocked,
+        userId: result.userId,
+        username: result.username,
+        userAccountStatus: result.userAccountStatus,
+        isAlreadyResigned: result.isAlreadyResigned,
+      },
+    });
+  } catch (error) {
+    if (error instanceof EmployeeError) {
+      return errorResponse(res, {
+        statusCode: error.statusCode,
+        errorCode: error.errorCode,
+        message: error.message,
+      });
+    }
+
+    next(error);
+  }
+}
+
 export default {
   createEmployee,
   getEmployeeById,
   getEmployees,
+  updateEmployee,
+  resignEmployee,
 };

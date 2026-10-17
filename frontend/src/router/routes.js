@@ -2,6 +2,7 @@ import DashboardPage from '../pages/DashboardPage.js';
 import DepartmentsPage from '../pages/DepartmentsPage.js';
 import EmployeesPage from '../pages/EmployeesPage.js';
 import AttendancesPage from '../pages/AttendancesPage.js';
+import AttendanceHistoryPage from '../pages/AttendanceHistoryPage.js';
 import UsersPage from '../pages/UsersPage.js';
 import LoginPage from '../pages/LoginPage.js';
 import NotFoundPage from '../pages/NotFoundPage.js';
@@ -53,6 +54,25 @@ export const routes = [
     component: AttendancesPage,
     // Bảng chấm công toàn công ty chỉ dành cho Admin và Quản lý nhân sự
     allowedRoles: [ROLES.ADMIN, ROLES.HR_MANAGER],
+  },
+  {
+    path: '/attendance-history',
+    title: 'Lịch sử chấm công - HRM ICTU',
+    layout: 'app',
+    renderLayout: renderAppLayout,
+    initLayoutEvents: initAppLayoutEvents,
+    component: AttendanceHistoryPage,
+    // Cho phép cả Admin, HR Manager và Employee truy cập tra cứu lịch sử
+    allowedRoles: [ROLES.ADMIN, ROLES.HR_MANAGER, ROLES.EMPLOYEE],
+  },
+  {
+    path: '/attendance/history',
+    title: 'Lịch sử chấm công - HRM ICTU',
+    layout: 'app',
+    renderLayout: renderAppLayout,
+    initLayoutEvents: initAppLayoutEvents,
+    component: AttendanceHistoryPage,
+    allowedRoles: [ROLES.ADMIN, ROLES.HR_MANAGER, ROLES.EMPLOYEE],
   },
   {
     path: '/users',

@@ -466,6 +466,12 @@
   border-color: #fde68a;
 }
 
+.emp-action-icon-btn.btn-resign:hover {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
 /* ------------------------------------------------------------------------------
    5. PAGINATION CONTROLS
    ------------------------------------------------------------------------------ */
@@ -858,4 +864,101 @@
   color: #92400e;
   line-height: 1.4;
 }
+
+/* ------------------------------------------------------------------------------
+   8. RESIGN CONFIRMATION MODAL
+   ------------------------------------------------------------------------------ */
+.resign-warning-box {
+  background-color: #fef2f2;
+  border: 1px solid #fee2e2;
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.resign-warning-text {
+  font-size: var(--font-size-sm);
+  color: #991b1b;
+  line-height: 1.5;
+  margin: 0;
+  font-weight: 500;
+}
+
+.resign-emp-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background-color: #f8fafc;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+}
+
+.resign-emp-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  color: #334155;
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.resign-emp-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.resign-emp-name {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-main);
+  margin-bottom: 4px;
+}
+
+.resign-emp-meta-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.resign-meta-label {
+  font-weight: 500;
+  color: #64748b;
+  margin-right: 4px;
+}
+
+.resign-meta-value {
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.resign-modal-header-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background-color: #fef2f2;
+  border: 1px solid #fee2e2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.resign-modal-notice {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+  margin: 0;
+}
+
 

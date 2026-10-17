@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node tests/authService.test.js && node tests/rbacNavigation.test.js && node tests/departmentUI.test.js && node tests/departmentFormModal.test.js && node tests/employeeUI.test.js && node tests/employeeModals.test.js && node tests/attendanceWidget.test.js && node tests/attendanceBoard.test.js && node tests/dashboardPersonalization.test.js"
+    "test": "node tests/authService.test.js && node tests/rbacNavigation.test.js && node tests/departmentUI.test.js && node tests/departmentFormModal.test.js && node tests/employeeUI.test.js && node tests/employeeModals.test.js && node tests/employeeEditModal.test.js && node tests/attendanceWidget.test.js && node tests/attendanceBoard.test.js && node tests/dashboardPersonalization.test.js && node tests/dashboardStatsAndChart.test.js && node tests/attendanceReportExportUI.test.js && node tests/changePasswordModal.test.js",
+    "test:change-password": "node tests/changePasswordModal.test.js"
   },
   "keywords": [
     "hrm",

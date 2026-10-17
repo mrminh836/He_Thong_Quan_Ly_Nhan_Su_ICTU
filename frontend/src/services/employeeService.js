@@ -86,6 +86,40 @@ export const employeeService = {
   },
 
   /**
+   * Cập nhật thông tin nhân sự (Chức vụ, Mức lương, Số điện thoại)
+   * Kết nối endpoint: PUT /api/employees/:id
+   * @param {number|string} id - ID nhân viên
+   * @param {object} updates - Dữ liệu cập nhật
+   * @returns {Promise<object>}
+   */
+  async updateEmployee(id, updates) {
+    if (!id || isNaN(Number(id))) {
+      throw new Error('Mã định danh nhân viên (ID) không hợp lệ.');
+    }
+    if (!updates || typeof updates !== 'object') {
+      throw new Error('Dữ liệu cập nhật không hợp lệ.');
+    }
+
+    const res = await api.put(`/employees/${id}`, updates);
+    return res.data || res;
+  },
+
+  /**
+   * Chuyển nhân viên sang trạng thái thôi việc (Resigned) và khóa tài khoản User liên kết
+   * Kết nối endpoint: PATCH /api/employees/:id
+   * @param {number|string} id - ID nhân viên
+   * @returns {Promise<object>} Dữ liệu sau khi cập nhật trạng thái thôi việc
+   */
+  async resignEmployee(id) {
+    if (!id || isNaN(Number(id))) {
+      throw new Error('Mã định danh nhân viên (ID) không hợp lệ.');
+    }
+
+    const res = await api.patch(`/employees/${id}`, { action: 'RESIGN' });
+    return res.data || res;
+  },
+
+  /**
    * Lấy số liệu thống kê nhân viên toàn diện từ Backend
    * @returns {Promise<{ totalEmployees: number, activeEmployees: number, deptsWithEmployees: number }>}
    */

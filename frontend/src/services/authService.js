@@ -178,9 +178,38 @@ export function logout() {
   // Không xóa STORAGE_KEYS.REMEMBER_USERNAME để giữ tiện ích cho lần đăng nhập sau
 }
 
+/**
+ * Thực hiện yêu cầu đổi mật khẩu tài khoản của người dùng đang đăng nhập (HRM-217)
+ * Endpoint: PUT /api/auth/change-password
+ * 
+ * @param {object} payload
+ * @param {string} payload.currentPassword - Mật khẩu hiện tại
+ * @param {string} payload.newPassword - Mật khẩu mới
+ * @param {string} [payload.confirmPassword] - Xác nhận mật khẩu mới
+ * @returns {Promise<{ success: boolean, message: string }>}
+ */
+export async function changePassword({ currentPassword, newPassword, confirmPassword }) {
+  if (!currentPassword || !newPassword) {
+    throw new Error('Mật khẩu hiện tại và mật khẩu mới là bắt buộc.');
+  }
+
+  const payload = {
+    currentPassword,
+    newPassword,
+  };
+
+  if (confirmPassword !== undefined && confirmPassword !== null) {
+    payload.confirmPassword = confirmPassword;
+  }
+
+  const response = await api.put('/auth/change-password', payload);
+  return response;
+}
+
 export const authService = {
   login,
   logout,
+  changePassword,
   getAccessToken,
   setAccessToken,
   getCurrentUser,
@@ -195,3 +224,4 @@ export const authService = {
 };
 
 export default authService;
+

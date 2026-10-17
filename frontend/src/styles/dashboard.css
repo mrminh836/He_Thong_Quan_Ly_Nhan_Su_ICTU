@@ -1,0 +1,344 @@
+/* ==============================================================================
+   DASHBOARD 3 KPI CARDS & DEPARTMENT DISTRIBUTION CHART (HRM-212)
+   ============================================================================== */
+
+/* 3 Thẻ KPI chia đều theo chiều ngang */
+.kpi-3-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+@media (max-width: 900px) {
+  .kpi-3-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kpi-card {
+  position: relative;
+  overflow: hidden;
+  border-left: 4px solid transparent;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.kpi-card#card-total-employees {
+  border-left-color: var(--color-primary);
+}
+
+.kpi-card#card-total-departments {
+  border-left-color: #7c3aed;
+}
+
+.kpi-card#card-attendance-rate {
+  border-left-color: var(--color-success);
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.kpi-card .stat-value {
+  font-feature-settings: 'tnum';
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+.badge-purple {
+  background-color: #f5f3ff;
+  color: #7c3aed;
+  border: 1px solid #ddd6fe;
+}
+
+/* Nút thử tải lại */
+.btn-retry-kpi {
+  margin-top: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  border-radius: var(--radius-sm);
+  background-color: #fff;
+  border: 1px solid var(--color-border);
+  color: var(--color-primary);
+  cursor: pointer;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.btn-retry-kpi:hover {
+  background-color: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+/* ==============================================================================
+   BIỂU ĐỒ PHÂN BỔ NHÂN SỰ THEO PHÒNG BAN (DEPARTMENT DISTRIBUTION CHART)
+   ============================================================================== */
+.department-distribution-card {
+  margin-bottom: var(--space-6);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.department-distribution-card .card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+}
+
+.department-distribution-card .card-title {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--color-text-main);
+  margin: 0;
+}
+
+.department-distribution-card .card-subtitle {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin: 2px 0 0 0;
+}
+
+.dept-chart-wrapper {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: var(--space-6);
+  align-items: center;
+  padding: var(--space-3) var(--space-2);
+}
+
+@media (max-width: 860px) {
+  .dept-chart-wrapper {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+}
+
+/* Container chứa biểu đồ tròn Doughnut SVG */
+.dept-chart-visual {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dept-chart-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+
+.dept-chart-segment {
+  cursor: pointer;
+  transition: stroke-width 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, filter 0.2s ease;
+}
+
+.dept-chart-segment:hover,
+.dept-chart-segment.is-active {
+  stroke-width: 24;
+  opacity: 1;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+/* Phần chữ nằm giữa tâm biểu đồ Doughnut */
+.dept-chart-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.dept-chart-center-val {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--color-text-main);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.dept-chart-center-lbl {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+/* Chú giải và bảng danh sách tỷ trọng (Legend) */
+.dept-legend-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dept-legend-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  cursor: pointer;
+}
+
+.dept-legend-item:hover,
+.dept-legend-item.is-active {
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border);
+}
+
+.dept-legend-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  flex: 1;
+}
+
+.dept-legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.dept-legend-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dept-legend-name {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dept-legend-code {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.dept-legend-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.dept-legend-bar-wrap {
+  width: 90px;
+  height: 6px;
+  background-color: #f1f5f9;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .dept-legend-bar-wrap {
+    display: none;
+  }
+}
+
+.dept-legend-bar {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.4s ease;
+}
+
+.dept-legend-count {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-main);
+  min-width: 55px;
+  text-align: right;
+}
+
+.dept-legend-pct {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--color-primary);
+  min-width: 48px;
+  text-align: right;
+  padding: 2px 6px;
+  background-color: #eff6ff;
+  border-radius: var(--radius-sm);
+}
+
+/* Tooltip nổi tương tác */
+.dept-chart-tooltip {
+  position: absolute;
+  background: rgba(15, 23, 42, 0.95);
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 20;
+  white-space: nowrap;
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: opacity 0.15s ease;
+  opacity: 0;
+  transform: translate(-50%, -130%);
+}
+
+.dept-chart-tooltip.is-visible {
+  opacity: 1;
+}
+
+/* Trạng thái lỗi và rỗng */
+.dept-chart-empty-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  color: var(--color-text-muted);
+  gap: var(--space-2);
+}
+
+.dept-chart-empty-box svg {
+  width: 40px;
+  height: 40px;
+  color: var(--color-text-subtle);
+}
+
+.dept-chart-error-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--color-danger);
+  gap: var(--space-3);
+  background-color: #fef2f2;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-danger-border);
+}

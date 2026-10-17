@@ -93,16 +93,87 @@ Authorization: Bearer {{adminToken}}
 }
 
 ### ==============================================================================
-### 8. PUT /api/departments/:id - Cập nhật thông tin phòng ban
+### 8a. PUT /api/departments/:id - Cập nhật mã và tên mới hợp lệ (Admin / HR)
 ### ==============================================================================
 PUT {{baseUrl}}/departments/{{createdDeptId}}
 Content-Type: {{contentType}}
 Authorization: Bearer {{adminToken}}
 
 {
+  "departmentCode": "PB-DIGITAL",
   "departmentName": "Phòng Chuyển đổi số & CNTT",
-  "location": "Tầng 5 - Tòa nhà Công nghệ"
+  "location": "Tầng 5 - Tòa nhà Công nghệ",
+  "phone": "0208-3846-888"
 }
+
+### ==============================================================================
+### 8b. PUT /api/departments/:id - Cập nhật giữ nguyên mã hiện tại (200 OK)
+### ==============================================================================
+PUT {{baseUrl}}/departments/{{createdDeptId}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{hrToken}}
+
+{
+  "departmentCode": "PB-DIGITAL",
+  "description": "Mô tả bổ sung sau khi chuẩn hóa mã"
+}
+
+### ==============================================================================
+### 8c. PUT /api/departments/:id - Thử cập nhật sang mã phòng ban khác (409 Conflict)
+### ==============================================================================
+PUT {{baseUrl}}/departments/{{createdDeptId}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "departmentCode": "PB-TECH"
+}
+
+### ==============================================================================
+### 8d. PUT /api/departments/:id - Thử cập nhật ID không tồn tại (404 Not Found)
+### ==============================================================================
+PUT {{baseUrl}}/departments/99999
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "departmentName": "Phòng Không Tồn Tại"
+}
+
+### ==============================================================================
+### 8e. PUT /api/departments/:id - ID sai định dạng (400 Bad Request)
+### ==============================================================================
+PUT {{baseUrl}}/departments/invalid-id-123
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "departmentName": "ID Sai Định Dạng"
+}
+
+### ==============================================================================
+### 8f. PUT /api/departments/:id - Gửi kèm DepartmentID giả mạo (Bỏ qua an toàn)
+### ==============================================================================
+PUT {{baseUrl}}/departments/{{createdDeptId}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "departmentId": 9999,
+  "location": "Tầng 6 - Tòa nhà Công nghệ"
+}
+
+### ==============================================================================
+### 8g. PUT /api/departments/:id - RBAC: Employee cố cập nhật (403 Forbidden)
+### ==============================================================================
+PUT {{baseUrl}}/departments/{{createdDeptId}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{empToken}}
+
+{
+  "departmentName": "Tên phòng ban do Employee sửa"
+}
+
 
 ### ==============================================================================
 ### 9. DELETE /api/departments/:id - Xóa phòng ban rỗng (Chỉ ADMIN)
