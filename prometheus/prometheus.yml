@@ -26,10 +26,20 @@ scrape_configs:
 
   # 3. Host Metrics (Node Exporter - Mạng monitoring)
   - job_name: "node-exporter"
+    scrape_interval: 10s
     static_configs:
       - targets: ["node-exporter:9100"]
+        labels:
+          instance: "host:9100"
+          service: "host-metrics"
+          environment: "production"
 
   # 4. Container Stats (cAdvisor - Mạng monitoring)
   - job_name: "cadvisor"
+    scrape_interval: 10s
     static_configs:
       - targets: ["cadvisor:8080"]
+        labels:
+          instance: "docker-engine:8080"
+          service: "container-metrics"
+          environment: "production"

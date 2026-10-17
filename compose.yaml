@@ -218,7 +218,65 @@ services:
       - monitoring
 
   # ----------------------------------------------------------------------------
-  # SERVICE 7: Prometheus Monitoring Server (prometheus)
+  # SERVICE 7: cAdvisor Container Metrics (cadvisor)
+  # Thu thập số liệu thời gian thực của Docker containers tại cổng nội bộ 8080
+  # ----------------------------------------------------------------------------
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cadvisor
+    restart: unless-stopped
+    command:
+      - "--docker_only=true"
+      - "--housekeeping_interval=10s"
+      - "--max_housekeeping_interval=15s"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    ports:
+      # Bind 127.0.0.1:8085 trên Host (tránh xung đột cổng 8080 với phpMyAdmin)
+      - "127.0.0.1:8085:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - monitoring
+
+  # ----------------------------------------------------------------------------
+  # SERVICE 8: Node Exporter Host Metrics (node-exporter)
+  # Thu thập số liệu CPU, RAM, Disk, Network hệ điều hành tại cổng nội bộ 9100
+  # ----------------------------------------------------------------------------
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: node-exporter
+    restart: unless-stopped
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    ports:
+      # Bind 127.0.0.1:9100 trên Host phục vụ kiểm thử an toàn nội bộ
+      - "127.0.0.1:9100:9100"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:9100/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - monitoring
+
+  # ----------------------------------------------------------------------------
+  # SERVICE 9: Prometheus Monitoring Server (prometheus)
   # Nằm độc lập trên mạng monitoring để scrape metrics
   # ----------------------------------------------------------------------------
   prometheus:
@@ -237,6 +295,10 @@ services:
       - "127.0.0.1:9090:9090"
     depends_on:
       mysqld-exporter:
+        condition: service_healthy
+      cadvisor:
+        condition: service_healthy
+      node-exporter:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:9090/-/healthy"]
