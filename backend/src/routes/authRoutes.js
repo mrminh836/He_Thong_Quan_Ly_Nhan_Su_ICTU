@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import authController from '../controllers/authController.js';
 import { authenticateToken } from '../middlewares/auth.js';
-import { loginRateLimiter } from '../middlewares/rateLimiter.js';
+import { loginRateLimiter, changePasswordRateLimiter } from '../middlewares/rateLimiter.js';
 
 const router = Router();
 
@@ -18,5 +18,17 @@ router.post('/login', loginRateLimiter(), authController.login);
  * @access  Private (Yêu cầu JWT Bearer Token)
  */
 router.get('/profile', authenticateToken, authController.getProfile);
+
+/**
+ * @route   PUT /api/auth/change-password
+ * @desc    Đổi mật khẩu tài khoản của người dùng đang đăng nhập (HRM-216)
+ * @access  Private (Yêu cầu JWT Bearer Token, Rate Limiting)
+ */
+router.put(
+  '/change-password',
+  authenticateToken,
+  changePasswordRateLimiter(),
+  authController.changePassword
+);
 
 export default router;
