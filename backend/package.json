@@ -20,6 +20,7 @@
     "test:attendance:history": "node tests/attendanceHistoryApi.test.js",
     "test:dashboard": "node tests/dashboardStatsApi.test.js",
     "test:report:export": "node tests/attendanceReportExportApi.test.js",
+    "test:qa:report": "node tests/qaAttendanceReportReconciliation.test.js",
     "test:qa:attendance": "node tests/qaAttendanceCalculationReconciliation.test.js",
     "test:qa:dashboard": "node tests/qaDashboardDatabaseReconciliation.test.js",
     "test:db": "node tests/databaseInitSecurity.test.js",
