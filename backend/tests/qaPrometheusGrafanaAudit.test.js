@@ -243,12 +243,14 @@ async function runQaAudit() {
       await httpGet(`${BACKEND_URL}/api/health`);
     }
 
-    // Đợi 2 chu kỳ scrape nhỏ (3 giây)
-    await new Promise(r => setTimeout(r, 3000));
-
-    // 6.3. Đo lại giá trị sau khi phát sinh lưu lượng
-    const qAfter = await httpGet(`${PROMETHEUS_URL}/api/v1/query?query=sum(http_requests_total)`);
-    const afterCount = Number(qAfter.data?.data?.result?.[0]?.value?.[1] || 0);
+    // Đợi Prometheus scrape (chu kỳ scrape 10s, đợi tối đa 12s)
+    let afterCount = initialCount;
+    for (let retry = 0; retry < 6; retry++) {
+      await new Promise(r => setTimeout(r, 2000));
+      const qAfter = await httpGet(`${PROMETHEUS_URL}/api/v1/query?query=sum(http_requests_total)`);
+      afterCount = Number(qAfter.data?.data?.result?.[0]?.value?.[1] || 0);
+      if (afterCount >= initialCount + testRequests) break;
+    }
     const diff = afterCount - initialCount;
 
     assert(afterCount >= initialCount + testRequests, `Bộ đếm http_requests_total tăng tương ứng với lưu lượng thực tế (Ban đầu: ${initialCount}, Sau test: ${afterCount}, Tăng: +${diff})`);

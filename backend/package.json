@@ -31,6 +31,7 @@
     "test:prometheus:5targets": "node tests/qaPrometheus5Targets.test.js",
     "test:grafana:dashboards": "node tests/qaGrafanaDashboards.test.js",
     "test:qa:monitoring:realtime": "node tests/qaPrometheusGrafanaAudit.test.js",
+    "test:e2e:sprint2": "node tests/e2eSprint2Integration.test.js",
     "test:e2e:https": "node tests/e2eHttpsIntegration.test.js",
     "migrate": "node src/scripts/migrate.js up",
     "migrate:rollback": "node src/scripts/migrate.js rollback",
