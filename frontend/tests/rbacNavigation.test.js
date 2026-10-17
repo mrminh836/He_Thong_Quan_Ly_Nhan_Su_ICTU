@@ -112,44 +112,46 @@ test('Test 2.1: Nhãn và class CSS badge của từng vai trò', () => {
 // -----------------------------------------------------------------------------
 // NHÓM 3: MA TRẬN PHÂN QUYỀN MENU ĐIỀU HƯỚNG (MENU MATRIX)
 // -----------------------------------------------------------------------------
-test('Test 3.1: ADMIN nhìn thấy toàn bộ 5 chức năng thuộc 3 Section', () => {
+test('Test 3.1: ADMIN nhìn thấy toàn bộ 6 chức năng thuộc 3 Section', () => {
   const adminSections = filterNavigationByRole(ROLES.ADMIN);
   const allItems = adminSections.flatMap((s) => s.items);
   const paths = allItems.map((i) => i.path);
 
-  assert.strictEqual(allItems.length, 5);
+  assert.strictEqual(allItems.length, 6);
   assert.deepStrictEqual(paths, [
     '/dashboard',
     '/departments',
     '/employees',
     '/attendances',
+    '/attendance-history',
     '/users',
   ]);
 });
 
-test('Test 3.2: HR_MANAGER nhìn thấy 4 chức năng, mục Tài khoản (/users) bị ẩn hoàn toàn', () => {
+test('Test 3.2: HR_MANAGER nhìn thấy 5 chức năng, mục Tài khoản (/users) bị ẩn hoàn toàn', () => {
   const hrSections = filterNavigationByRole(ROLES.HR_MANAGER);
   const allItems = hrSections.flatMap((s) => s.items);
   const paths = allItems.map((i) => i.path);
 
-  assert.strictEqual(allItems.length, 4);
+  assert.strictEqual(allItems.length, 5);
   assert.strictEqual(paths.includes('/dashboard'), true);
   assert.strictEqual(paths.includes('/departments'), true);
   assert.strictEqual(paths.includes('/employees'), true);
   assert.strictEqual(paths.includes('/attendances'), true);
+  assert.strictEqual(paths.includes('/attendance-history'), true);
   assert.strictEqual(paths.includes('/users'), false, 'HR Manager KHÔNG được nhìn thấy /users');
 
   // Mục HỆ THỐNG không còn item nào nên section cũng bị loại bỏ
   assert.strictEqual(hrSections.length, 2);
 });
 
-test('Test 3.3: EMPLOYEE chỉ nhìn thấy duy nhất Tổng quan cá nhân (Gộp Chấm công vào Dashboard, ẩn các module quản lý)', () => {
+test('Test 3.3: EMPLOYEE nhìn thấy Tổng quan cá nhân và Lịch sử chấm công (ẩn các module quản lý)', () => {
   const empSections = filterNavigationByRole(ROLES.EMPLOYEE);
   const allItems = empSections.flatMap((s) => s.items);
   const paths = allItems.map((i) => i.path);
 
-  assert.strictEqual(allItems.length, 1);
-  assert.deepStrictEqual(paths, ['/dashboard']);
+  assert.strictEqual(allItems.length, 2);
+  assert.deepStrictEqual(paths, ['/dashboard', '/attendance-history']);
   assert.strictEqual(paths.includes('/departments'), false, 'Employee KHÔNG được thấy /departments');
   assert.strictEqual(paths.includes('/employees'), false, 'Employee KHÔNG được thấy /employees');
   assert.strictEqual(paths.includes('/attendances'), false, 'Employee gộp chấm công vào Dashboard, không thấy /attendances');
