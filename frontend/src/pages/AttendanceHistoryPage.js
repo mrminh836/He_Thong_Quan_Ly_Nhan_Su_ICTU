@@ -3,6 +3,7 @@ import { showToast } from '../components/Toast.js';
 import { qs, sanitizeHTML } from '../utils/dom.js';
 import { attendanceService } from '../services/attendanceService.js';
 import { employeeService } from '../services/employeeService.js';
+import { reportService } from '../services/reportService.js';
 import { getCurrentUser, getCurrentUserRole } from '../services/authService.js';
 import { ROLES } from '../utils/rbac.js';
 
@@ -16,10 +17,11 @@ import { ROLES } from '../utils/rbac.js';
  * - Xem chi tiết từng ngày: Ngày, Thứ, Giờ vào (HH:mm), Giờ ra (HH:mm), Trạng thái, Ghi chú
  * - Xem 4 thẻ thống kê KPI chuẩn xác từ backend (Tổng ngày công, Đúng giờ, Đi muộn, Về sớm)
  * - Phân trang đầy đủ kết hợp bộ lọc (page, limit 10, 20, 31)
+ * - Tích hợp nút "Xuất báo cáo Excel" và "Xuất CSV" mượt mà (HRM-215)
  */
 
 // Trạng thái cục bộ của trang
-const state = {
+export const state = {
   month: new Date().getMonth() + 1,
   year: new Date().getFullYear(),
   employeeId: 'all',
@@ -39,6 +41,7 @@ const state = {
   },
   employeesList: [],
   isLoading: false,
+  isExporting: false,
   error: null,
 };
 
@@ -613,7 +616,7 @@ export function renderAttendanceHistoryPage() {
           <!-- Chọn Nhân viên (nếu có quyền Admin/HR) -->
           ${employeeFilterHtml}
 
-          <!-- Thao tác lọc -->
+          <!-- Thao tác lọc và Xuất báo cáo -->
           <div class="history-filter-actions">
             <button type="button" class="btn-filter-submit" id="btn-submit-filter">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -622,6 +625,53 @@ export function renderAttendanceHistoryPage() {
             <button type="button" class="btn-filter-quick" id="btn-quick-this-month" title="Về tháng hiện tại">
               Tháng này
             </button>
+
+            <!-- CỤM NÚT XUẤT BÁO CÁO (EXCEL & CSV) - HRM-215 -->
+            <div class="export-report-btn-group" id="export-report-btn-group">
+              <button
+                type="button"
+                class="btn-export-excel"
+                id="btn-export-attendance-excel"
+                title="Xuất bảng tổng hợp chấm công ra file Excel (.xlsx)"
+                aria-label="Xuất báo cáo Excel"
+              >
+                <svg class="export-btn-icon" id="export-excel-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                <span class="export-btn-spinner" id="export-excel-spinner" style="display: none;" aria-hidden="true"></span>
+                <span class="export-btn-text" id="export-excel-text">Xuất báo cáo Excel</span>
+              </button>
+
+              <!-- Nút mũi tên mở dropdown xuất phụ (CSV) -->
+              <button
+                type="button"
+                class="btn-export-dropdown-toggle"
+                id="btn-export-more-toggle"
+                title="Tùy chọn định dạng xuất khác"
+                aria-haspopup="true"
+                aria-expanded="false"
+                aria-label="Tùy chọn định dạng xuất"
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+
+              <!-- Dropdown menu tùy chọn định dạng xuất khác -->
+              <div class="export-dropdown-menu" id="export-dropdown-menu" style="display: none;" role="menu">
+                <button type="button" class="export-dropdown-item" id="btn-export-attendance-csv" role="menuitem">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                  </svg>
+                  <span>Xuất file CSV (.csv)</span>
+                </button>
+              </div>
+            </div>
           </div>
         </form>
       </div>
@@ -637,6 +687,96 @@ export function renderAttendanceHistoryPage() {
       </div>
     </div>
   `;
+}
+
+/**
+ * Xử lý sự kiện xuất báo cáo chấm công (Excel / CSV)
+ * Đảm bảo:
+ * 1. Chống spam click (khóa nút khi đang xử lý)
+ * 2. Đọc đúng tháng/năm và bộ lọc đang chọn
+ * 3. Không reset bộ lọc
+ * 4. Hiển thị loading spinner & text
+ * 5. Bắt lỗi chuẩn mực, không tải file lỗi rác
+ * @param {'xlsx'|'csv'} format
+ */
+export async function handleExportAttendanceReport(format = 'xlsx') {
+  if (state.isExporting) {
+    return;
+  }
+
+  const monthSelect = qs('#history-month-select');
+  const yearSelect = qs('#history-year-select');
+  const empSelect = qs('#history-employee-select');
+
+  const month = monthSelect ? Number(monthSelect.value) : state.month;
+  const year = yearSelect ? Number(yearSelect.value) : state.year;
+  const employeeId = empSelect ? empSelect.value : state.employeeId;
+
+  // 1. Kiểm tra tham số bộ lọc
+  if (!month || isNaN(month) || month < 1 || month > 12) {
+    showToast('Tháng không hợp lệ (vui lòng chọn từ tháng 1 đến 12).', 'error');
+    return;
+  }
+
+  if (!year || isNaN(year) || year < 1900 || year > 2100) {
+    showToast('Năm không hợp lệ.', 'error');
+    return;
+  }
+
+  // 2. Thiết lập trạng thái loading UI
+  state.isExporting = true;
+  const btnExcel = qs('#btn-export-attendance-excel');
+  const btnMore = qs('#btn-export-more-toggle');
+  const btnCsv = qs('#btn-export-attendance-csv');
+  const spinner = qs('#export-excel-spinner');
+  const icon = qs('#export-excel-icon');
+  const textSpan = qs('#export-excel-text');
+  const dropdown = qs('#export-dropdown-menu');
+
+  if (dropdown) dropdown.style.display = 'none';
+  if (btnMore) btnMore.setAttribute('aria-expanded', 'false');
+
+  if (btnExcel) {
+    btnExcel.disabled = true;
+    btnExcel.classList.add('loading');
+  }
+  if (btnMore) btnMore.disabled = true;
+  if (btnCsv) btnCsv.disabled = true;
+  if (icon) icon.style.display = 'none';
+  if (spinner) spinner.style.display = 'inline-block';
+  if (textSpan) {
+    textSpan.textContent = format === 'csv' ? 'Đang xuất CSV...' : 'Đang xuất Excel...';
+  }
+
+  try {
+    const params = {
+      month,
+      year,
+      format,
+    };
+
+    if (employeeId && employeeId !== 'all') {
+      params.employeeId = employeeId;
+    }
+
+    const result = await reportService.downloadAttendanceReport(params);
+    showToast(`Đã xuất báo cáo thành công: ${result.fileName}`, 'success');
+  } catch (err) {
+    console.error('[AttendanceHistory] Lỗi xuất báo cáo:', err);
+    showToast(err.message || 'Không thể xuất báo cáo. Vui lòng thử lại sau.', 'error');
+  } finally {
+    // 3. Khôi phục trạng thái nút ban đầu
+    state.isExporting = false;
+    if (btnExcel) {
+      btnExcel.disabled = false;
+      btnExcel.classList.remove('loading');
+    }
+    if (btnMore) btnMore.disabled = false;
+    if (btnCsv) btnCsv.disabled = false;
+    if (spinner) spinner.style.display = 'none';
+    if (icon) icon.style.display = 'inline-block';
+    if (textSpan) textSpan.textContent = 'Xuất báo cáo Excel';
+  }
 }
 
 /**
@@ -694,14 +834,52 @@ export async function initAttendanceHistoryPageEvents() {
     });
   }
 
-  // 4. Gắn sự kiện ban đầu cho bảng & phân trang
+  // 4. Gắn sự kiện cho nút "Xuất báo cáo Excel" và dropdown tùy chọn
+  const btnExportExcel = qs('#btn-export-attendance-excel');
+  if (btnExportExcel) {
+    btnExportExcel.addEventListener('click', () => {
+      handleExportAttendanceReport('xlsx');
+    });
+  }
+
+  const btnExportMore = qs('#btn-export-more-toggle');
+  const exportDropdown = qs('#export-dropdown-menu');
+  if (btnExportMore && exportDropdown) {
+    btnExportMore.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isVisible = exportDropdown.style.display === 'block';
+      exportDropdown.style.display = isVisible ? 'none' : 'block';
+      btnExportMore.setAttribute('aria-expanded', String(!isVisible));
+    });
+
+    // Đóng dropdown khi click bên ngoài
+    document.addEventListener('click', (e) => {
+      if (exportDropdown.style.display === 'block') {
+        const isClickInside = exportDropdown.contains(e.target) || btnExportMore.contains(e.target);
+        if (!isClickInside) {
+          exportDropdown.style.display = 'none';
+          btnExportMore.setAttribute('aria-expanded', 'false');
+        }
+      }
+    });
+  }
+
+  const btnExportCsv = qs('#btn-export-attendance-csv');
+  if (btnExportCsv) {
+    btnExportCsv.addEventListener('click', () => {
+      handleExportAttendanceReport('csv');
+    });
+  }
+
+  // 5. Gắn sự kiện ban đầu cho bảng & phân trang
   bindTableEvents();
 
-  // 5. Tự động tải dữ liệu tháng hiện tại khi mở trang
+  // 6. Tự động tải dữ liệu tháng hiện tại khi mở trang
   fetchHistoryData();
 }
 
 export default {
   render: renderAttendanceHistoryPage,
   initEvents: initAttendanceHistoryPageEvents,
+  handleExportAttendanceReport,
 };
