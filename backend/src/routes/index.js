@@ -6,6 +6,7 @@ import departmentRoutes from './departmentRoutes.js';
 import employeeRoutes from './employeeRoutes.js';
 import attendanceRoutes from './attendanceRoutes.js';
 import dashboardRoutes from './dashboardRoutes.js';
+import reportRoutes from './reportRoutes.js';
 
 const router = Router();
 
@@ -18,6 +19,7 @@ router.use('/employees', employeeRoutes);
 router.use('/attendances', attendanceRoutes);
 router.use('/attendance', attendanceRoutes);
 router.use('/dashboard', dashboardRoutes);
+router.use('/reports', reportRoutes);
 
 // Thông tin API Root
 router.get('/', (req, res) => {
@@ -38,6 +40,7 @@ router.get('/', (req, res) => {
       attendanceCheckOut: '/api/attendance/check-out',
       attendanceToday: '/api/attendance/today',
       attendanceHistory: '/api/attendance/history',
+      attendanceExport: '/api/reports/attendance/export',
       rbacAdminUsers: '/api/rbac/admin/users',
       rbacHrEmployees: '/api/rbac/hr/employees',
       rbacEmployeeAttendance: '/api/rbac/employees/:id/attendances',
