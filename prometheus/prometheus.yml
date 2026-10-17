@@ -1,6 +1,7 @@
 # ==============================================================================
 # HỆ THỐNG QUẢN LÝ NHÂN SỰ (HRM - ICTU) - PROMETHEUS CONFIGURATION
 # Cấu hình Scrape Metrics thời gian thực (Sprint 2 - US-21 / US-29.0)
+# Đầy đủ 5 Scrape Targets: Prometheus, Node Exporter, cAdvisor, MySQL Exporter, HRM App
 # ==============================================================================
 
 global:
@@ -9,22 +10,12 @@ global:
   scrape_timeout: 10s
 
 scrape_configs:
-  # 1. Prometheus Self-monitoring
+  # 1. Target 1 — Prometheus Self-monitoring
   - job_name: "prometheus"
     static_configs:
-      - targets: ["localhost:9090"]
+      - targets: ["prometheus:9090"]
 
-  # 2. MySQL Database Exporter (Dual-network Bridge via app-network & monitoring)
-  - job_name: "mysql-exporter"
-    scrape_interval: 10s
-    static_configs:
-      - targets: ["mysqld-exporter:9104"]
-        labels:
-          instance: "mysql-db:3306"
-          service: "mysql-database"
-          environment: "production"
-
-  # 3. Host Metrics (Node Exporter - Mạng monitoring)
+  # 2. Target 2 — Node Exporter (Host/OS Metrics)
   - job_name: "node-exporter"
     scrape_interval: 10s
     static_configs:
@@ -34,7 +25,7 @@ scrape_configs:
           service: "host-metrics"
           environment: "production"
 
-  # 4. Container Stats (cAdvisor - Mạng monitoring)
+  # 3. Target 3 — cAdvisor (Docker Containers Metrics)
   - job_name: "cadvisor"
     scrape_interval: 10s
     static_configs:
@@ -42,4 +33,25 @@ scrape_configs:
         labels:
           instance: "docker-engine:8080"
           service: "container-metrics"
+          environment: "production"
+
+  # 4. Target 4 — MySQL Exporter (Database Metrics)
+  - job_name: "mysql-exporter"
+    scrape_interval: 10s
+    static_configs:
+      - targets: ["mysqld-exporter:9104"]
+        labels:
+          instance: "mysql-db:3306"
+          service: "mysql-database"
+          environment: "production"
+
+  # 5. Target 5 — HRM Application Backend (prom-client Runtime & HTTP Metrics)
+  - job_name: "hrm-app"
+    metrics_path: /metrics
+    scrape_interval: 10s
+    static_configs:
+      - targets: ["hrm-app:3005"]
+        labels:
+          instance: "hrm-app:3005"
+          service: "hrm-backend-api"
           environment: "production"

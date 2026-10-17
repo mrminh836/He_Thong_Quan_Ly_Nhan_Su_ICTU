@@ -7,6 +7,7 @@ import employeeRoutes from './employeeRoutes.js';
 import attendanceRoutes from './attendanceRoutes.js';
 import dashboardRoutes from './dashboardRoutes.js';
 import reportRoutes from './reportRoutes.js';
+import { metricsHandler } from '../utils/metrics.js';
 
 const router = Router();
 
@@ -20,6 +21,7 @@ router.use('/attendances', attendanceRoutes);
 router.use('/attendance', attendanceRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/reports', reportRoutes);
+router.get('/metrics', metricsHandler);
 
 // Thông tin API Root
 router.get('/', (req, res) => {
@@ -30,6 +32,7 @@ router.get('/', (req, res) => {
     endpoints: {
       appHealth: '/api/health',
       dbHealth: '/api/health/db',
+      metrics: '/metrics',
       authLogin: '/api/auth/login',
       authProfile: '/api/auth/profile',
       dashboardStats: '/api/dashboard/stats',
