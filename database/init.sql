@@ -302,6 +302,12 @@ REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'report_user'@'%';
 -- Cấp quyền chỉ đọc (SELECT) trên các bảng và Views báo cáo
 GRANT SELECT ON `hrm_db`.* TO 'report_user'@'%';
 
+-- 4.3 Khởi tạo và cấp quyền cho exporter (Prometheus MySQL Exporter)
+CREATE USER IF NOT EXISTS 'exporter'@'%' IDENTIFIED BY 'Pr0m3th3us@M0n2026!' WITH MAX_USER_CONNECTIONS 3;
+REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'exporter'@'%';
+GRANT PROCESS, REPLICATION CLIENT ON *.* TO 'exporter'@'%';
+GRANT SELECT ON `performance_schema`.* TO 'exporter'@'%';
+
 -- Áp dụng thay đổi quyền ngay lập tức
 FLUSH PRIVILEGES;
 

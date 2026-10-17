@@ -26,6 +26,7 @@
     "test:qa:dashboard": "node tests/qaDashboardDatabaseReconciliation.test.js",
     "test:qa:change-password": "node tests/qaChangePasswordEdgeCases.test.js",
     "test:db": "node tests/databaseInitSecurity.test.js",
+    "test:exporter": "node tests/qaMysqlExporter.test.js",
     "test:e2e:https": "node tests/e2eHttpsIntegration.test.js",
     "migrate": "node src/scripts/migrate.js up",
     "migrate:rollback": "node src/scripts/migrate.js rollback",
