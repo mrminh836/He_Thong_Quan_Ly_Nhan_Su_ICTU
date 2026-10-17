@@ -319,12 +319,49 @@ services:
         aliases:
           - prometheus
 
+  # ----------------------------------------------------------------------------
+  # SERVICE 10: Grafana Observability Dashboards (grafana)
+  # Trực quan hóa hạ tầng và ứng dụng HRM với Datasource & Dashboards Provisioning
+  # ----------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      # Bind 127.0.0.1:3000 trên Host phục vụ truy cập dashboard nội bộ
+      - "127.0.0.1:3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-Admin@Pass2026}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      monitoring:
+        aliases:
+          - grafana
+
 # ------------------------------------------------------------------------------
 # VOLUMES & NETWORKS
 # ------------------------------------------------------------------------------
 volumes:
   mysql_data:
     name: hrm_ictu_mysql_data
+  grafana-data:
+    name: hrm_ictu_grafana_data
 
 networks:
   app-network:
@@ -334,3 +371,4 @@ networks:
   monitoring:
     name: hrm-monitoring-network
     driver: bridge
+
