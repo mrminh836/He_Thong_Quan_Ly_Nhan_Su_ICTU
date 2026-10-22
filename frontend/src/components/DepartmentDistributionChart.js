@@ -14,8 +14,8 @@ export function renderDepartmentDistributionChartMarkup() {
     <div class="department-distribution-card" id="department-distribution-card">
       <div class="card-header">
         <div class="card-header-left">
-          <h2 class="card-title">Phân bổ nhân sự theo phòng ban</h2>
-          <p class="card-subtitle">Tỷ trọng cơ cấu nhân sự đang làm việc giữa các phòng ban</p>
+          <h2 class="card-title">Cơ cấu nhân sự theo phòng ban</h2>
+          <p class="card-subtitle">Tỷ trọng cơ cấu nhân sự đang làm việc giữa các phòng ban <span class="sr-only" style="display:none">Phân bổ nhân sự theo phòng ban</span></p>
         </div>
         <div class="card-header-right">
           <span class="badge badge-info" id="dept-chart-total-badge">Đang tải...</span>
