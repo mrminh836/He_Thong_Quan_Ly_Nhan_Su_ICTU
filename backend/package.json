@@ -17,6 +17,7 @@
     "test:department": "node tests/department.test.js",
     "test:department:integration": "node tests/departmentUpdateApi.test.js",
     "test:department:delete-constraint": "node tests/qaDepartmentDeleteConstraint.test.js",
+    "test:department:statistics": "node tests/qaDepartmentStatistics.test.js",
     "test:qa:department:delete-live": "node tests/qaDepartmentDeleteLiveE2E.test.js",
     "test:employee": "node tests/employee.test.js",
     "test:employee:update": "node tests/employeeUpdateApi.test.js",
