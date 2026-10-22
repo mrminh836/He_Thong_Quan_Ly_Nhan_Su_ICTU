@@ -85,6 +85,24 @@ export async function updateStatus(req, res, next) {
   }
 }
 
+/**
+ * Controller lấy danh sách tất cả tài khoản người dùng
+ * Endpoint: GET /api/users
+ */
+export async function getUsers(req, res, next) {
+  try {
+    const users = await userService.getAllUsers();
+    return successResponse(res, {
+      statusCode: 200,
+      message: 'Lấy danh sách tài khoản người dùng thành công',
+      data: users,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export default {
   updateStatus,
+  getUsers,
 };

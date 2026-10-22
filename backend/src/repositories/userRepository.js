@@ -241,6 +241,38 @@ export async function updatePassword(userId, newPasswordHash) {
   return result.affectedRows > 0;
 }
 
+/**
+ * Lấy toàn bộ danh sách tài khoản người dùng kèm thông tin hồ sơ nhân viên
+ * @returns {Promise<Array<object>>}
+ */
+export async function findAll() {
+  const sql = `
+    SELECT 
+      u.user_id,
+      u.employee_id,
+      u.username,
+      u.role,
+      u.account_status,
+      u.last_login_at,
+      u.created_at,
+      u.updated_at,
+      e.employee_code,
+      e.full_name,
+      e.email,
+      e.phone,
+      e.position,
+      e.department_id,
+      d.department_name,
+      e.employment_status
+    FROM \`users\` u
+    LEFT JOIN \`employees\` e ON u.employee_id = e.employee_id
+    LEFT JOIN \`departments\` d ON e.department_id = d.department_id
+    ORDER BY u.user_id ASC
+  `;
+
+  return query(sql);
+}
+
 export default {
   findByUsernameOrEmail,
   findById,
@@ -250,4 +282,5 @@ export default {
   updateAccountStatus,
   updatePassword,
   createUser,
+  findAll,
 };

@@ -2,9 +2,21 @@ import { Router } from 'express';
 import { authenticateToken } from '../middlewares/auth.js';
 import { requireRole } from '../middlewares/role.js';
 import { ROLES } from '../constants/roles.js';
-import { updateStatus } from '../controllers/userController.js';
+import { updateStatus, getUsers } from '../controllers/userController.js';
 
 const router = Router();
+
+/**
+ * @route   GET /api/users
+ * @desc    Lấy danh sách tài khoản người dùng hệ thống
+ * @access  Chỉ dành cho Quản trị viên (ADMIN)
+ */
+router.get(
+  '/',
+  authenticateToken,
+  requireRole(ROLES.ADMIN),
+  getUsers
+);
 
 /**
  * @route   PATCH /api/users/:id/status
