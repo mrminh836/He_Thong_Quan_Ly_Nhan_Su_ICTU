@@ -290,27 +290,72 @@ export async function deleteDepartment(departmentId, { isSoftDelete = false } = 
 }
 
 /**
- * Thống kê số lượng nhân viên hiện tại của từng phòng ban
+ * Thống kê số lượng nhân viên hiện tại của từng phòng ban và tỷ trọng cơ cấu nhân sự
  * Tổng hợp thông tin chi tiết và tóm tắt tổng số nhân viên toàn công ty
+ * 
+ * @param {object} options
+ * @returns {Promise<{ departments: Array<object>, summary: object }>}
  */
 export async function getDepartmentStatistics(options = {}) {
-  const departments = await departmentRepository.getDepartmentEmployeeStats(options);
+  const rawDepartments = await departmentRepository.getDepartmentEmployeeStats(options);
 
-  const totalEmployees = departments.reduce((acc, curr) => acc + curr.employeeCount, 0);
-  const activeEmployees = departments.reduce((acc, curr) => acc + curr.activeCount, 0);
-  const onLeaveEmployees = departments.reduce((acc, curr) => acc + curr.onLeaveCount, 0);
-  const totalDepartments = departments.length;
-  const emptyDepartments = departments.filter((d) => d.employeeCount === 0).length;
+  const totalEmployees = rawDepartments.reduce(
+    (acc, curr) => acc + (Number(curr.employeeCount) || 0),
+    0
+  );
+  const activeEmployees = rawDepartments.reduce(
+    (acc, curr) => acc + (Number(curr.activeCount) || 0),
+    0
+  );
+  const onLeaveEmployees = rawDepartments.reduce(
+    (acc, curr) => acc + (Number(curr.onLeaveCount) || 0),
+    0
+  );
+  const resignedEmployees = rawDepartments.reduce(
+    (acc, curr) => acc + (Number(curr.resignedCount) || 0),
+    0
+  );
+  const totalDepartments = rawDepartments.length;
+  const departmentsWithoutEmployees = rawDepartments.filter(
+    (d) => (Number(d.employeeCount) || 0) === 0
+  ).length;
+
+  // Tính tỷ trọng (%) cơ cấu nhân sự của từng phòng ban
+  // Công thức: Tỷ trọng (%) = (Số nhân viên phòng ban / Tổng số nhân viên) * 100
+  // Nếu totalEmployees = 0 -> percentage = 0 (chống lỗi chia cho 0)
+  const departments = rawDepartments.map((dept) => {
+    const count = Number(dept.employeeCount) || 0;
+    const percentage =
+      totalEmployees > 0
+        ? Number(((count / totalEmployees) * 100).toFixed(2))
+        : 0;
+
+    return {
+      departmentId: dept.departmentId,
+      departmentCode: dept.departmentCode,
+      departmentName: dept.departmentName,
+      isActive: dept.isActive,
+      employeeCount: count,
+      activeCount: Number(dept.activeCount) || 0,
+      onLeaveCount: Number(dept.onLeaveCount) || 0,
+      resignedCount: Number(dept.resignedCount) || 0,
+      percentage,
+    };
+  });
+
+  const summary = {
+    totalDepartments,
+    totalEmployees,
+    departmentsWithoutEmployees,
+    emptyDepartments: departmentsWithoutEmployees, // Alias tương thích ngược
+    activeEmployees,
+    onLeaveEmployees,
+    resignedEmployees,
+  };
 
   return {
     departments,
-    summary: {
-      totalDepartments,
-      emptyDepartments,
-      totalEmployees,
-      activeEmployees,
-      onLeaveEmployees,
-    },
+    summary,
   };
 }
 

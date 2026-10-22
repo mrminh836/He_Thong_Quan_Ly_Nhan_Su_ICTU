@@ -544,10 +544,10 @@ export async function getDepartmentEmployeeStats({
       d.department_code,
       d.department_name,
       d.is_active,
-      COUNT(CASE WHEN e.employment_status IN ('Active', 'OnLeave') THEN e.employee_id END) AS employee_count,
-      COUNT(CASE WHEN e.employment_status = 'Active' THEN e.employee_id END) AS active_count,
-      COUNT(CASE WHEN e.employment_status = 'OnLeave' THEN e.employee_id END) AS on_leave_count,
-      COUNT(CASE WHEN e.employment_status = 'Resigned' THEN e.employee_id END) AS resigned_count
+      COUNT(DISTINCT CASE WHEN e.employment_status IN ('Active', 'OnLeave') THEN e.employee_id END) AS employee_count,
+      COUNT(DISTINCT CASE WHEN e.employment_status = 'Active' THEN e.employee_id END) AS active_count,
+      COUNT(DISTINCT CASE WHEN e.employment_status = 'OnLeave' THEN e.employee_id END) AS on_leave_count,
+      COUNT(DISTINCT CASE WHEN e.employment_status = 'Resigned' THEN e.employee_id END) AS resigned_count
     FROM \`departments\` d
     LEFT JOIN \`employees\` e ON d.department_id = e.department_id
     ${whereSql}

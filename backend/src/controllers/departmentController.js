@@ -242,17 +242,34 @@ export async function deleteDepartment(req, res, next) {
  */
 export async function getDepartmentStatistics(req, res, next) {
   try {
-    const { status, sortBy, sortOrder } = req.query || {};
+    const { status, sortBy, sortOrder, format } = req.query || {};
     const result = await departmentService.getDepartmentStatistics({
       departmentStatus: status,
       sortBy,
       sortOrder,
     });
 
+    // Nếu client chỉ định định dạng nested: trả về { summary, departments } trong data
+    if (format === 'nested' || req.headers?.['x-response-format'] === 'nested') {
+      return successResponse(res, {
+        statusCode: 200,
+        message: 'Lấy thống kê cơ cấu nhân sự thành công.',
+        data: {
+          summary: result.summary,
+          departments: result.departments,
+        },
+      });
+    }
+
+    // Định dạng tiêu chuẩn Envelope của hệ thống (data là mảng departments, meta là summary)
+    const departments = result.departments;
+    departments.summary = result.summary;
+    departments.departments = result.departments;
+
     return successResponse(res, {
       statusCode: 200,
-      message: 'Lấy thống kê số lượng nhân viên theo phòng ban thành công',
-      data: result.departments,
+      message: 'Lấy thống kê cơ cấu nhân sự thành công.',
+      data: departments,
       meta: result.summary,
     });
   } catch (error) {
