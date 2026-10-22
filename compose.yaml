@@ -2,9 +2,11 @@
 # HỆ THỐNG QUẢN LÝ NHÂN SỰ (HRM - ICTU) - DOCKER COMPOSE ORCHESTRATION
 # Dịch vụ: MySQL 8.0 (db) + Express Backend (backend) + Vite SPA Nginx (frontend)
 # Cấu hình cổng Host:
-#   - MySQL:    3308 (tránh đụng cổng 3306)
+#   - MySQL:    3309 (tránh đụng cổng 3306/3307/3308)
 #   - Backend:  3005 (tránh đụng cổng 3000/8080)
 #   - Frontend: 5173 (tránh đụng cổng 80/3000)
+#   - phpMyAdmin: 8084 (tránh đụng cổng 8080/8082)
+#   - Grafana:  3001 (tránh đụng cổng 3000)
 # ==============================================================================
 
 services:
@@ -41,8 +43,8 @@ services:
       # Cấu hình bảo mật Lab 6 (General Query Log & Password Policy MEDIUM)
       - ./database/conf.d:/etc/mysql/conf.d:ro
     ports:
-      # Cổng 3308 trên máy host -> 3306 trong container (dành cho DBeaver/Navicat/MySQL Workbench)
-      - "${DB_PORT:-3308}:3306"
+      # Cổng 3309 trên máy host -> 3306 trong container (dành cho DBeaver/Navicat/MySQL Workbench)
+      - "${DB_PORT:-3309}:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-RootPassword@2026}"]
       interval: 10s
@@ -142,7 +144,7 @@ services:
       PMA_ARBITRARY: 0
       UPLOAD_LIMIT: 64M
     ports:
-      - "${PMA_PORT:-8080}:80"
+      - "${PMA_PORT:-8084}:80"
     depends_on:
       mysql-db:
         condition: service_healthy
@@ -328,8 +330,8 @@ services:
     container_name: grafana
     restart: unless-stopped
     ports:
-      # Bind 127.0.0.1:3000 trên Host phục vụ truy cập dashboard nội bộ
-      - "127.0.0.1:3000:3000"
+      # Bind 127.0.0.1:3001 trên Host phục vụ truy cập dashboard nội bộ (tránh đụng cổng 3000)
+      - "127.0.0.1:${GRAFANA_PORT:-3001}:3000"
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-Admin@Pass2026}
