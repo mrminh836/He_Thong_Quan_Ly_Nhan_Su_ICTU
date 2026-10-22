@@ -94,7 +94,36 @@ export async function updateUserStatus({
   };
 }
 
+/**
+ * Lấy toàn bộ danh sách tài khoản người dùng
+ * @returns {Promise<Array<object>>}
+ */
+export async function getAllUsers() {
+  const users = await userRepository.findAll();
+  return users.map((u) => ({
+    id: u.user_id,
+    userId: u.user_id,
+    username: u.username,
+    role: u.role,
+    status: u.account_status,
+    accountStatus: u.account_status,
+    employeeId: u.employee_id,
+    employeeCode: u.employee_code,
+    fullName: u.full_name,
+    email: u.email,
+    phone: u.phone,
+    position: u.position,
+    departmentId: u.department_id,
+    departmentName: u.department_name,
+    employmentStatus: u.employment_status,
+    lastLoginAt: u.last_login_at,
+    createdAt: u.created_at,
+    updatedAt: u.updated_at,
+  }));
+}
+
 export default {
   UserError,
   updateUserStatus,
+  getAllUsers,
 };

@@ -12,6 +12,7 @@
     "test:auth": "node tests/auth.test.js",
     "test:auth:change-password": "node tests/changePasswordApi.test.js",
     "test:user:status": "node tests/qaUserStatusJwtRevocation.test.js",
+    "test:qa:user:lockout": "node tests/qaUserLockoutJwtRevocationLiveE2E.test.js",
     "test:rbac": "node tests/rbac.test.js",
     "test:department": "node tests/department.test.js",
     "test:department:integration": "node tests/departmentUpdateApi.test.js",

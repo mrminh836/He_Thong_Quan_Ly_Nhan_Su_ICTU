@@ -1,0 +1,246 @@
+/* ==============================================================================
+   USER STATUS & SWITCH TOGGLE STYLES (HRM ICTU)
+   Giao diện Switch/Toggle trạng thái tài khoản (Active <-> Locked)
+   ============================================================================== */
+
+/* ------------------------------------------------------------------------------
+   1. TABLE STATUS CELL & ACCESSIBLE SWITCH
+   ------------------------------------------------------------------------------ */
+.user-status-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Switch Toggle Container */
+.user-toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 24px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+/* Ẩn checkbox native nhưng vẫn giữ trong DOM cho screen reader */
+.user-toggle-switch input[type="checkbox"] {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+  margin: 0;
+}
+
+/* Con trượt Slider */
+.user-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #94a3b8; /* Slate gray khi khóa */
+  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 24px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+/* Nút tròn di chuyển */
+.user-toggle-slider::before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #ffffff;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Trạng thái BẬT (Active - Đang hoạt động) */
+.user-toggle-switch input:checked + .user-toggle-slider {
+  background-color: #16a34a; /* Xanh lá chuẩn Success */
+}
+
+.user-toggle-switch input:checked + .user-toggle-slider::before {
+  transform: translateX(22px);
+}
+
+/* Khả năng truy cập bàn phím (Focus Ring WAI-ARIA) */
+.user-toggle-switch input:focus-visible + .user-toggle-slider {
+  outline: 2px solid var(--color-primary, #2563eb);
+  outline-offset: 2px;
+}
+
+/* Trạng thái Disabled / Đang cập nhật */
+.user-toggle-switch input:disabled + .user-toggle-slider {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: grayscale(30%);
+}
+
+.user-toggle-switch.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Trạng thái người dùng tự xem tài khoản của chính mình (Không được tự khóa) */
+.user-toggle-switch.is-self-lock {
+  cursor: not-allowed;
+}
+
+.user-toggle-switch.is-self-lock .user-toggle-slider {
+  border: 1px dashed rgba(37, 99, 235, 0.4);
+}
+
+/* Nhãn text trạng thái kèm theo switch */
+.user-status-label {
+  font-size: var(--font-size-xs, 0.75rem);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+.user-status-label.status-active {
+  color: #15803d;
+}
+
+.user-status-label.status-locked {
+  color: #b91c1c;
+}
+
+.user-status-label.status-unknown {
+  color: #64748b;
+}
+
+/* Spinner loading nhỏ bên cạnh switch khi đang gửi API */
+.user-status-spinner-small {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(37, 99, 235, 0.2);
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: userStatusSpin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes userStatusSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ------------------------------------------------------------------------------
+   2. MODAL XÁC NHẬN KHÓA / MỞ KHÓA
+   ------------------------------------------------------------------------------ */
+.user-status-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-lg, 8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.user-status-icon-box.icon-danger {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.user-status-icon-box.icon-primary {
+  background-color: #dbeafe;
+  color: #2563eb;
+}
+
+/* Khối hộp cảnh báo nghiệp vụ trong modal */
+.user-status-warning-box {
+  padding: 12px 16px;
+  border-radius: var(--radius-md, 6px);
+  margin-bottom: 16px;
+  border: 1px solid transparent;
+}
+
+.user-status-warning-box.box-danger {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.user-status-warning-box.box-primary {
+  background-color: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+.user-status-warning-text {
+  font-size: var(--font-size-sm, 0.875rem);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Thẻ tóm tắt thông tin người dùng trong modal */
+.user-status-user-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background-color: var(--color-surface-hover, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+}
+
+.user-status-avatar-circle {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.user-status-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.user-status-username {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-md, 0.95rem);
+  color: var(--color-text-main, #0f172a);
+}
+
+.user-status-meta-text {
+  font-size: var(--font-size-xs, 0.8rem);
+  color: var(--color-text-muted, #64748b);
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Banner lỗi khi API thất bại */
+.user-status-modal-container .form-banner-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background-color: #fef2f2;
+  border: 1px solid #f87171;
+  color: #b91c1c;
+  border-radius: var(--radius-md, 6px);
+  font-size: var(--font-size-sm, 0.875rem);
+}
