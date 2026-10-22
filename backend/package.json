@@ -14,6 +14,7 @@
     "test:rbac": "node tests/rbac.test.js",
     "test:department": "node tests/department.test.js",
     "test:department:integration": "node tests/departmentUpdateApi.test.js",
+    "test:department:delete-constraint": "node tests/qaDepartmentDeleteConstraint.test.js",
     "test:employee": "node tests/employee.test.js",
     "test:employee:update": "node tests/employeeUpdateApi.test.js",
     "test:qa:employee:cccd": "node tests/qaEmployeeUpdateCccdIntegrity.test.js",

@@ -222,14 +222,20 @@ export async function deleteDepartment(departmentId, { isSoftDelete = false } = 
     throw new DepartmentNotFoundError('Không tìm thấy phòng ban.', departmentId);
   }
 
-  // 2. Kiểm tra ràng buộc nhân sự trực thuộc (kể cả nhân viên đã thôi việc nếu còn liên kết)
-  const hasEmployees = typeof departmentRepository.hasEmployees === 'function'
-    ? await departmentRepository.hasEmployees(departmentId)
-    : (await departmentRepository.countEmployeesByDepartmentId(departmentId)) > 0;
+  // 2. Kiểm tra ràng buộc nhân sự trực thuộc bằng khóa ngoại thực tế (employees.department_id)
+  // Bảo đảm tính toàn vẹn: bao gồm tất cả nhân viên tham chiếu, kể cả nhân viên đã thôi việc (Resigned)
+  let employeeCount = 0;
+  if (typeof departmentRepository.countEmployeesByDepartmentId === 'function') {
+    employeeCount = await departmentRepository.countEmployeesByDepartmentId(departmentId);
+  } else if (typeof departmentRepository.hasEmployees === 'function') {
+    const hasEmp = await departmentRepository.hasEmployees(departmentId);
+    employeeCount = hasEmp ? 1 : 0;
+  }
 
-  if (hasEmployees) {
+  if (employeeCount > 0) {
     throw new DepartmentHasEmployeesError(
-      'Không thể xóa phòng ban vì vẫn còn nhân viên trực thuộc.'
+      'Không thể xóa phòng ban vì vẫn còn nhân viên trực thuộc.',
+      { employeeCount }
     );
   }
 
