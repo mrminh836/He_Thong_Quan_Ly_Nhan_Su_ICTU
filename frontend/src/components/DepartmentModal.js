@@ -1,5 +1,6 @@
 import { qs } from '../utils/dom.js';
 import { openDepartmentFormModal, closeDepartmentFormModal } from './DepartmentFormModal.js';
+import { showToast } from './Toast.js';
 
 /**
  * Component Modal Quản lý Phòng ban (Thêm, Sửa, Xem chi tiết, Xác nhận xóa)
@@ -206,7 +207,96 @@ export function openViewDepartmentModal(dept) {
 }
 
 /**
- * Mở hộp thoại xác nhận Xóa phòng ban
+ * Phân tích và chuẩn hóa đối tượng lỗi trả về từ API xóa phòng ban
+ * @param {any} err - Lỗi bắt được từ try-catch khi gọi API
+ * @returns {{ type: string, title: string, message: string, errorCode: string, statusCode: number, isConstraint: boolean }}
+ */
+export function parseDepartmentDeleteError(err) {
+  const status = Number(err?.status || err?.statusCode || 0);
+  const errorCode = err?.data?.errorCode || err?.data?.code || err?.errorCode || err?.code || '';
+  const serverMessage = err?.data?.message || err?.message || '';
+
+  // 1. Nhận diện lỗi phòng ban còn nhân viên tham chiếu (409 Conflict hoặc 400 có mã/thông báo tương ứng)
+  const isEmployeeConstraint =
+    errorCode === 'DEPARTMENT_HAS_EMPLOYEES' ||
+    ((status === 409 || status === 400) &&
+      (serverMessage.toLowerCase().includes('nhân viên') ||
+       serverMessage.toLowerCase().includes('trực thuộc') ||
+       serverMessage.toLowerCase().includes('employee')));
+
+  if (isEmployeeConstraint) {
+    return {
+      type: 'DEPARTMENT_HAS_EMPLOYEES',
+      title: 'Không thể xóa phòng ban',
+      message:
+        'Phòng ban này hiện vẫn có nhân viên trực thuộc. Vui lòng chuyển nhân viên sang phòng ban khác hoặc xử lý các hồ sơ nhân sự liên quan trước khi thực hiện xóa.',
+      errorCode: errorCode || 'DEPARTMENT_HAS_EMPLOYEES',
+      statusCode: status || 409,
+      isConstraint: true,
+    };
+  }
+
+  // 2. HTTP 403: Không có quyền thao tác
+  if (status === 403 || errorCode === 'FORBIDDEN') {
+    return {
+      type: 'FORBIDDEN',
+      title: 'Không có quyền thực hiện',
+      message: 'Bạn không có quyền xóa phòng ban. Thao tác này chỉ dành cho Quản trị viên cấp cao (ADMIN).',
+      errorCode: errorCode || 'FORBIDDEN',
+      statusCode: 403,
+      isConstraint: false,
+    };
+  }
+
+  // 3. HTTP 404: Không tìm thấy phòng ban
+  if (status === 404 || errorCode === 'DEPARTMENT_NOT_FOUND') {
+    return {
+      type: 'NOT_FOUND',
+      title: 'Phòng ban không tồn tại',
+      message: 'Phòng ban này không còn tồn tại trên hệ thống hoặc đã bị xóa trước đó.',
+      errorCode: errorCode || 'DEPARTMENT_NOT_FOUND',
+      statusCode: 404,
+      isConstraint: false,
+    };
+  }
+
+  // 4. HTTP 401: Hết hạn phiên đăng nhập
+  if (status === 401 || errorCode === 'TOKEN_REQUIRED' || errorCode === 'INVALID_TOKEN') {
+    return {
+      type: 'UNAUTHORIZED',
+      title: 'Phiên làm việc hết hạn',
+      message: 'Phiên đăng nhập đã hết hạn. Vui lòng tải lại trang hoặc đăng nhập lại.',
+      errorCode: errorCode || 'UNAUTHORIZED',
+      statusCode: 401,
+      isConstraint: false,
+    };
+  }
+
+  // 5. Lỗi mạng hoặc HTTP 500 (Server Error)
+  if (err?.isNetworkError || status >= 500) {
+    return {
+      type: 'SERVER_OR_NETWORK_ERROR',
+      title: 'Lỗi hệ thống hoặc kết nối',
+      message: 'Không thể kết nối đến máy chủ hoặc máy chủ gặp sự cố nội bộ. Vui lòng thử lại sau.',
+      errorCode: errorCode || 'INTERNAL_SERVER_ERROR',
+      statusCode: status || 500,
+      isConstraint: false,
+    };
+  }
+
+  // 6. Lỗi 400 khác (Ví dụ ID sai định dạng, request không hợp lệ)
+  return {
+    type: 'BAD_REQUEST',
+    title: 'Yêu cầu không hợp lệ',
+    message: serverMessage || 'Yêu cầu xóa phòng ban không hợp lệ. Vui lòng kiểm tra lại.',
+    errorCode: errorCode || 'BAD_REQUEST',
+    statusCode: status || 400,
+    isConstraint: false,
+  };
+}
+
+/**
+ * Mở hộp thoại xác nhận Xóa phòng ban và xử lý cảnh báo chi tiết
  * @param {object} department - Phòng ban cần xóa
  * @param {object} param1
  * @param {Function} param1.onConfirm - Hàm xử lý gọi API xóa
@@ -216,7 +306,7 @@ export function openDeleteDepartmentModal(department, { onConfirm }) {
 
   const warningEmployeesHtml = hasEmployees
     ? `
-      <div class="alert-warning-box">
+      <div class="alert-warning-box" id="modal-initial-warning-box">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         <div>
           <strong>Cảnh báo nghiệp vụ:</strong> Phòng ban này hiện đang có <strong>${department.employeeCount} nhân sự</strong> trực thuộc.
@@ -234,15 +324,41 @@ export function openDeleteDepartmentModal(department, { onConfirm }) {
       <span id="modal-error-text"></span>
     </div>
 
-    <p class="modal-delete-text">
-      Bạn có chắc chắn muốn xóa phòng ban <strong>${department.departmentName}</strong> (Mã: <code>${department.departmentCode || 'N/A'}</code>) không?
-    </p>
+    <div id="modal-delete-prompt-content">
+      <p class="modal-delete-text">
+        Bạn có chắc chắn muốn xóa phòng ban <strong>${department.departmentName}</strong> (Mã: <code>${department.departmentCode || 'N/A'}</code>) không?
+      </p>
 
-    ${warningEmployeesHtml}
+      ${warningEmployeesHtml}
 
-    <p class="modal-delete-notice">
-      Lưu ý: Hành động này không thể hoàn tác sau khi đã xóa thành công.
-    </p>
+      <p class="modal-delete-notice">
+        Lưu ý: Hành động này không thể hoàn tác sau khi đã xóa thành công.
+      </p>
+    </div>
+
+    <!-- Cảnh báo chi tiết khi Backend từ chối do phòng ban còn nhân viên -->
+    <div id="modal-has-employees-alert" class="alert-department-has-employees" style="display: none;">
+      <div class="alert-warning-header">
+        <div class="alert-warning-icon-wrapper">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-warning-icon">
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <div class="alert-warning-title-group">
+          <h3 class="alert-warning-title" id="has-employees-alert-title">Không thể xóa phòng ban</h3>
+          <span class="error-code-badge" id="has-employees-code-badge" style="display: none;">
+            Mã lỗi: <code id="has-employees-code-text">DEPARTMENT_HAS_EMPLOYEES</code>
+          </span>
+        </div>
+      </div>
+      <div class="alert-warning-body">
+        <p id="has-employees-alert-message">
+          Phòng ban này hiện vẫn có nhân viên trực thuộc. Vui lòng chuyển nhân viên sang phòng ban khác hoặc xử lý các hồ sơ nhân sự liên quan trước khi thực hiện xóa.
+        </p>
+      </div>
+    </div>
   `;
 
   const footerHtml = `
@@ -251,42 +367,102 @@ export function openDeleteDepartmentModal(department, { onConfirm }) {
       <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
       <span>Xác nhận xóa</span>
     </button>
+    <button type="button" class="btn btn-primary" id="modal-understood-btn" style="display: none;">
+      <span>Đã hiểu</span>
+    </button>
   `;
 
-  const overlay = createModalFrame('Xác nhận xóa phòng ban', bodyHtml, footerHtml, 480);
+  const overlay = createModalFrame('Xác nhận xóa phòng ban', bodyHtml, footerHtml, 520);
 
   const cancelBtn = overlay.querySelector('#modal-cancel-btn');
   const confirmBtn = overlay.querySelector('#modal-confirm-delete-btn');
+  const understoodBtn = overlay.querySelector('#modal-understood-btn');
   const errorBanner = overlay.querySelector('#modal-error-banner');
   const errorText = overlay.querySelector('#modal-error-text');
+  const promptContent = overlay.querySelector('#modal-delete-prompt-content');
+  const hasEmployeesAlert = overlay.querySelector('#modal-has-employees-alert');
+  const hasEmployeesTitle = overlay.querySelector('#has-employees-alert-title');
+  const hasEmployeesMessage = overlay.querySelector('#has-employees-alert-message');
+  const codeBadge = overlay.querySelector('#has-employees-code-badge');
+  const codeText = overlay.querySelector('#has-employees-code-text');
+  const modalTitle = overlay.querySelector('.modal-title');
 
   cancelBtn.addEventListener('click', closeModal);
+  understoodBtn.addEventListener('click', closeModal);
+
+  let isSubmitting = false;
 
   confirmBtn.addEventListener('click', async () => {
+    // Ngăn chặn nhấn nhiều lần tạo nhiều request đồng thời
+    if (isSubmitting) return;
+    isSubmitting = true;
+
     confirmBtn.disabled = true;
+    cancelBtn.disabled = true;
     confirmBtn.innerHTML = `
       <div class="spinner btn-spinner"></div>
       <span>Đang xóa...</span>
     `;
+    if (errorBanner) {
+      errorBanner.classList.remove('visible');
+    }
 
     try {
       await onConfirm(department.departmentId || department.id);
       closeModal();
     } catch (err) {
-      confirmBtn.disabled = false;
-      confirmBtn.innerHTML = `
-        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-        <span>Xác nhận xóa</span>
-      `;
+      isSubmitting = false;
+      cancelBtn.disabled = false;
 
-      // Bắt lỗi nghiệp vụ 409 Conflict: phòng ban còn nhân viên
-      if (err.status === 409 || err.data?.code === 'DEPARTMENT_HAS_EMPLOYEES' || err.data?.errorCode === 'DEPARTMENT_HAS_EMPLOYEES') {
-        errorText.textContent =
-          'Không thể xóa phòng ban vì vẫn còn nhân viên trực thuộc. Vui lòng chuyển nhân viên sang phòng ban khác trước khi xóa.';
+      const parsedError = parseDepartmentDeleteError(err);
+
+      if (parsedError.type === 'DEPARTMENT_HAS_EMPLOYEES') {
+        // 1. Chuyển đổi giao diện sang Cảnh báo chi tiết
+        if (modalTitle) {
+          modalTitle.textContent = parsedError.title;
+        }
+        if (promptContent) {
+          promptContent.style.display = 'none';
+        }
+        if (errorBanner) {
+          errorBanner.classList.remove('visible');
+        }
+
+        if (hasEmployeesAlert) {
+          hasEmployeesAlert.style.display = 'flex';
+          if (hasEmployeesTitle) hasEmployeesTitle.textContent = parsedError.title;
+          if (hasEmployeesMessage) hasEmployeesMessage.textContent = parsedError.message;
+
+          if (parsedError.errorCode && codeBadge && codeText) {
+            codeText.textContent = parsedError.errorCode;
+            codeBadge.style.display = 'inline-flex';
+          }
+        }
+
+        // Chuyển đổi footer: Ẩn nút xóa, hiển thị nút "Đã hiểu" và giữ nút "Hủy"
+        confirmBtn.style.display = 'none';
+        understoodBtn.style.display = 'inline-flex';
+        cancelBtn.textContent = 'Hủy';
+        understoodBtn.focus();
+
+        showToast(parsedError.message, 'warning', 4000);
       } else {
-        errorText.textContent = err.data?.message || err.message || 'Không thể xóa phòng ban.';
+        // 2. Khôi phục nút xác nhận đối với các nhóm lỗi khác (cho phép thử lại hoặc hủy)
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = `
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          <span>Xác nhận xóa</span>
+        `;
+
+        if (errorText) {
+          errorText.textContent = parsedError.message;
+        }
+        if (errorBanner) {
+          errorBanner.classList.add('visible');
+        }
+
+        showToast(parsedError.message, 'error', 3500);
       }
-      errorBanner.classList.add('visible');
     }
   });
 }
@@ -297,4 +473,5 @@ export default {
   openEditDepartmentModal,
   openViewDepartmentModal,
   openDeleteDepartmentModal,
+  parseDepartmentDeleteError,
 };
