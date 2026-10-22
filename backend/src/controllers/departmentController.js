@@ -219,7 +219,12 @@ export async function deleteDepartment(req, res, next) {
     }
 
     // Xử lý mã lỗi ràng buộc khóa ngoại MySQL (InnoDB ON DELETE RESTRICT)
-    if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.errno === 1451) {
+    if (
+      error.code === 'ER_ROW_IS_REFERENCED_2' ||
+      error.code === 'ER_ROW_IS_REFERENCED' ||
+      error.errno === 1451 ||
+      error.errno === 1217
+    ) {
       return errorResponse(res, {
         statusCode: 409,
         errorCode: 'DEPARTMENT_HAS_EMPLOYEES',

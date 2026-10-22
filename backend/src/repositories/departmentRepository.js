@@ -227,16 +227,16 @@ export async function countEmployeesByDepartmentId(departmentId, connection = nu
   if (!departmentId || isNaN(departmentId)) return 0;
 
   const sql = `
-    SELECT COUNT(*) AS total
+    SELECT COUNT(*) AS employeeCount
     FROM \`employees\`
     WHERE \`department_id\` = ?
   `;
   if (connection) {
     const [rows] = await connection.execute(sql, [departmentId]);
-    return Number(rows[0]?.total || 0);
+    return Number(rows[0]?.employeeCount ?? rows[0]?.total ?? 0);
   }
   const rows = await query(sql, [departmentId]);
-  return Number(rows[0]?.total || 0);
+  return Number(rows[0]?.employeeCount ?? rows[0]?.total ?? 0);
 }
 
 /**
@@ -448,17 +448,19 @@ export async function deleteDepartmentWithLock(departmentId, { isSoftDelete = fa
 
     const department = formatDepartment(deptRows[0]);
 
-    // 2. Kiểm tra tồn tại nhân viên tham chiếu đến phòng ban
-    const [existsRows] = await conn.execute(
-      'SELECT EXISTS (SELECT 1 FROM `employees` WHERE `department_id` = ?) AS has_employees',
+    // 2. Kiểm tra tồn tại nhân viên tham chiếu đến phòng ban bằng khóa ngoại thực tế (employees.department_id)
+    const [countRows] = await conn.execute(
+      'SELECT COUNT(*) AS employeeCount FROM `employees` WHERE `department_id` = ?',
       [departmentId]
     );
 
-    const hasEmp = Boolean(existsRows[0]?.has_employees);
+    const employeeCount = Number(countRows[0]?.employeeCount ?? countRows[0]?.total ?? 0);
+    const hasEmp = employeeCount > 0;
     if (hasEmp) {
       return {
         found: true,
         hasEmployees: true,
+        employeeCount,
         isDeleted: false,
         department,
       };
