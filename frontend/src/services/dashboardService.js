@@ -1,11 +1,13 @@
 import { api } from './api.js';
 import { departmentService } from './departmentService.js';
+import { attendanceService } from './attendanceService.js';
 
 /**
  * FRONTEND SERVICE: DASHBOARD SERVICE
  * Kết nối các API thống kê tổng quan và phân bổ nhân sự cho Dashboard HRM:
  * - GET /api/dashboard/stats: Lấy 3 chỉ số KPI (Tổng nhân sự, Tổng phòng ban, Tỷ lệ có mặt)
  * - GET /api/departments/statistics: Lấy số lượng nhân viên theo từng phòng ban
+ * - GET /api/attendance/today: Lấy dữ liệu chấm công thực tế của toàn công ty
  */
 
 export const dashboardService = {
@@ -29,7 +31,7 @@ export const dashboardService = {
   },
 
   /**
-   * Lấy dữ liệu phân bổ nhân sự theo từng phòng ban phục vụ vẽ biểu đồ
+   * Lấy dữ liệu phân bổ nhân sự theo từng phòng ban phục vụ vẽ biểu đồ tròn (Pie/Doughnut Chart)
    * Tự động đối soát với totalEmployees để bổ sung nhóm "Chưa phân phòng ban" nếu có
    * 
    * @param {number} [totalWorkingEmployees=null] - Tổng nhân sự đang làm việc từ KPI stats
@@ -73,7 +75,7 @@ export const dashboardService = {
         name: dept.departmentName || dept.name || 'Phòng ban',
         code: dept.departmentCode || dept.code || '',
         count,
-        percentage: 0, // Sẽ tính sau khi xác định tổng chuẩn
+        percentage: typeof dept.percentage === 'number' ? dept.percentage : 0,
         color: PALETTE[index % PALETTE.length],
         isActive: dept.isActive !== false,
       };
@@ -111,6 +113,128 @@ export const dashboardService = {
       items,
       totalCount: finalTotal,
       departmentCount: rawDepartments.length,
+    };
+  },
+
+  /**
+   * Lấy số liệu tỷ lệ chấm công đúng giờ theo từng phòng ban phục vụ Bar Chart
+   * Nguồn dữ liệu thực tế từ:
+   * - GET /api/departments/statistics: danh sách phòng ban
+   * - GET /api/attendance/today: nhật ký check-in thực tế hôm nay của nhân viên
+   * 
+   * @param {string} [timeFilter='today'] 'today' | '7days' | 'month'
+   * @returns {Promise<{
+   *   isSupported: boolean,
+   *   filter: string,
+   *   items: Array<{
+   *     departmentId: number|string,
+   *     departmentName: string,
+   *     departmentCode: string,
+   *     totalEmployees: number,
+   *     totalCheckIns: number,
+   *     onTimeCount: number,
+   *     lateCount: number,
+   *     onTimeRate: number|null,
+   *     hasData: boolean
+   *   }>,
+   *   totalCheckIns: number,
+   *   totalOnTime: number,
+   *   averageRate: number,
+   *   message?: string
+   * }>}
+   */
+  async getDepartmentOnTimeRates(timeFilter = 'today') {
+    if (timeFilter !== 'today') {
+      return {
+        isSupported: false,
+        filter: timeFilter,
+        items: [],
+        totalCheckIns: 0,
+        totalOnTime: 0,
+        averageRate: 0,
+        message: 'Backend hiện tại chỉ cung cấp dữ liệu chấm công theo phòng ban cho ngày hôm nay qua API GET /api/attendance/today. Thống kê theo khoảng thời gian dài hơn sẽ khả dụng khi Backend triển khai API tổng hợp theo phòng ban.',
+      };
+    }
+
+    // 1. Lấy danh sách phòng ban thực tế từ GET /api/departments/statistics
+    const deptStatsRes = await departmentService.getDepartmentStatistics();
+    let departments = [];
+    if (Array.isArray(deptStatsRes?.departments)) {
+      departments = deptStatsRes.departments;
+    } else if (Array.isArray(deptStatsRes?.data)) {
+      departments = deptStatsRes.data;
+    } else if (Array.isArray(deptStatsRes)) {
+      departments = deptStatsRes;
+    }
+
+    // 2. Lấy dữ liệu chấm công hôm nay của toàn công ty từ GET /api/attendance/today
+    const attRes = await attendanceService.getTodayAttendance();
+    let records = [];
+    if (Array.isArray(attRes?.data)) {
+      records = attRes.data;
+    } else if (attRes?.data && typeof attRes.data === 'object') {
+      records = [attRes.data];
+    }
+
+    // 3. Tổng hợp theo từng phòng ban
+    let sumCheckIns = 0;
+    let sumOnTime = 0;
+
+    const items = departments.map((dept, idx) => {
+      const deptId = dept.departmentId || dept.id || idx;
+      const deptName = dept.departmentName || dept.name || 'Phòng ban';
+      const deptCode = dept.departmentCode || dept.code || '';
+      const totalEmployees = Math.max(0, Number(dept.employeeCount || dept.count || 0));
+
+      // Lọc các bản ghi chấm công thuộc phòng ban này
+      const deptRecords = records.filter((r) => {
+        if (r.departmentId && deptId) {
+          return Number(r.departmentId) === Number(deptId);
+        }
+        if (r.departmentName && deptName) {
+          return r.departmentName.trim().toLowerCase() === deptName.trim().toLowerCase();
+        }
+        return false;
+      });
+
+      // Bản ghi check-in hợp lệ (có checkInTime)
+      const validCheckIns = deptRecords.filter((r) => Boolean(r.checkInTime));
+      const totalCheckIns = validCheckIns.length;
+      const onTimeCount = validCheckIns.filter((r) => r.status === 'ON_TIME').length;
+      const lateCount = validCheckIns.filter((r) => r.status === 'LATE').length;
+
+      sumCheckIns += totalCheckIns;
+      sumOnTime += onTimeCount;
+
+      // Tỷ lệ đúng giờ: Nếu có ít nhất 1 lượt check-in -> tính %, nếu 0 lượt check-in -> null (chưa có dữ liệu)
+      const onTimeRate = totalCheckIns > 0
+        ? Number(((onTimeCount / totalCheckIns) * 100).toFixed(1))
+        : null;
+
+      return {
+        departmentId: deptId,
+        departmentName: deptName,
+        departmentCode: deptCode,
+        totalEmployees,
+        totalCheckIns,
+        onTimeCount,
+        lateCount,
+        onTimeRate,
+        hasData: totalCheckIns > 0,
+      };
+    });
+
+    const averageRate = sumCheckIns > 0
+      ? Number(((sumOnTime / sumCheckIns) * 100).toFixed(1))
+      : 0;
+
+    return {
+      isSupported: true,
+      filter: 'today',
+      items,
+      totalCheckIns: sumCheckIns,
+      totalOnTime: sumOnTime,
+      averageRate,
     };
   },
 };

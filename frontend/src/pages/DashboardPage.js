@@ -10,6 +10,12 @@ import {
   updateDepartmentDistributionChart,
   renderDepartmentDistributionError,
 } from '../components/DepartmentDistributionChart.js';
+import {
+  renderDepartmentOnTimeBarChartMarkup,
+  updateDepartmentOnTimeBarChart,
+  renderDepartmentOnTimeBarChartError,
+  renderDepartmentOnTimeBarChartApiNotice,
+} from '../components/DepartmentOnTimeBarChart.js';
 import { getCurrentUser, getCurrentUserRole } from '../services/authService.js';
 import { ROLES } from '../utils/rbac.js';
 import { openEmployeeDetailModal } from '../components/EmployeeDetailModal.js';
@@ -234,8 +240,14 @@ export function renderDashboardPage() {
       </div>
     </div>
 
-    <!-- Khu vực Biểu đồ phân bổ nhân sự theo phòng ban (HRM-212) -->
-    ${renderDepartmentDistributionChartMarkup()}
+    <!-- Khu vực 2 Biểu đồ quản trị Dashboard: Cơ cấu nhân sự (Pie) & Tỷ lệ đúng giờ (Bar) -->
+    <div class="dashboard-charts-grid">
+      <!-- 1. Pie/Doughnut Chart: Cơ cấu nhân sự theo phòng ban (HRM-212) -->
+      ${renderDepartmentDistributionChartMarkup()}
+
+      <!-- 2. Bar Chart: Tỷ lệ chấm công đúng giờ theo phòng ban -->
+      ${renderDepartmentOnTimeBarChartMarkup()}
+    </div>
 
     <!-- Layout 2 cột: Hoạt động gần đây + Trạng thái Backend Live -->
     <div class="dashboard-grid">
@@ -293,6 +305,7 @@ export function initDashboardPageEvents() {
         loadEmployeeDashboardStatus();
       } else {
         loadDashboardKpiAndDistribution();
+        loadDashboardDepartmentOnTimeChart('today');
         checkLiveBackendStatus();
         loadLiveDashboardAttendance();
       }
@@ -314,6 +327,10 @@ export function initDashboardPageEvents() {
   } else {
     // Tải 3 KPI và Biểu đồ phân bổ nhân sự cho Quản trị viên & HR
     loadDashboardKpiAndDistribution();
+
+    // Tải Biểu đồ cột tỷ lệ chấm công đúng giờ theo phòng ban
+    loadDashboardDepartmentOnTimeChart('today');
+    initOnTimeChartFilterEvents();
 
     // Tự động kiểm tra trạng thái Backend & MySQL live cho Quản trị viên
     checkLiveBackendStatus();
@@ -430,6 +447,74 @@ export async function loadDashboardKpiAndDistribution() {
       renderDepartmentDistributionError(chartBody, err.message, () => loadDashboardKpiAndDistribution());
     }
   }
+}
+
+/**
+ * Tải và hiển thị Biểu đồ cột tỷ lệ chấm công đúng giờ theo phòng ban
+ * @param {string} [filter='today']
+ */
+export async function loadDashboardDepartmentOnTimeChart(filter = 'today') {
+  const chartBody = qs('#dept-ontime-chart-body');
+  if (!chartBody) return;
+
+  try {
+    chartBody.innerHTML = `
+      <div class="loading-container" style="padding: 2.5rem 0;">
+        <div class="spinner"></div>
+        <span>Đang tải số liệu chấm công đúng giờ...</span>
+      </div>
+    `;
+
+    const result = await dashboardService.getDepartmentOnTimeRates(filter);
+
+    if (!result.isSupported) {
+      renderDepartmentOnTimeBarChartApiNotice(chartBody, result.message, () => {
+        // Cập nhật lại chip Hôm nay khi quay lại
+        const filterGroup = qs('#ontime-time-filter');
+        if (filterGroup) {
+          filterGroup.querySelectorAll('.chart-filter-chip').forEach((c) => {
+            const isToday = c.getAttribute('data-range') === 'today';
+            c.classList.toggle('is-active', isToday);
+            c.setAttribute('aria-selected', isToday ? 'true' : 'false');
+          });
+        }
+        loadDashboardDepartmentOnTimeChart('today');
+      });
+      return;
+    }
+
+    updateDepartmentOnTimeBarChart(chartBody, result);
+  } catch (err) {
+    console.warn('[DashboardPage] Không thể tải biểu đồ chấm công đúng giờ:', err?.message);
+    renderDepartmentOnTimeBarChartError(chartBody, err?.message, () => {
+      loadDashboardDepartmentOnTimeChart(filter);
+    });
+  }
+}
+
+/**
+ * Khởi tạo sự kiện chọn khoảng thời gian cho biểu đồ chấm công
+ */
+function initOnTimeChartFilterEvents() {
+  const filterGroup = qs('#ontime-time-filter');
+  if (!filterGroup) return;
+
+  const chips = filterGroup.querySelectorAll('.chart-filter-chip');
+  chips.forEach((chip) => {
+    chip.addEventListener('click', (e) => {
+      e.preventDefault();
+      const range = chip.getAttribute('data-range') || 'today';
+
+      chips.forEach((c) => {
+        c.classList.remove('is-active');
+        c.setAttribute('aria-selected', 'false');
+      });
+      chip.classList.add('is-active');
+      chip.setAttribute('aria-selected', 'true');
+
+      loadDashboardDepartmentOnTimeChart(range);
+    });
+  });
 }
 
 /**
