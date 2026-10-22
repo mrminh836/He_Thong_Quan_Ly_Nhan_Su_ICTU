@@ -7,6 +7,7 @@ import employeeRoutes from './employeeRoutes.js';
 import attendanceRoutes from './attendanceRoutes.js';
 import dashboardRoutes from './dashboardRoutes.js';
 import reportRoutes from './reportRoutes.js';
+import userRoutes from './userRoutes.js';
 import { metricsHandler } from '../utils/metrics.js';
 
 const router = Router();
@@ -21,6 +22,7 @@ router.use('/attendances', attendanceRoutes);
 router.use('/attendance', attendanceRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/reports', reportRoutes);
+router.use('/users', userRoutes);
 router.get('/metrics', metricsHandler);
 
 // Thông tin API Root
@@ -44,6 +46,7 @@ router.get('/', (req, res) => {
       attendanceToday: '/api/attendance/today',
       attendanceHistory: '/api/attendance/history',
       attendanceExport: '/api/reports/attendance/export',
+      userUpdateStatus: '/api/users/:id/status',
       rbacAdminUsers: '/api/rbac/admin/users',
       rbacHrEmployees: '/api/rbac/hr/employees',
       rbacEmployeeAttendance: '/api/rbac/employees/:id/attendances',
