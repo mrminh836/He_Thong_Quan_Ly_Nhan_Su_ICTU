@@ -237,13 +237,18 @@ export async function getEmployeeById(employeeId, options = {}) {
   }
 
   // 3. Kiểm tra tính hợp lệ của kết quả giải mã CCCD
-  // Nếu MySQL trả về NULL (do sai khóa hoặc dữ liệu hỏng) hoặc chuỗi không đúng định dạng
-  const decryptedCccd = record.cccd ? String(record.cccd).trim() : null;
+  // Nếu MySQL trả về NULL hoặc dữ liệu cũ sai khóa, ưu tiên dùng ssn_masked dự phòng an toàn
+  let decryptedCccd = record.cccd ? String(record.cccd).trim() : null;
   const cccdValidation = decryptedCccd ? validateCccdFormat(decryptedCccd) : { isValid: false };
 
   if (!decryptedCccd || !cccdValidation.isValid) {
-    console.error(`[SECURITY AUDIT] Giải mã CCCD thất bại cho Employee ID ${parsedId}: Kết quả NULL hoặc sai định dạng.`);
-    throw new CccdDecryptionError('Không thể giải mã số CCCD do lỗi dữ liệu hoặc khóa giải mã không hợp lệ.');
+    if (record.ssn_masked || (decryptedCccd && decryptedCccd.includes('*'))) {
+      decryptedCccd = record.ssn_masked || decryptedCccd;
+      console.warn(`[SECURITY AUDIT] Sử dụng CCCD che mờ dự phòng an toàn cho Employee ID ${parsedId}`);
+    } else {
+      console.error(`[SECURITY AUDIT] Giải mã CCCD thất bại cho Employee ID ${parsedId}: Kết quả NULL hoặc sai định dạng.`);
+      throw new CccdDecryptionError('Không thể giải mã số CCCD do lỗi dữ liệu hoặc khóa giải mã không hợp lệ.');
+    }
   }
 
   // Hàm tiện ích format ngày về YYYY-MM-DD
