@@ -9,6 +9,17 @@ global:
   evaluation_interval: 15s
   scrape_timeout: 10s
 
+# Quy tắc cảnh báo hạ tầng & ứng dụng HRM (Sprint 3 - US 31.0)
+rule_files:
+  - "/etc/prometheus/alert.rules.yml"
+
+# Kết nối Prometheus tới Alertmanager qua mạng Docker monitoring
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - "alertmanager:9093"
+
 scrape_configs:
   # 1. Target 1 — Prometheus Self-monitoring
   - job_name: "prometheus"

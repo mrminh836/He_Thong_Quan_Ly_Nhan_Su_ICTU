@@ -1,0 +1,72 @@
+# ==============================================================================
+# PROMETHEUS ALERT RULES - HRM ICTU MONITORING
+# Cảnh báo hạ tầng và ứng dụng (Sprint 3 - US 31.0)
+# ==============================================================================
+groups:
+  - name: hrm-infrastructure-alerts
+    rules:
+      # 1. Cảnh báo target giám sát mất tín hiệu (Down)
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          environment: production
+        annotations:
+          summary: "Target {{ $labels.instance }} bị gián đoạn"
+          description: "Target {{ $labels.instance }} thuộc job {{ $labels.job }} đã mất kết nối hơn 1 phút."
+
+      # 2. Cảnh báo dịch vụ HRM Backend API ngưng hoạt động
+      - alert: HRMApplicationDown
+        expr: up{job="hrm-app"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: hrm-backend
+        annotations:
+          summary: "HRM Backend API đang không phản hồi"
+          description: "Container hrm-app tại {{ $labels.instance }} không thể scrape metrics qua /metrics."
+
+      # 3. Cảnh báo MySQL Exporter không thể kết nối DB
+      - alert: MySQLExporterDown
+        expr: up{job="mysql-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: mysql-database
+        annotations:
+          summary: "MySQL Exporter không thể thu thập số liệu CSDL"
+          description: "MySQL Exporter tại {{ $labels.instance }} bị gián đoạn kết nối tới MySQL Database."
+
+      # 4. Cảnh báo quá tải CPU (> 80%)
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 3m
+        labels:
+          severity: warning
+          component: host-node
+        annotations:
+          summary: "Mức sử dụng CPU máy chủ vượt ngưỡng 80%"
+          description: "CPU trung bình trong 5 phút của {{ $labels.instance }} đạt mức cao (giá trị: {{ $value | printf \"%.2f\" }}%)."
+
+      # 5. Cảnh báo cạn kiệt bộ nhớ RAM (> 85%)
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 3m
+        labels:
+          severity: warning
+          component: host-node
+        annotations:
+          summary: "Mức sử dụng bộ nhớ RAM vượt ngưỡng 85%"
+          description: "Bộ nhớ khả dụng của {{ $labels.instance }} đang dưới 15% (đang sử dụng: {{ $value | printf \"%.2f\" }}%)."
+
+      # 6. Cảnh báo số lượng kết nối MySQL vượt ngưỡng an toàn (> 80 kết nối)
+      - alert: MySQLTooManyConnections
+        expr: mysql_global_status_threads_connected > 80
+        for: 2m
+        labels:
+          severity: warning
+          service: mysql-database
+        annotations:
+          summary: "Số lượng kết nối MySQL vượt quá 80 kết nối"
+          description: "MySQL đang có {{ $value }} active threads connected, có nguy cơ cạn kiệt connection pool."
