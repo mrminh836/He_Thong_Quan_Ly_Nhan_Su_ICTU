@@ -17,7 +17,7 @@ groups:
           environment: production
         annotations:
           summary: "CPU usage is above 80%"
-          description: "CPU usage on {{ $labels.instance }} has exceeded 80% for 5 minutes (current value: {{ $value | printf \"%.2f\" }}%)."
+          description: 'CPU usage on {{ $labels.instance }} has exceeded 80% for 5 minutes (current value: {{ $value | printf "%.2f" }}%).'
 
       # ------------------------------------------------------------------------
       # RULE 2: Cạn kiệt bộ nhớ RAM máy chủ (> 85% trong 5 phút)
@@ -31,7 +31,7 @@ groups:
           environment: production
         annotations:
           summary: "RAM usage is above 85%"
-          description: "RAM usage on {{ $labels.instance }} has exceeded 85% for 5 minutes (current value: {{ $value | printf \"%.2f\" }}%)."
+          description: 'RAM usage on {{ $labels.instance }} has exceeded 85% for 5 minutes (current value: {{ $value | printf "%.2f" }}%).'
 
       # ------------------------------------------------------------------------
       # RULE 3: Quá tải số lượng kết nối MySQL (> 80 active connections trong 2 phút)
