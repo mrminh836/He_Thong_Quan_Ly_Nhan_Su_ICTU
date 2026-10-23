@@ -197,14 +197,15 @@ sudo echo "127.0.0.1 hrm.local" >> /etc/hosts
 
 ### 5.3. Khởi chạy toàn bộ hệ thống bằng Docker Compose
 
-```powershell
-# 1. Sao chép file cấu hình biến môi trường
-copy .env.example .env
+```bash
+# 1. (Tùy chọn) Khởi tạo file biến môi trường từ mẫu nếu cần tùy chỉnh cổng/mật khẩu:
+cp .env.example .env    # Trên Linux / macOS
+copy .env.example .env  # Trên Windows
 
-# 2. Khởi chạy và build toàn bộ 13 dịch vụ container
+# 2. Khởi chạy toàn bộ 13 dịch vụ container:
 docker compose up -d --build
 
-# 3. Kiểm tra trạng thái các container
+# 3. Kiểm tra trạng thái các container:
 docker compose ps
 ```
 

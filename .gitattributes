@@ -1,0 +1,18 @@
+# ==============================================================================
+# GITATTRIBUTES - CHUẨN HÓA LINE ENDINGS CHO TẤT CẢ HỆ ĐIỀU HÀNH (WINDOWS / LINUX / MACOS)
+# Đảm bảo các file cấu hình và shell script luôn giữ định dạng LF khi mount vào Docker Linux container
+# ==============================================================================
+
+* text=auto
+
+*.sh text eol=lf
+*.cnf text eol=lf
+*.conf text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sql text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+Dockerfile* text eol=lf

@@ -61,14 +61,18 @@ desktop.ini
 tmp/
 temp/
 
-# TLS / SSL Certificates & Private Keys (DevSecOps - TUYỆT ĐỐI KHÔNG COMMIT PRIVATE KEY)
+# TLS / SSL Certificates & Private Keys (DevSecOps: Cho phép cặp chứng chỉ tự ký nội bộ hrm.local để chạy Docker ngay)
 certs/*.key
 *.key
 certs/*.crt
 !certs/hrm.local.cnf
+!certs/hrm.local.crt
+!certs/hrm.local.key
 
 # Monitoring Credentials & Secrets (MySQL Exporter / Prometheus)
 *.my.cnf
 monitoring/**/.my.cnf
 !monitoring/**/.my.cnf.example
+!monitoring/mysqld-exporter/.my.cnf
+
 
