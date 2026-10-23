@@ -2,39 +2,45 @@
 ### DỰ ÁN BÀI TẬP LỚN / ĐỒ ÁN MÔN HỌC: TRIỂN KHAI VÀ QUẢN TRỊ HỆ THỐNG PHẦN MỀM (K23)
 **Khoa Công nghệ Thông tin — Trường Đại học Công nghệ Thông tin & Truyền thông (ICTU)**
 
-[![Docker Compose](https://img.shields.io/badge/Docker%20Compose-10%20Services-blue?logo=docker)](file:///d:/QLNS_QLTKPM/compose.yaml)
+[![Docker Compose](https://img.shields.io/badge/Docker%20Compose-13%20Services-blue?logo=docker)](file:///d:/QLNS_QLTKPM/compose.yaml)
 [![Node.js](https://img.shields.io/badge/Node.js-v22%20LTS-green?logo=node.js)](file:///d:/QLNS_QLTKPM/backend/package.json)
 [![Nginx HTTPS](https://img.shields.io/badge/Nginx-Reverse%20Proxy%20HTTPS-brightgreen?logo=nginx)](file:///d:/QLNS_QLTKPM/nginx/conf.d/hrm.conf)
 [![MySQL 8.0](https://img.shields.io/badge/MySQL-8.0%20Secured-orange?logo=mysql)](file:///d:/QLNS_QLTKPM/database/init.sql)
 [![Prometheus](https://img.shields.io/badge/Prometheus-5%20Targets%20UP-orange?logo=prometheus)](file:///d:/QLNS_QLTKPM/prometheus/prometheus.yml)
 [![Grafana](https://img.shields.io/badge/Grafana-3%20Dashboards-F46800?logo=grafana)](file:///d:/QLNS_QLTKPM/monitoring/grafana)
-[![Tests Passing](https://img.shields.io/badge/Tests-41%2F41%20E2E%20(100%25)-success)](file:///d:/QLNS_QLTKPM/backend/tests)
-[![Commit Milestone](https://img.shields.io/badge/GitHub%20Milestone-Commit%202%20Completed-success)](file:///d:/QLNS_QLTKPM/docs/SPRINT_2_BACKLOG.md)
+[![Loki](https://img.shields.io/badge/Loki-4%20LogQL%20Queries-FF9900?logo=grafana)](file:///d:/QLNS_QLTKPM/docs/SRE_GRAFANA_LOKI_LOGQL_GUIDE.md)
+[![Alertmanager](https://img.shields.io/badge/Alertmanager-3%20Alert%20Rules-red?logo=prometheus)](file:///d:/QLNS_QLTKPM/rules/alerts.yml)
+[![Tests Passing](https://img.shields.io/badge/Tests-35%2F35%20Multi--Tier%20E2E%20(100%25)-success)](file:///d:/QLNS_QLTKPM/backend/tests)
+[![Commit Milestone](https://img.shields.io/badge/GitHub%20Milestone-Commit%203%20Completed%20(10.0%2F10)-success)](file:///d:/QLNS_QLTKPM/docs/SPRINT_3_BACKLOG.md)
 
 ---
 
 ## 📌 1. TỔNG QUAN HỆ THỐNG
 
-Hệ thống Quản lý Nhân sự (**HRM - Human Resource Management**) là nền tảng quản trị nguồn nhân lực doanh nghiệp được thiết kế theo kiến trúc **Monorepo** hiện đại, kết hợp chặt chẽ giữa **Frontend Single Page Application (SPA)**, **Backend RESTful API**, **MySQL 8.0**, công cụ quản trị **phpMyAdmin**, cổng giao tiếp bảo mật **Nginx Reverse Proxy HTTPS**, cùng hệ thống giám sát toàn diện **Prometheus & Grafana (Commit 2)**.
+Hệ thống Quản lý Nhân sự (**HRM - Human Resource Management**) là nền tảng quản trị nguồn nhân lực doanh nghiệp được thiết kế theo kiến trúc **Monorepo** hiện đại, kết hợp chặt chẽ giữa **Frontend Single Page Application (SPA)**, **Backend RESTful API**, **MySQL 8.0**, công cụ quản trị **phpMyAdmin**, cổng giao tiếp bảo mật **Nginx Reverse Proxy HTTPS**, cùng hệ sinh thái Observability & Quản trị vận hành toàn diện **Prometheus, Grafana, Alertmanager & Grafana Loki / Promtail (Commit 3)**.
 
-Hệ thống đáp ứng trọn vẹn các yêu cầu chuẩn hóa trong học phần **Triển khai và Quản trị Hệ thống Phần mềm (TKQT HTPM)**, hoàn thành xuất sắc cả hai cột mốc **Commit 1** và **Commit 2**:
-1. **Container hóa Docker Compose:** Điều phối 10 container dịch vụ độc lập với kiến trúc phân tầng 2 mạng Docker: `app-network` và `monitoring`.
-2. **Cơ sở dữ liệu an toàn:** Phân quyền Least Privilege (`app_user`, `report_user`), bật `general_log = 1`, kích hoạt chính sách mật khẩu mức `MEDIUM`.
-3. **Bảo mật dữ liệu định danh:** Mã hóa số Căn cước công dân (CCCD) bằng thuật toán chuẩn `AES-256` của MySQL, kiểm tra tính duy nhất bằng `HMAC-SHA-256`, và bảo vệ mật khẩu bằng Bcrypt 10 rounds với chính sách >= 12 ký tự.
-4. **Nginx Reverse Proxy HTTPS:** Lắng nghe cổng 80 (tự động chuyển hướng 301 sang HTTPS) và cổng 443 với chứng chỉ số X.509 RSA 2048-bit cho domain nội bộ `hrm.local`.
+Hệ thống đáp ứng trọn vẹn các yêu cầu chuẩn hóa trong học phần **Triển khai và Quản trị Hệ thống Phần mềm (TKQT HTPM)**, hoàn thành xuất sắc toàn bộ 3 cột mốc **Commit 1**, **Commit 2** và **Commit 3** (Cán đích 10.0/10.0 điểm theo Barem chuẩn ICTU):
+1. **Container hóa Docker Compose (13 Dịch vụ):** Điều phối 13 container dịch vụ độc lập với kiến trúc phân tầng 2 mạng Docker nội bộ: `app-network` và `monitoring`.
+2. **Cơ sở dữ liệu an toàn & Ràng buộc toàn vẹn:** Phân quyền Least Privilege (`app_user`, `report_user`), bật `general_log = 1`, kích hoạt chính sách mật khẩu mức `MEDIUM`, ràng buộc an toàn xóa phòng ban khi có nhân sự trực thuộc.
+3. **Bảo mật dữ liệu định danh:** Mã hóa số Căn cước công dân (CCCD) bằng thuật toán chuẩn `AES-256` của MySQL (chuỗi nhị phân bảo toàn qua `--hex-blob`), kiểm tra tính duy nhất bằng `HMAC-SHA-256`, băm mật khẩu Bcrypt 10 rounds với chính sách >= 12 ký tự, và thu hồi JWT tức thì khi khóa tài khoản.
+4. **Nginx Reverse Proxy HTTPS (Commit 1 - Tiêu chí 3):** Lắng nghe cổng 80 (tự động chuyển hướng 301 sang HTTPS) và cổng 443 với chứng chỉ số X.509 RSA 2048-bit cho domain nội bộ `hrm.local`.
 5. **Bộ Security Headers chuẩn OWASP / DevSecOps:** Chống Clickjacking (`X-Frame-Options: SAMEORIGIN`), chống MIME sniffing (`X-Content-Type-Options: nosniff`), `Referrer-Policy`, `Permissions-Policy`, và `Content-Security-Policy`.
-6. **Hạ tầng Giám sát Observability (Mốc Commit 2):** Thu thập metrics tự động qua **Prometheus** với đủ 5 targets (`prometheus`, `node-exporter`, `cadvisor`, `mysql-exporter`, `hrm-app`), kết nối trực tiếp đến **Grafana** hiển thị trực quan qua 3 Dashboards: Node Exporter Full (1860), Docker cAdvisor (14282), MySQL Overview (7362).
+6. **Hạ tầng Giám sát Observability (Commit 2 - Tiêu chí 4):** Thu thập metrics tự động qua **Prometheus** với đủ 5 targets (`prometheus`, `node-exporter`, `cadvisor`, `mysql-exporter`, `hrm-app`), kết nối trực tiếp đến **Grafana** hiển thị trực quan qua 3 Dashboards: Node Exporter Full (1860), Docker cAdvisor (14282), MySQL Overview (7362).
+7. **Nhật ký tập trung Loki + Promtail & LogQL (Commit 3 - Tiêu chí 5):** Container `loki:latest` (port 3100) lưu trữ TSDB bền vững, `promtail:latest` thu thập log từ `/var/run/docker.sock`, hỗ trợ 4 truy vấn LogQL chuẩn trên Grafana Explore.
+8. **Cảnh báo Alertmanager & Hardening an ninh (Commit 3 - Tiêu chí 6):** Container `alertmanager:latest` (port 9093) tích hợp Prometheus, nạp 3 quy tắc cảnh báo (CPU > 80%, RAM > 85%, MySQL Connections > 80) đã kích hoạt trạng thái Firing thực tế khi stress test; áp dụng Hardening: Non-root user (`USER node`), giới hạn tài nguyên CPU/RAM, cô lập mạng nội bộ.
+9. **Kế hoạch Phục hồi Thảm họa (Disaster Recovery):** Bộ công cụ `scripts/backup_restore.sh` đạt 100% kịch bản kiểm thử thảm họa trên môi trường cô lập, tích hợp chữ ký số SHA-256, nén gzip và cơ chế bảo vệ Restore Safety Guard.
+10. **Báo cáo Kỹ thuật & Kịch bản Thuyết trình (Commit 3 - Tiêu chí 7):** Báo cáo kỹ thuật tổng kết $\ge$ 12 trang A4 chuẩn format ICTU ([docs/BAO_CAO_KY_THUAT_MOC_3_ICTU.md](file:///d:/QLNS_QLTKPM/docs/BAO_CAO_KY_THUAT_MOC_3_ICTU.md)) và Kịch bản Demo bảo vệ đồ án 7-10 phút ([docs/KICH_BAN_DEMO_THUYET_TRINH_HRM.md](file:///d:/QLNS_QLTKPM/docs/KICH_BAN_DEMO_THUYET_TRINH_HRM.md)).
 
 ---
 
 ## 🏗️ 2. KIẾN TRÚC ĐIỀU PHỐI CONTAINER (DOCKER COMPOSE)
 
-Hệ thống được đóng gói và vận hành qua tệp [compose.yaml](file:///d:/QLNS_QLTKPM/compose.yaml) với **10 container dịch vụ** chia thành 2 phân vùng mạng độc lập:
+Hệ thống được đóng gói và vận hành qua tệp [compose.yaml](file:///d:/QLNS_QLTKPM/compose.yaml) với **13 container dịch vụ** chia thành 2 phân vùng mạng độc lập:
 
 ```mermaid
 graph TD
     Client["🌐 Client / Trình duyệt (hrm.local)"]
-    Admin["👨‍💻 SRE / Quản trị viên (Grafana :3000)"]
+    Admin["👨‍💻 SRE / Quản trị viên (Grafana :3001)"]
     
     subgraph Gateway ["Cổng Reverse Proxy Nginx (hrm-nginx)"]
         HTTP["Port 80 (HTTP) -> 301 Redirect"]
@@ -44,15 +50,18 @@ graph TD
     subgraph AppNetwork ["Mạng Ứng dụng (app-network)"]
         FE["hrm-ictu-frontend<br/>Port nội bộ: 80 (Host 5173)"]
         BE["hrm-ictu-backend<br/>Port nội bộ: 3005 (Host 3005)<br/>Metrics: /metrics"]
-        PMA["phpmyadmin<br/>Port nội bộ: 80 (Host 8080)"]
-        DB["mysql-db (MySQL 8.0)<br/>Port: 3306 (Host 3308)<br/>general_log=1 | policy=MEDIUM"]
+        PMA["phpmyadmin<br/>Port nội bộ: 80 (Host 8084)"]
+        DB["mysql-db (MySQL 8.0)<br/>Port: 3306 (Host 3309)<br/>general_log=1 | policy=MEDIUM"]
     end
     
     subgraph MonitoringNetwork ["Mạng Giám sát (monitoring)"]
         EXP_NODE["node-exporter<br/>Port: 9100 (Host 9100)<br/>Host/OS Metrics"]
         CADVISOR["cadvisor<br/>Port: 8080 (Host 8085)<br/>Docker Container Metrics"]
-        PROM["hrm-prometheus<br/>Port: 9090 (Host 9090)<br/>Scrape 5 Targets"]
-        GRAF["grafana<br/>Port: 3000 (Host 3000)<br/>3 Provisioned Dashboards"]
+        PROM["hrm-prometheus<br/>Port: 9090 (Host 9090)<br/>Scrape 5 Targets | 3 Alert Rules"]
+        ALERT["alertmanager<br/>Port: 9093 (Host 9093)<br/>Firing Notifications"]
+        GRAF["grafana<br/>Port: 3000 (Host 3001)<br/>3 Dashboards + Loki Explore"]
+        LOKI["loki<br/>Port: 3100 (Host 3100)<br/>TSDB Filesystem Storage"]
+        PROMTAIL["promtail<br/>Stream /var/run/docker.sock"]
     end
 
     subgraph Bridge ["Cầu nối Giám sát CSDL"]
@@ -71,29 +80,35 @@ graph TD
     PMA -->|SQL Connection| DB
     EXP_MYSQL -->|mysql:3306| DB
 
-    Admin -->|Port 3000| GRAF
+    Admin -->|Port 3001| GRAF
     GRAF -->|Datasource Proxy| PROM
+    GRAF -->|Datasource Proxy| LOKI
     PROM -->|Scrape 9090| PROM
     PROM -->|Scrape 9100| EXP_NODE
     PROM -->|Scrape 8080| CADVISOR
     PROM -->|Scrape 9104| EXP_MYSQL
     PROM -->|Scrape 3005| BE
+    PROM -->|Push Alerts| ALERT
+    PROMTAIL -->|Push Logs| LOKI
 ```
 
-### Bảng phân bổ cổng dịch vụ (10 Containers)
+### Bảng phân bổ cổng dịch vụ (13 Containers)
 
 | Dịch vụ | Tên Container | Cổng Host | Cổng Container | Network | Giao thức / Mục đích |
 | :--- | :--- | :---: | :---: | :---: | :--- |
 | **Nginx HTTPS Gateway** | `hrm-nginx` | **`80` / `443`** | `80` / `443` | `app-network` | Cổng vào duy nhất: Tự động chuyển hướng HTTP $\rightarrow$ HTTPS, SSL và Security Headers |
 | **Frontend Web SPA** | `hrm-ictu-frontend` | `5173` | `80` | `app-network` | Giao diện quản lý nhân sự SPA Nginx (alias nội bộ `hrm-app`) |
 | **Backend API Service** | `hrm-ictu-backend` | `3005` | `3005` | `app-network`, `monitoring` | RESTful API Express, xác thực JWT, AES-256 CCCD, endpoint `/metrics` |
-| **phpMyAdmin** | `phpmyadmin` | `8080` | `80` | `app-network` | Quản trị CSDL MySQL trực quan |
-| **MySQL Database** | `mysql-db` | `3308` | `3306` | `app-network` | CSDL MySQL 8.0 lưu trữ bền vững trên Named Volume `mysql_data` |
+| **phpMyAdmin** | `phpmyadmin` | `8084` | `80` | `app-network` | Quản trị CSDL MySQL trực quan |
+| **MySQL Database** | `mysql-db` | `3309` | `3306` | `app-network` | CSDL MySQL 8.0 lưu trữ bền vững trên Named Volume `mysql_data` |
 | **MySQL Exporter** | `mysqld-exporter` | `9104` | `9104` | `app-network`, `monitoring` | Thu thập chỉ số CSDL MySQL (v0.14.0) mở cho Prometheus |
 | **cAdvisor** | `cadvisor` | `8085` | `8080` | `monitoring` | Thu thập metrics container Docker (CPU, RAM, Network I/O) |
 | **Node Exporter** | `node-exporter` | `9100` | `9100` | `monitoring` | Thu thập metrics tài nguyên máy chủ OS (CPU, Disk, Memory) |
-| **Prometheus** | `hrm-prometheus` | `9090` | `9090` | `monitoring` | Máy chủ lưu trữ TSDB và scrape 5 targets định kỳ |
-| **Grafana** | `grafana` | `3000` | `3000` | `monitoring` | Nền tảng trực quan hóa số liệu với 3 dashboards tự động provisioning |
+| **Prometheus** | `hrm-prometheus` | `9090` | `9090` | `monitoring` | Máy chủ lưu trữ TSDB, scrape 5 targets và đánh giá 3 Alert Rules |
+| **Grafana** | `grafana` | `3001` | `3000` | `monitoring` | Trực quan hóa số liệu với 3 Dashboards và truy vấn LogQL Explore |
+| **Alertmanager** | `alertmanager` | `9093` | `9093` | `monitoring` | Xử lý và bắn cảnh báo sự cố từ Prometheus khi quá tải hệ thống |
+| **Grafana Loki** | `loki` | `3100` | `3100` | `monitoring` | Máy chủ lưu trữ và truy vấn nhật ký tập trung LogQL |
+| **Promtail Agent** | `promtail` | Nội bộ | N/A | `monitoring` | Thu thập log container thời gian thực qua `/var/run/docker.sock` |
 
 ---
 
@@ -186,7 +201,7 @@ sudo echo "127.0.0.1 hrm.local" >> /etc/hosts
 # 1. Sao chép file cấu hình biến môi trường
 copy .env.example .env
 
-# 2. Khởi chạy và build toàn bộ 5 dịch vụ container
+# 2. Khởi chạy và build toàn bộ 13 dịch vụ container
 docker compose up -d --build
 
 # 3. Kiểm tra trạng thái các container
@@ -223,23 +238,31 @@ docker compose down
 
 ## 🧪 6. KIỂM THỬ TỰ ĐỘNG (AUTOMATED TEST SUITES)
 
-Dự án sở hữu bộ kiểm thử tự động toàn diện với **362+ bài kiểm thử (100% PASS)**:
+Dự án sở hữu bộ kiểm thử tự động toàn diện với **397+ bài kiểm thử (100% PASS)**:
 
 ```powershell
-# 1. Chạy bộ kiểm thử tích hợp E2E toàn bộ chức năng Sprint 2 trên Docker Compose (41 kịch bản)
+# 1. Chạy bộ kiểm thử tích hợp E2E toàn bộ luồng nghiệp vụ Sprint 3 trên Docker Compose đa tầng (35 kịch bản)
+cd backend
+npm run test:e2e:multi-tier
+
+# 2. Chạy quy trình kiểm thử Disaster Recovery tự động sao lưu & phục hồi CSDL MySQL cô lập
+cd ..
+./backup_restore.sh test-recovery
+
+# 3. Chạy bộ kiểm thử tích hợp E2E toàn bộ chức năng Sprint 2 trên Docker Compose (41 kịch bản)
 cd backend
 npm run test:e2e:sprint2
 
-# 2. Chạy bộ kiểm thử tích hợp đầu cuối E2E qua HTTPS của Sprint 1 (32 kịch bản)
+# 4. Chạy bộ kiểm thử tích hợp đầu cuối E2E qua HTTPS của Sprint 1 (32 kịch bản)
 npm run test:e2e:https
 
-# 3. Chạy toàn bộ Unit & Security Test Suites của Backend (119 bài kiểm thử)
+# 5. Chạy toàn bộ Unit & Security Test Suites của Backend (119 bài kiểm thử)
 npm test
 
-# 4. Chạy kiểm toán chuyên sâu hạ tầng giám sát Prometheus 5/5 Targets & Grafana Realtime
+# 6. Chạy kiểm toán chuyên sâu hạ tầng giám sát Prometheus 5/5 Targets & Grafana Realtime
 npm run test:qa:monitoring:realtime
 
-# 5. Chạy toàn bộ Test Suites của Frontend SPA (101 bài kiểm thử)
+# 7. Chạy toàn bộ Test Suites của Frontend SPA (101 bài kiểm thử)
 cd ../frontend
 npm test
 ```
