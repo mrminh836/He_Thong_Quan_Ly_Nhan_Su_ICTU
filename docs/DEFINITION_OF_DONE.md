@@ -148,4 +148,21 @@ Mọi thành viên khi thực hiện bất kỳ task nào đều phải vượt 
 ```
 
 ---
+
+## 5. Biên Bản Rà Soát & Ký Duyệt Cột Mốc 3 (Commit 3 - Sprint 3 Sign-Off)
+
+Ngày 23/10/2026, toàn bộ Hội đồng Scrum dự án HRM ICTU đã tiến hành rà soát chéo độc lập 100% các tiêu chí Definition of Done đối với toàn bộ hệ sinh thái phần mềm và hạ tầng.
+
+### 5.1. Kết quả nghiệm thu 100% các hạng mục Mốc 3:
+- [x] **Hạ tầng 13 Containers Docker Compose:** Đạt 100% healthy/running qua 2 mạng biệt lập `app-network` và `monitoring`.
+- [x] **Tiêu chí 5 (Loki + Promtail & LogQL):** 4 truy vấn LogQL chuẩn hoạt động mượt mà trên Grafana Explore, lưu trữ TSDB bền vững.
+- [x] **Tiêu chí 6 (Alertmanager & Hardening):** Alertmanager port 9093 liên kết Prometheus, 3 quy tắc cảnh báo (CPU, RAM, MySQL Connections) kích hoạt trạng thái Firing chuẩn xác khi stress test; Hardening đạt chuẩn (Non-root user, CPU/RAM limits, network isolation).
+- [x] **Sao lưu & Disaster Recovery:** Script `backup_restore.sh` đạt 100% kịch bản kiểm thử thảm họa mà không ảnh hưởng CSDL thật.
+- [x] **Tiêu chí 7 (Báo cáo Kỹ thuật & Kịch bản Demo):** `docs/BAO_CAO_KY_THUAT_MOC_3_ICTU.md` ($\ge$ 12 trang A4) và `docs/KICH_BAN_DEMO_THUYET_TRINH_HRM.md` (7-10 phút) hoàn tất trọn vẹn.
+- [x] **Kiểm thử E2E Đa tầng:** Vượt qua **35/35 test cases (100% PASS)** trên môi trường thực tế.
+
+👉 **Chi tiết đối chiếu Barem điểm và chữ ký phê duyệt:** Xem tại [docs/DEFINITION_OF_DONE_MILESTONE_3_SIGN_OFF.md](file:///d:/QLNS_QLTKPM/docs/DEFINITION_OF_DONE_MILESTONE_3_SIGN_OFF.md).
+
+---
 *Tài liệu này là quy chuẩn bắt buộc của dự án HRM ICTU. Mọi thắc mắc hoặc đề xuất cải tiến vui lòng liên hệ Technical Lead hoặc thảo luận trong buổi họp Sprint Retrospective.*
+
