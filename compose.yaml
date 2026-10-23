@@ -48,7 +48,17 @@ services:
       # Cổng 3309 trên máy host -> 3306 trong container (dành cho DBeaver/Navicat/MySQL Workbench)
       - "${DB_PORT:-3309}:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-RootPassword@2026}"]
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p${DB_ROOT_PASSWORD:-RootPassword@2026}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -114,9 +124,6 @@ services:
       dockerfile: Dockerfile
     container_name: hrm-ictu-frontend
     restart: unless-stopped
-    # Cổng HTTP direct 5173 đã đóng để bảo đảm 100% truy cập qua HTTPS Gateway (https://localhost hoặc https://hrm.local:443)
-    # ports:
-    #   - "${FRONTEND_PORT:-5173}:80"
     environment:
       NODE_ENV: production
     depends_on:
@@ -170,9 +177,7 @@ services:
     container_name: hrm-nginx
     restart: unless-stopped
     ports:
-      # Port 80: HTTP Redirect -> 301 HTTPS
       - "80:80"
-      # Port 443: HTTPS Reverse Proxy cho hrm.local
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
@@ -187,7 +192,11 @@ services:
       phpmyadmin:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -k -s -o /dev/null https://localhost:443/ || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "curl -k -s -o /dev/null https://localhost:443/ || exit 1",
+        ]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -239,14 +248,16 @@ services:
     container_name: cadvisor
     restart: unless-stopped
     command:
-      - "--docker_only=true"
+      - "--docker_only=false"
       - "--housekeeping_interval=10s"
       - "--max_housekeeping_interval=15s"
+      - "--raw_cgroup_prefix_whitelist=/docker"
+      - "--disable_metrics=disk,percpu,sched,process"
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
     ports:
       # Bind 127.0.0.1:8085 trên Host (tránh xung đột cổng 8080 với phpMyAdmin)
       - "127.0.0.1:8085:8080"
@@ -352,7 +363,11 @@ services:
       prometheus:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/api/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q --spider http://127.0.0.1:3000/api/health || exit 1",
+        ]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -451,4 +466,3 @@ networks:
   monitoring:
     name: hrm-monitoring-network
     driver: bridge
-

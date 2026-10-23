@@ -115,10 +115,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{instance=~\"$host\",name=~\"$container\",name=~\".+\"}[5m])) by (name) *100",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{instance=~\"$host\",id=~\"$container\"}[5m])) by (name, id) *100",
           "hide": false,
           "interval": "",
-          "legendFormat": "{{name}}",
+          "legendFormat": "{{name}}{{id}}",
           "refId": "A",
           "datasource": {
             "type": "prometheus",
@@ -239,10 +239,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(container_memory_rss{instance=~\"$host\",name=~\"$container\",name=~\".+\"}) by (name)",
+          "expr": "sum(container_memory_usage_bytes{instance=~\"$host\",id=~\"$container\"}) by (name, id)",
           "hide": false,
           "interval": "",
-          "legendFormat": "{{name}}",
+          "legendFormat": "{{name}}{{id}}",
           "refId": "A",
           "datasource": {
             "type": "prometheus",
@@ -346,10 +346,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(container_memory_cache{instance=~\"$host\",name=~\"$container\",name=~\".+\"}) by (name)",
+          "expr": "sum(container_memory_cache{instance=~\"$host\",id=~\"$container\"}) by (name, id)",
           "hide": false,
           "interval": "",
-          "legendFormat": "{{name}}",
+          "legendFormat": "{{name}}{{id}}",
           "refId": "A",
           "datasource": {
             "type": "prometheus",
@@ -473,10 +473,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_network_receive_bytes_total{instance=~\"$host\",name=~\"$container\",name=~\".+\"}[5m])) by (name)",
+          "expr": "sum(rate(container_network_receive_bytes_total{instance=~\"$host\"}[5m])) by (interface)",
           "hide": false,
           "interval": "",
-          "legendFormat": "{{name}}",
+          "legendFormat": "{{interface}}",
           "refId": "A",
           "datasource": {
             "type": "prometheus",
@@ -580,9 +580,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_network_transmit_bytes_total{instance=~\"$host\",name=~\"$container\",name=~\".+\"}[5m])) by (name)",
+          "expr": "sum(rate(container_network_transmit_bytes_total{instance=~\"$host\"}[5m])) by (interface)",
           "interval": "",
-          "legendFormat": "{{name}}",
+          "legendFormat": "{{interface}}",
           "refId": "A",
           "datasource": {
             "type": "prometheus",
@@ -732,11 +732,11 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
-          "expr": "(time() - container_start_time_seconds{instance=~\"$host\",name=~\"$container\",name=~\".+\"})/86400",
+          "expr": "(time() - container_start_time_seconds{instance=~\"$host\",id=~\"$container\"})/86400",
           "format": "table",
           "instant": true,
           "interval": "",
-          "legendFormat": "{{name}}",
+          "legendFormat": "{{name}}{{id}}",
           "refId": "A",
           "datasource": {
             "type": "prometheus",
@@ -758,6 +758,7 @@
                 "image",
                 "instance",
                 "name",
+                "id",
                 "Value",
                 "container_label_com_docker_compose_service"
               ]
@@ -776,7 +777,8 @@
               "container_label_com_docker_compose_service": "Service",
               "image": "Registry Image",
               "instance": "Instance",
-              "name": "Name"
+              "name": "Name",
+              "id": "Container ID"
             }
           }
         }
@@ -833,7 +835,7 @@
           "type": "prometheus",
           "uid": "prometheus"
         },
-        "definition": "label_values({__name__=~\"container.*\", instance=~\"$host\"},name)",
+        "definition": "label_values(container_cpu_usage_seconds_total{instance=~\"$host\"}, id)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -843,7 +845,7 @@
         "name": "container",
         "options": [],
         "query": {
-          "query": "label_values({__name__=~\"container.*\", instance=~\"$host\"},name)",
+          "query": "label_values(container_cpu_usage_seconds_total{instance=~\"$host\"}, id)",
           "refId": "Prometheus-container-Variable-Query"
         },
         "refresh": 1,
