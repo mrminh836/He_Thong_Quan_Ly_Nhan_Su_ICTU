@@ -1,16 +1,15 @@
-# QUY TRÌNH QUẢN LÝ MÃ NGUỒN VÀ LÀM VIỆC NHÓM (GIT WORKFLOW)
+# QUY TRÌNH QUẢN LÝ MÃ NGUỒN VÀ PHÁT TRIỂN PHẦN MỀM (GIT WORKFLOW)
 ## DỰ ÁN: HỆ THỐNG QUẢN LÝ NHÂN SỰ (HRM - ICTU)
-### Nhóm Phát triển Phần mềm | K23 - Khoa CNTT - ICTU
+### Sinh viên thực hiện: Đỗ Quang Minh | K23 - Khoa CNTT - ICTU
 
 ---
 
 ## 1. Giới thiệu & Mục tiêu
 
-Mục tiêu của tài liệu này là chuẩn hóa toàn bộ quy trình làm việc với Git và GitHub cho nhóm phát triển phần mềm (quy mô từ 7 thành viên trở lên). Việc tuân thủ quy trình giúp:
-- **Loại bỏ triệt để xung đột mã nguồn (Merge Conflicts)** giữa các thành viên.
-- **Bảo vệ mã nguồn ổn định** trên nhánh chính, tránh tình trạng code lỗi bị đẩy lên làm hỏng môi trường của cả nhóm.
-- **Minh bạch tiến độ công việc**, dễ dàng truy vết lịch sử thay đổi và liên kết trực tiếp với Backlog công việc.
-- **Tạo thói quen chuyên nghiệp** tương đương môi trường doanh nghiệp phần mềm thực tế.
+Mục tiêu của tài liệu này là chuẩn hóa toàn bộ quy trình làm việc với Git và GitHub theo chuẩn công nghiệp (Personal Scrum & Simplified Feature Branch Flow). Việc tự chủ tuân thủ quy trình nghiêm ngặt giúp:
+- **Bảo vệ mã nguồn ổn định** trên nhánh chính, tránh tình trạng code lỗi bị đẩy lên làm hỏng môi trường.
+- **Minh bạch tiến độ công việc**, dễ dàng truy vết lịch sử thay đổi và liên kết trực tiếp với Product Backlog theo 3 cột mốc Commit.
+- **Rèn luyện thói quen chuyên nghiệp** tương đương môi trường doanh nghiệp phần mềm thực tế.
 
 ---
 

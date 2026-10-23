@@ -9,9 +9,9 @@
 ---
 
 **Cán bộ hướng dẫn giảng dạy:** Giảng viên Bộ môn CNPM / HTTT  
-**Nhóm sinh viên thực hiện:** Nhóm K23 - Đề tài 10  
-- **Sinh viên thực hiện chính / Trưởng nhóm:** Đỗ Quang Minh (Scrum Master, Technical Lead, DevSecOps)  
+**Sinh viên thực hiện:** Đỗ Quang Minh  
 - **Lớp:** K23 - Công nghệ Thông tin  
+- **Hình thức thực hiện:** Cá nhân độc lập (Tự chủ áp dụng mô hình Personal Scrum & GitFlow)  
 - **Thời gian thực hiện:** Tháng 10/2026  
 - **Cột mốc hoàn tất:** Cán mốc Commit 3 (Hoàn thành 100% Khối lượng Đồ án)  
 
@@ -452,7 +452,7 @@ Nhóm tuân thủ mô hình phân nhánh Simplified Feature Branch Flow, bảo �
 # KẾT LUẬN & HƯỚNG PHÁT TRIỂN TIẾP THEO
 
 ## Kết luận
-Qua quá trình thực hiện Đề tài số 10 "Hệ thống Quản lý Nhân sự (HRM - ICTU)", nhóm sinh viên đã làm chủ toàn diện chu trình phát triển, đóng gói và vận hành phần mềm theo tiêu chuẩn Enterprise:
+Qua quá trình thực hiện Đề tài số 10 "Hệ thống Quản lý Nhân sự (HRM - ICTU)", sinh viên đã làm chủ toàn diện chu trình phát triển, đóng gói và vận hành phần mềm theo tiêu chuẩn Enterprise:
 - Xây dựng thành công ứng dụng HRM đầy đủ tính năng nghiệp vụ, phân quyền RBAC và bảo vệ dữ liệu CCCD bằng mã hóa AES-256 nhị phân.
 - Làm chủ kỹ thuật Container hóa đa tầng với Docker Compose, triển khai an toàn qua Nginx HTTPS Gateway và phân tách mạng nội bộ.
 - Xây dựng hoàn chỉnh hệ sinh thái Quản trị và Giám sát vận hành (SRE & Observability) hiện đại bậc nhất hiện nay: Prometheus, Grafana, Alertmanager, Loki và Promtail.
