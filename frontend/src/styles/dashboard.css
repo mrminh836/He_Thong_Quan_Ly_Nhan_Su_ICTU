@@ -112,13 +112,13 @@
 
 .dept-chart-wrapper {
   display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: var(--space-6);
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: var(--space-4);
   align-items: center;
   padding: var(--space-3) var(--space-2);
 }
 
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .dept-chart-wrapper {
     grid-template-columns: 1fr;
     justify-items: center;
@@ -128,12 +128,13 @@
 /* Container chứa biểu đồ tròn Doughnut SVG */
 .dept-chart-visual {
   position: relative;
-  width: 220px;
-  height: 220px;
+  width: 200px;
+  height: 200px;
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .dept-chart-svg {
@@ -185,20 +186,24 @@
 /* Chú giải và bảng danh sách tỷ trọng (Legend) */
 .dept-legend-container {
   width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  overflow: hidden;
 }
 
 .dept-legend-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-1-5) var(--space-3);
   border-radius: var(--radius-md);
   border: 1px solid transparent;
   transition: background-color var(--transition-fast), border-color var(--transition-fast);
   cursor: pointer;
+  min-width: 0;
+  width: 100%;
 }
 
 .dept-legend-item:hover,
@@ -210,54 +215,64 @@
 .dept-legend-left {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   min-width: 0;
-  flex: 1;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .dept-legend-dot {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: var(--radius-full);
   flex-shrink: 0;
 }
 
 .dept-legend-info {
   display: flex;
-  flex-direction: column;
+  align-items: baseline;
   min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .dept-legend-name {
+  display: block;
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text-main);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .dept-legend-code {
   font-size: 11px;
   color: var(--color-text-muted);
+  font-weight: 400;
+  margin-left: 4px;
 }
 
 .dept-legend-right {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   flex-shrink: 0;
+  margin-left: var(--space-2);
 }
 
 .dept-legend-bar-wrap {
-  width: 90px;
+  width: 70px;
   height: 6px;
   background-color: #f1f5f9;
   border-radius: var(--radius-full);
   overflow: hidden;
+  flex-shrink: 0;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 1280px) {
   .dept-legend-bar-wrap {
     display: none;
   }
@@ -270,19 +285,23 @@
 }
 
 .dept-legend-count {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--color-text-main);
-  min-width: 55px;
+  min-width: 45px;
   text-align: right;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .dept-legend-pct {
   font-size: var(--font-size-xs);
   font-weight: 700;
   color: var(--color-primary);
-  min-width: 48px;
+  min-width: 38px;
   text-align: right;
+  white-space: nowrap;
+  flex-shrink: 0;
   padding: 2px 6px;
   background-color: #eff6ff;
   border-radius: var(--radius-sm);
@@ -354,7 +373,7 @@
   align-items: stretch;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
   .dashboard-charts-grid {
     grid-template-columns: 1fr;
   }
