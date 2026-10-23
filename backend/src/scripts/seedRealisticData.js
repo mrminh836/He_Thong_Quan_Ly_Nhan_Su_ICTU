@@ -429,8 +429,11 @@ async function seed() {
       empMap[r.employee_code] = r.employee_id;
     });
 
-    // 3. Khởi tạo tài khoản đăng nhập mẫu
-    console.log('[3/4] Cập nhật tài khoản người dùng...');
+    // 3. Khởi tạo tài khoản đăng nhập cho toàn bộ nhân sự
+    console.log('[3/4] Cập nhật tài khoản người dùng cho toàn bộ nhân viên...');
+    const EMP_DEFAULT_HASH = '$2a$10$ECSFWXymvV6Wealo/RtjQ.46s1LymeY2XrEqx6aVn5R2EysV885CK'; // Mật khẩu: Emp@123
+
+    // A. Tài khoản theo danh sách chỉ định sẵn
     for (const u of USER_ACCOUNTS) {
       const empId = empMap[u.empCode];
       if (!empId) continue;
@@ -443,6 +446,24 @@ async function seed() {
            \`account_status\` = 'Active'`,
         [empId, u.username, u.passwordHash, u.role]
       );
+    }
+
+    // B. Tự động cấp tài khoản Employee cho tất cả nhân sự đang làm việc còn lại
+    for (const emp of empRows) {
+      const [existingUsers] = await connection.query(
+        'SELECT `user_id` FROM `users` WHERE `employee_id` = ?',
+        [emp.employee_id]
+      );
+
+      if (existingUsers.length === 0) {
+        const username = emp.employee_code.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+        await connection.query(
+          `INSERT INTO \`users\` (\`employee_id\`, \`username\`, \`password_hash\`, \`role\`, \`account_status\`)
+           VALUES (?, ?, ?, 'Employee', 'Active')
+           ON DUPLICATE KEY UPDATE \`account_status\` = 'Active'`,
+          [emp.employee_id, username, EMP_DEFAULT_HASH]
+        );
+      }
     }
 
     // 4. Khởi tạo bản ghi chấm công thực tế cho từng ngày làm việc tháng 10/2026
