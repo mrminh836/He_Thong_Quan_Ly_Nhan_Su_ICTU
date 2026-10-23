@@ -48,18 +48,24 @@ async function runExporterTests() {
     const dbStatus = await testConnection();
     assert(dbStatus.ok === true, 'MySQL database hrm-db đang hoạt động bình thường.');
 
+    const isDocker = process.env.DB_HOST === 'mysql-db';
+    const exporterHost = process.env.EXPORTER_HOST || (isDocker ? 'mysqld-exporter' : '127.0.0.1');
+    const prometheusHost = process.env.PROMETHEUS_HOST || (isDocker ? 'hrm-prometheus' : '127.0.0.1');
+    const dbHost = process.env.DB_HOST || '127.0.0.1';
+    const dbPort = Number(process.env.DB_PORT || (isDocker ? 3306 : 3309));
+
     // 2. Kiểm tra Exporter metrics endpoint
     console.log('\n--- PHẦN 1: KIỂM THỬ METRICS ENDPOINT (PORT 9104) ---');
-    const exporterRes = await fetchUrl('http://127.0.0.1:9104/metrics');
-    assert(exporterRes.statusCode === 200, 'Endpoint http://127.0.0.1:9104/metrics trả về HTTP 200 OK.');
+    const exporterRes = await fetchUrl(`http://${exporterHost}:9104/metrics`);
+    assert(exporterRes.statusCode === 200, `Endpoint http://${exporterHost}:9104/metrics trả về HTTP 200 OK.`);
     assert(exporterRes.data.includes('mysql_up 1'), 'Chỉ số mysql_up = 1 (Exporter kết nối MySQL thành công).');
     assert(exporterRes.data.includes('mysql_global_status_uptime'), 'Exporter thu thập thành công mysql_global_status_uptime.');
     assert(exporterRes.data.includes('mysql_global_status_threads_connected'), 'Exporter thu thập thành công threads_connected.');
 
     // 3. Kiểm tra Prometheus targets API
     console.log('\n--- PHẦN 2: KIỂM THỬ PROMETHEUS SCRAPE TARGETS (PORT 9090) ---');
-    const targetsRes = await fetchUrl('http://127.0.0.1:9090/api/v1/targets');
-    assert(targetsRes.statusCode === 200, 'Prometheus Targets API http://127.0.0.1:9090/api/v1/targets phản hồi HTTP 200.');
+    const targetsRes = await fetchUrl(`http://${prometheusHost}:9090/api/v1/targets`);
+    assert(targetsRes.statusCode === 200, `Prometheus Targets API http://${prometheusHost}:9090/api/v1/targets phản hồi HTTP 200.`);
     
     const targetsJson = JSON.parse(targetsRes.data);
     const mysqlTarget = targetsJson.data?.activeTargets?.find(t => t.labels?.job === 'mysql-exporter');
@@ -68,12 +74,12 @@ async function runExporterTests() {
 
     // 4. Kiểm tra Prometheus Query API
     console.log('\n--- PHẦN 3: KIỂM THỬ PROMETHEUS QUERY API ---');
-    const upQueryRes = await fetchUrl('http://127.0.0.1:9090/api/v1/query?query=up%7Bjob%3D%22mysql-exporter%22%7D');
+    const upQueryRes = await fetchUrl(`http://${prometheusHost}:9090/api/v1/query?query=up%7Bjob%3D%22mysql-exporter%22%7D`);
     const upJson = JSON.parse(upQueryRes.data);
     const upValue = upJson.data?.result?.[0]?.value?.[1];
     assert(upValue === '1', `Truy vấn up{job="mysql-exporter"} trả về giá trị 1 (Giá trị nhận được: ${upValue}).`);
 
-    const mysqlUpQueryRes = await fetchUrl('http://127.0.0.1:9090/api/v1/query?query=mysql_up');
+    const mysqlUpQueryRes = await fetchUrl(`http://${prometheusHost}:9090/api/v1/query?query=mysql_up`);
     const mysqlUpJson = JSON.parse(mysqlUpQueryRes.data);
     const mysqlUpValue = mysqlUpJson.data?.result?.[0]?.value?.[1];
     assert(mysqlUpValue === '1', `Truy vấn mysql_up trong Prometheus trả về giá trị 1 (Giá trị nhận được: ${mysqlUpValue}).`);
@@ -82,8 +88,8 @@ async function runExporterTests() {
     console.log('\n--- PHẦN 4: KIỂM THỬ BẢO MẬT LEAST PRIVILEGE ---');
     import('mysql2/promise').then(async (mysql) => {
       const exporterConn = await mysql.createConnection({
-        host: '127.0.0.1',
-        port: Number(process.env.DB_PORT || 3308),
+        host: dbHost,
+        port: dbPort,
         user: 'exporter',
         password: 'Pr0m3th3us@M0n2026!'
       });

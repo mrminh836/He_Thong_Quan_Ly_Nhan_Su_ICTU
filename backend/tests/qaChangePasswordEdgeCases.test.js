@@ -807,3 +807,4 @@ console.log('   - 100% Ranh giới độ dài mật khẩu (11 ký tự, 12 ký 
 console.log('   - 100% Vòng đời phiên & Đăng nhập lại với mật khẩu mới thành công, mật khẩu cũ bị thu hồi.');
 console.log('   - 100% Toàn vẹn CSDL và ngăn chặn triệt để tấn công IDOR.');
 console.log('==============================================================================\n');
+process.exit(0);

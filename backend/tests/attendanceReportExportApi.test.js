@@ -68,7 +68,7 @@ async function runAsyncTest(testName, testFn) {
 
 // Helper sinh JWT token kiểm thử
 function generateTestToken(payload) {
-  return jwt.sign(payload, env.JWT_SECRET || 'ICTU_HRM_JWT_SECRET_KEY_2026_SUPER_SECURE', {
+  return jwt.sign(payload, env.jwtSecret || env.JWT_SECRET || 'ICTU_HRM_JWT_SECRET_KEY_2026_SUPER_SECURE', {
     expiresIn: '1h',
   });
 }
@@ -510,7 +510,7 @@ await runAsyncTest('Test 13: Không có JWT trong request -> 401 Unauthorized (T
 await runAsyncTest('Test 14: Token hết hạn sử dụng -> 401 Unauthorized (TOKEN_EXPIRED)', async () => {
   const expiredToken = jwt.sign(
     { sub: 1, username: 'admin', role: 'Admin' },
-    env.JWT_SECRET || 'ICTU_HRM_JWT_SECRET_KEY_2026_SUPER_SECURE',
+    env.jwtSecret || env.JWT_SECRET || 'ICTU_HRM_JWT_SECRET_KEY_2026_SUPER_SECURE',
     { expiresIn: '-1s' }
   );
 

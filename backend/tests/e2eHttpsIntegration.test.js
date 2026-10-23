@@ -24,14 +24,24 @@ import { env } from '../src/config/env.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const certPath = path.resolve(__dirname, '../../certs/hrm.local.crt');
+const candidatePaths = [
+  path.resolve(__dirname, '../../certs/hrm.local.crt'),
+  path.resolve(__dirname, '../certs/hrm.local.crt'),
+  '/usr/src/app/certs/hrm.local.crt',
+  '/usr/src/certs/hrm.local.crt',
+  '/certs/hrm.local.crt'
+];
+const certPath = candidatePaths.find(p => fs.existsSync(p));
 
-if (!fs.existsSync(certPath)) {
-  console.error(`❌ Không tìm thấy chứng chỉ SSL tại: ${certPath}`);
+if (!certPath) {
+  console.error(`❌ Không tìm thấy chứng chỉ SSL tại bất kỳ đường dẫn nào: ${candidatePaths.join(', ')}`);
   process.exit(1);
 }
 
 const caCert = fs.readFileSync(certPath);
+
+const isDocker = process.env.DB_HOST === 'mysql-db';
+const NGINX_HOST = process.env.NGINX_HOST || (isDocker ? 'hrm-nginx' : '127.0.0.1');
 
 let totalTests = 0;
 let passedTests = 0;
@@ -75,7 +85,7 @@ function requestHttps({ path: reqPath, method = 'GET', headers = {}, body = null
     }
 
     const options = {
-      host: '127.0.0.1',
+      host: NGINX_HOST,
       port: 443,
       servername: 'hrm.local',
       path: reqPath,
@@ -119,7 +129,7 @@ function requestHttps({ path: reqPath, method = 'GET', headers = {}, body = null
 function requestHttp({ path: reqPath = '/', headers = {} }) {
   return new Promise((resolve, reject) => {
     const options = {
-      host: '127.0.0.1',
+      host: NGINX_HOST,
       port: 80,
       path: reqPath,
       method: 'GET',
