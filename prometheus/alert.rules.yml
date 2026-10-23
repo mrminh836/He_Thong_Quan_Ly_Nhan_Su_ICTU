@@ -1,11 +1,55 @@
 # ==============================================================================
 # PROMETHEUS ALERT RULES - HRM ICTU MONITORING
-# Cảnh báo hạ tầng và ứng dụng (Sprint 3 - US 31.0)
+# Cảnh báo CPU, RAM, MySQL Connections và dịch vụ hạ tầng (Sprint 3 - US 31.0)
 # ==============================================================================
 groups:
   - name: hrm-infrastructure-alerts
     rules:
-      # 1. Cảnh báo target giám sát mất tín hiệu (Down)
+      # ------------------------------------------------------------------------
+      # RULE 1: Quá tải CPU máy chủ (> 80% trong 5 phút)
+      # ------------------------------------------------------------------------
+      - alert: HighCPUUsage
+        expr: 100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: host-node
+          environment: production
+        annotations:
+          summary: "CPU usage is above 80%"
+          description: "CPU usage on {{ $labels.instance }} has exceeded 80% for 5 minutes (current value: {{ $value | printf \"%.2f\" }}%)."
+
+      # ------------------------------------------------------------------------
+      # RULE 2: Cạn kiệt bộ nhớ RAM máy chủ (> 85% trong 5 phút)
+      # ------------------------------------------------------------------------
+      - alert: HighRAMUsage
+        expr: 100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 85
+        for: 5m
+        labels:
+          severity: warning
+          component: host-node
+          environment: production
+        annotations:
+          summary: "RAM usage is above 85%"
+          description: "RAM usage on {{ $labels.instance }} has exceeded 85% for 5 minutes (current value: {{ $value | printf \"%.2f\" }}%)."
+
+      # ------------------------------------------------------------------------
+      # RULE 3: Quá tải số lượng kết nối MySQL (> 80 active connections trong 2 phút)
+      # ------------------------------------------------------------------------
+      - alert: MySQLTooManyConnections
+        expr: mysql_global_status_threads_connected > 80
+        for: 2m
+        labels:
+          severity: warning
+          service: mysql-database
+          environment: production
+        annotations:
+          summary: "MySQL has too many active connections"
+          description: "MySQL has more than 80 connected threads for 2 minutes (current value: {{ $value }} threads)."
+
+      # ------------------------------------------------------------------------
+      # RULE 4: Target giám sát bị gián đoạn (Instance Down)
+      # ------------------------------------------------------------------------
       - alert: InstanceDown
         expr: up == 0
         for: 1m
@@ -13,60 +57,33 @@ groups:
           severity: critical
           environment: production
         annotations:
-          summary: "Target {{ $labels.instance }} bị gián đoạn"
-          description: "Target {{ $labels.instance }} thuộc job {{ $labels.job }} đã mất kết nối hơn 1 phút."
+          summary: "Target {{ $labels.instance }} is down"
+          description: "Target {{ $labels.instance }} of job {{ $labels.job }} has been unavailable for more than 1 minute."
 
-      # 2. Cảnh báo dịch vụ HRM Backend API ngưng hoạt động
+      # ------------------------------------------------------------------------
+      # RULE 5: Dịch vụ HRM Backend API ngưng hoạt động
+      # ------------------------------------------------------------------------
       - alert: HRMApplicationDown
         expr: up{job="hrm-app"} == 0
         for: 30s
         labels:
           severity: critical
           service: hrm-backend
+          environment: production
         annotations:
-          summary: "HRM Backend API đang không phản hồi"
-          description: "Container hrm-app tại {{ $labels.instance }} không thể scrape metrics qua /metrics."
+          summary: "HRM Application Backend is down"
+          description: "HRM Backend API container at {{ $labels.instance }} is not responding on /metrics."
 
-      # 3. Cảnh báo MySQL Exporter không thể kết nối DB
+      # ------------------------------------------------------------------------
+      # RULE 6: MySQL Exporter bị gián đoạn kết nối DB
+      # ------------------------------------------------------------------------
       - alert: MySQLExporterDown
         expr: up{job="mysql-exporter"} == 0
         for: 1m
         labels:
           severity: critical
           service: mysql-database
+          environment: production
         annotations:
-          summary: "MySQL Exporter không thể thu thập số liệu CSDL"
-          description: "MySQL Exporter tại {{ $labels.instance }} bị gián đoạn kết nối tới MySQL Database."
-
-      # 4. Cảnh báo quá tải CPU (> 80%)
-      - alert: HighCPUUsage
-        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
-        for: 3m
-        labels:
-          severity: warning
-          component: host-node
-        annotations:
-          summary: "Mức sử dụng CPU máy chủ vượt ngưỡng 80%"
-          description: "CPU trung bình trong 5 phút của {{ $labels.instance }} đạt mức cao (giá trị: {{ $value | printf \"%.2f\" }}%)."
-
-      # 5. Cảnh báo cạn kiệt bộ nhớ RAM (> 85%)
-      - alert: HighMemoryUsage
-        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
-        for: 3m
-        labels:
-          severity: warning
-          component: host-node
-        annotations:
-          summary: "Mức sử dụng bộ nhớ RAM vượt ngưỡng 85%"
-          description: "Bộ nhớ khả dụng của {{ $labels.instance }} đang dưới 15% (đang sử dụng: {{ $value | printf \"%.2f\" }}%)."
-
-      # 6. Cảnh báo số lượng kết nối MySQL vượt ngưỡng an toàn (> 80 kết nối)
-      - alert: MySQLTooManyConnections
-        expr: mysql_global_status_threads_connected > 80
-        for: 2m
-        labels:
-          severity: warning
-          service: mysql-database
-        annotations:
-          summary: "Số lượng kết nối MySQL vượt quá 80 kết nối"
-          description: "MySQL đang có {{ $value }} active threads connected, có nguy cơ cạn kiệt connection pool."
+          summary: "MySQL Exporter is down"
+          description: "MySQL Exporter at {{ $labels.instance }} failed to scrape MySQL Database."

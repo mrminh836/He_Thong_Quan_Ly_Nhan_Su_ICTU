@@ -11,7 +11,7 @@ global:
 
 # Quy tắc cảnh báo hạ tầng & ứng dụng HRM (Sprint 3 - US 31.0)
 rule_files:
-  - "/etc/prometheus/alert.rules.yml"
+  - "/etc/prometheus/rules/alerts.yml"
 
 # Kết nối Prometheus tới Alertmanager qua mạng Docker monitoring
 alerting:

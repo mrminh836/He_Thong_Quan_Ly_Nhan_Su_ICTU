@@ -300,7 +300,7 @@ services:
       - "--web.console.templates=/usr/share/prometheus/consoles"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
+      - ./monitoring/prometheus/rules/alerts.yml:/etc/prometheus/rules/alerts.yml:ro
     ports:
       # Bind 127.0.0.1 trên Host phục vụ truy cập dashboard nội bộ
       - "127.0.0.1:9090:9090"
