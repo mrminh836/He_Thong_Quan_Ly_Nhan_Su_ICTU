@@ -139,12 +139,12 @@ export function generateLegendHtml(items) {
         .map((item, idx) => {
           const codeText = item.code && item.code !== 'N/A' ? `(${item.code})` : '';
           return `
-            <div class="dept-legend-item" data-legend-idx="${idx}" data-dept-id="${item.id}">
+            <div class="dept-legend-item" data-legend-idx="${idx}" data-dept-id="${item.id}" title="${escapeHtml(item.name)} ${escapeHtml(codeText)}: ${item.count} nhân sự (${item.percentage}%)">
               <div class="dept-legend-left">
                 <span class="dept-legend-dot" style="background-color: ${item.color};"></span>
                 <div class="dept-legend-info">
-                  <span class="dept-legend-name" title="${escapeHtml(item.name)} ${codeText}">
-                    ${escapeHtml(item.name)} <span class="dept-legend-code">${codeText}</span>
+                  <span class="dept-legend-name" title="${escapeHtml(item.name)} ${escapeHtml(codeText)}">
+                    ${escapeHtml(item.name)} <span class="dept-legend-code">${escapeHtml(codeText)}</span>
                   </span>
                 </div>
               </div>
