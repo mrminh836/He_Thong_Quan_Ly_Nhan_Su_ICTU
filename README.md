@@ -195,12 +195,20 @@ docker compose ps
 
 *Kỳ vọng đầu ra:*
 ```text
-NAME                IMAGE                   STATUS                  PORTS
-hrm-nginx           nginx:alpine            Up (healthy)            0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp
-hrm-ictu-frontend   qlns_qltkpm-frontend    Up (healthy)            0.0.0.0:5173->80/tcp
-hrm-ictu-backend    qlns_qltkpm-backend     Up (healthy)            0.0.0.0:3005->3005/tcp
-phpmyadmin          phpmyadmin:5.2.1        Up (healthy)            0.0.0.0:8080->80/tcp
-mysql-db            mysql:8.0               Up (healthy)            0.0.0.0:3308->3306/tcp
+NAME                IMAGE                              STATUS                  PORTS
+hrm-nginx           nginx:alpine                       Up (healthy)            0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp
+hrm-ictu-frontend   qlns_qltkpm-frontend               Up (healthy)            0.0.0.0:5173->80/tcp
+hrm-ictu-backend    qlns_qltkpm-backend                Up (healthy)            0.0.0.0:3005->3005/tcp
+phpmyadmin          phpmyadmin:5.2.1                   Up (healthy)            0.0.0.0:8084->80/tcp
+mysql-db            mysql:8.0                          Up (healthy)            0.0.0.0:3309->3306/tcp
+hrm-prometheus      prom/prometheus:v2.51.0            Up (healthy)            127.0.0.1:9090->9090/tcp
+grafana             grafana/grafana:latest             Up (healthy)            127.0.0.1:3001->3000/tcp
+alertmanager        prom/alertmanager:latest           Up (healthy)            127.0.0.1:9093->9093/tcp
+loki                grafana/loki:latest                Up                      127.0.0.1:3100->3100/tcp
+promtail            grafana/promtail:latest            Up                      /var/run/docker.sock stream
+cadvisor            gcr.io/cadvisor/cadvisor:v0.49.1   Up (healthy)            127.0.0.1:8085->8080/tcp
+node-exporter       prom/node-exporter:v1.7.0          Up (healthy)            127.0.0.1:9100->9100/tcp
+mysqld-exporter     prom/mysqld-exporter:v0.14.0       Up (healthy)            127.0.0.1:9104->9104/tcp
 ```
 
 ### 5.4. Dừng hệ thống an toàn (Bảo toàn dữ liệu)
@@ -295,6 +303,19 @@ Theo [docs/SPRINT_2_BACKLOG.md](file:///d:/QLNS_QLTKPM/docs/SPRINT_2_BACKLOG.md)
 - [x] **DoD 8:** Bộ kiểm thử tích hợp tự động E2E Sprint 2 (`npm run test:e2e:sprint2`) vượt qua **41/41 kịch bản (100% PASS)**, đảm bảo zero regression trên toàn bộ hệ thống.
 - [x] **DoD 9:** Repository GitHub hoàn tất **Commit mốc số 2** với commit message chuẩn mực:  
   `feat(monitoring): integrate prometheus, grafana dashboards, mysql-exporter, cadvisor, and node-exporter with dual-network architecture`
+
+### 7.3. Cột mốc Commit 3 (Sprint 3 — Cột mốc Về đích)
+Theo [docs/SPRINT_3_BACKLOG.md](file:///d:/QLNS_QLTKPM/docs/SPRINT_3_BACKLOG.md) và [docs/DEFINITION_OF_DONE_MILESTONE_3_SIGN_OFF.md](file:///d:/QLNS_QLTKPM/docs/DEFINITION_OF_DONE_MILESTONE_3_SIGN_OFF.md), toàn bộ 8 tiêu chí nghiệm thu của Sprint 3 đã hoàn thành xuất sắc:
+- [x] **DoD 1:** Ràng buộc toàn vẹn xóa phòng ban (`US 8.0`) chặn xóa khi có nhân sự (409 Conflict) và khóa tài khoản nhân viên thôi việc thu hồi JWT tức thì (`US 4.0`).
+- [x] **DoD 2:** Container Loki (`port 3100`) và Promtail khởi chạy ổn định, stream log liên tục từ `hrm-app`, `mysql-db`, `nginx` qua Docker socket.
+- [x] **DoD 3:** Grafana Explore tự động nạp Loki Datasource và chạy trơn tru 4 truy vấn LogQL chuẩn (`{container="hrm-app"}`, `|= "error"`, `{container="mysql-db"}`).
+- [x] **DoD 4:** Container Alertmanager (`port 9093`) tích hợp thông suốt với Prometheus, 3 quy tắc cảnh báo (High CPU, High RAM, MySQL Connections) kích hoạt trạng thái Firing khi stress test.
+- [x] **DoD 5:** Hoàn thành Hardening bảo mật: Container Backend chạy Non-root user (`USER node`), giới hạn tài nguyên CPU/RAM (`resources.limits`), cô lập mạng nội bộ.
+- [x] **DoD 6:** Script tự động sao lưu và khôi phục CSDL MySQL (`./backup_restore.sh`) đạt 100% tiêu chí Disaster Recovery trên môi trường cô lập không ảnh hưởng CSDL thật.
+- [x] **DoD 7:** Báo cáo kỹ thuật tổng kết $\ge$ 12 trang A4 chuẩn ICTU ([docs/BAO_CAO_KY_THUAT_MOC_3_ICTU.md](file:///d:/QLNS_QLTKPM/docs/BAO_CAO_KY_THUAT_MOC_3_ICTU.md)) và Kịch bản Demo thuyết trình 7-10 phút ([docs/KICH_BAN_DEMO_THUYET_TRINH_HRM.md](file:///d:/QLNS_QLTKPM/docs/KICH_BAN_DEMO_THUYET_TRINH_HRM.md)).
+- [x] **DoD 8:** Bộ kiểm thử tích hợp E2E đa tầng (`npm run test:e2e:multi-tier`) vượt qua **35/35 kịch bản (100% PASS)**, đảm bảo toàn vẹn nghiệp vụ và hạ tầng.
+- [x] **DoD 9:** Repository GitHub hoàn tất **Commit mốc số 3** với commit message chuẩn mực:  
+  `feat(logging-hardening): implement loki centralized logging, logql queries, alertmanager rules, security hardening, and final report`
 
 ---
 

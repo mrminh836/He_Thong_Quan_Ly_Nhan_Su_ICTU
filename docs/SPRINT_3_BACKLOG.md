@@ -77,3 +77,27 @@ Sprint 3 là Sprint về đích, tập trung hoàn thiện các tiêu chí chấ
 - [x] **DoD 7:** Báo cáo kỹ thuật $\ge$ 10 trang A4 và Kịch bản Demo thuyết trình hoàn thiện, đạt yêu cầu bảo vệ.
 - [x] **DoD 8:** GitHub hoàn thành **Commit 3** với thông điệp:  
   `feat(logging-hardening): implement loki centralized logging, logql queries, alertmanager rules, security hardening, and final report`
+
+---
+
+## 📊 4. BÁO CÁO NGHIỆM THU E2E SPRINT 3 (QA SIGN-OFF)
+
+| Phân hệ / User Story | Số test cases | Kết quả | Trạng thái |
+| :--- | :---: | :---: | :---: |
+| **Suite 1:** Hạ tầng Docker Compose Đa tầng (9 endpoints) | 9 | 9/9 PASS (100%) | **HOÀN THÀNH** |
+| **Suite 2:** Phân quyền RBAC, Khóa tài khoản & Thu hồi JWT tức thì (US 4.0) | 5 | 5/5 PASS (100%) | **HOÀN THÀNH** |
+| **Suite 3:** Ràng buộc an toàn xóa phòng ban & Thống kê cơ cấu (US 8.0 & 21.0) | 5 | 5/5 PASS (100%) | **HOÀN THÀNH** |
+| **Suite 4:** Vòng đời nhân sự, mã hóa CCCD AES-256 & Thôi việc (US 13.0 & 14.0) | 4 | 4/4 PASS (100%) | **HOÀN THÀNH** |
+| **Suite 5:** Chấm công thời gian thực & Xuất báo cáo Excel/CSV (US 19.0 & 22.0) | 6 | 6/6 PASS (100%) | **HOÀN THÀNH** |
+| **Suite 6:** Dashboard KPI & Đối soát số liệu CSDL thời gian thực | 2 | 2/2 PASS (100%) | **HOÀN THÀNH** |
+| **Suite 7:** Observability, Alertmanager 3 Rules & Loki Log Streams (US 30.0 & 31.0) | 4 | 4/4 PASS (100%) | **HOÀN THÀNH** |
+| **TỔNG CỘNG E2E INTEGRATION SPRINT 3** | **35** | **35/35 PASS (100%)** | **ĐẠT CHUẨN ĐÓNG SPRINT 3 & COMMIT 3** |
+
+### 📑 Tài liệu bàn giao & Minh chứng nghiệm thu:
+- [Biên bản Rà soát Definition of Done & Barem Điểm](file:///d:/QLNS_QLTKPM/docs/DEFINITION_OF_DONE_MILESTONE_3_SIGN_OFF.md)
+- [Báo cáo Kỹ thuật Tổng kết Mốc 3 ($\ge$ 12 trang A4)](file:///d:/QLNS_QLTKPM/docs/BAO_CAO_KY_THUAT_MOC_3_ICTU.md)
+- [Kịch bản Demo Thuyết trình Bảo vệ Đồ án (7-10 phút)](file:///d:/QLNS_QLTKPM/docs/KICH_BAN_DEMO_THUYET_TRINH_HRM.md)
+- [Báo cáo Kiểm thử Tích hợp E2E Đa tầng](file:///d:/QLNS_QLTKPM/docs/QA_E2E_MULTI_TIER_BUSINESS_WORKFLOWS_REPORT.md)
+- [Báo cáo Mô phỏng Quá tải Kích hoạt Cảnh báo Firing](file:///d:/QLNS_QLTKPM/docs/QA_STRESS_TEST_ALERT_FIRING_REPORT.md)
+- [Hướng dẫn Sao lưu & Phục hồi CSDL MySQL](file:///d:/QLNS_QLTKPM/docs/BACKUP_RESTORE_GUIDE.md)
+
