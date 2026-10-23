@@ -69,8 +69,9 @@ services:
     container_name: hrm-ictu-backend
     restart: unless-stopped
     ports:
-      # Cổng 3005 trên máy host -> 3005 trong container
-      - "${PORT:-3005}:${PORT:-3005}"
+      # Lắng nghe loopback 127.0.0.1 phục vụ riêng cho các test suites tự động trên máy host (npm test)
+      # Mọi truy cập API từ người dùng/client bắt buộc qua HTTPS Gateway: https://localhost/api (port 443)
+      - "127.0.0.1:${PORT:-3005}:${PORT:-3005}"
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: ${PORT:-3005}
@@ -113,9 +114,9 @@ services:
       dockerfile: Dockerfile
     container_name: hrm-ictu-frontend
     restart: unless-stopped
-    ports:
-      # Cổng 5173 trên máy host -> cổng 80 Nginx trong container (Direct Dev access)
-      - "${FRONTEND_PORT:-5173}:80"
+    # Cổng HTTP direct 5173 đã đóng để bảo đảm 100% truy cập qua HTTPS Gateway (https://localhost hoặc https://hrm.local:443)
+    # ports:
+    #   - "${FRONTEND_PORT:-5173}:80"
     environment:
       NODE_ENV: production
     depends_on:
@@ -145,8 +146,10 @@ services:
       PMA_PORT: 3306
       PMA_ARBITRARY: 0
       UPLOAD_LIMIT: 64M
-    ports:
-      - "${PMA_PORT:-8084}:80"
+      PMA_ABSOLUTE_URI: /phpmyadmin/
+    # Cổng HTTP direct 8084 đã đóng để bảo đảm 100% truy cập qua HTTPS Gateway (https://localhost/phpmyadmin/:443)
+    # ports:
+    #   - "${PMA_PORT:-8084}:80"
     depends_on:
       mysql-db:
         condition: service_healthy

@@ -19,7 +19,7 @@ import mysql from 'mysql2/promise';
 
 // Cấu hình URL endpoint trên môi trường Docker Compose
 const BACKEND_URL = process.env.BACKEND_URL || 'http://127.0.0.1:3005';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://127.0.0.1:5173';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://127.0.0.1:443';
 const NGINX_HTTP_URL = 'http://127.0.0.1:80';
 const NGINX_HTTPS_URL = 'https://127.0.0.1:443';
 const PROMETHEUS_URL = 'http://127.0.0.1:9090';
@@ -165,7 +165,7 @@ async function runTestSuite() {
       assert.strictEqual(res.body.data.status, 'UP');
     });
 
-    await test('Hạ tầng', 'Frontend SPA Client (Port 5173) -> 200 OK phục vụ HTML index', async () => {
+    await test('Hạ tầng', 'Frontend SPA Client qua HTTPS Gateway (Port 443) -> 200 OK phục vụ HTML index', async () => {
       const res = await httpRequest(`${FRONTEND_URL}/`);
       assert.strictEqual(res.statusCode, 200);
       assert.ok(res.text.includes('<div id="app">') || res.text.includes('<div id="root">') || res.text.includes('/assets/'));
