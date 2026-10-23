@@ -42,3 +42,16 @@ scrape_configs:
       - source_labels: ['container_name']
         regex: 'promtail'
         action: drop
+
+  # Thu thập General Query Log trực tiếp từ MySQL Database
+  - job_name: mysql-general-log
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: mysql
+          container: mysql-db
+          container_name: mysql-db
+          service: mysql-db
+          service_name: mysql-db
+          __path__: /var/log/mysql/mysql_general.log
