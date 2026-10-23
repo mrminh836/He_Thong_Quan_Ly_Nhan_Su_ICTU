@@ -144,6 +144,25 @@ export const dashboardService = {
    * }>}
    */
   async getDepartmentOnTimeRates(timeFilter = 'today') {
+    // 1. Gọi API Backend thống kê tỷ lệ đúng giờ theo phòng ban cho các mốc thời gian ('today' | '7days' | 'month')
+    try {
+      const res = await api.get(`/dashboard/department-ontime?range=${encodeURIComponent(timeFilter)}`);
+      const payload = res?.data || res;
+      if (payload && Array.isArray(payload.items)) {
+        return {
+          isSupported: true,
+          filter: payload.filter || timeFilter,
+          items: payload.items,
+          totalCheckIns: Number(payload.totalCheckIns) || 0,
+          totalOnTime: Number(payload.totalOnTime) || 0,
+          averageRate: Number(payload.averageRate) || 0,
+        };
+      }
+    } catch (err) {
+      console.warn('[DashboardService] Gọi /dashboard/department-ontime không thành công, thử fallback:', err?.message);
+    }
+
+    // 2. Nếu khoảng thời gian không phải 'today' và backend lỗi, trả về thông báo lỗi
     if (timeFilter !== 'today') {
       return {
         isSupported: false,
@@ -152,11 +171,12 @@ export const dashboardService = {
         totalCheckIns: 0,
         totalOnTime: 0,
         averageRate: 0,
-        message: 'Backend hiện tại chỉ cung cấp dữ liệu chấm công theo phòng ban cho ngày hôm nay qua API GET /api/attendance/today. Thống kê theo khoảng thời gian dài hơn sẽ khả dụng khi Backend triển khai API tổng hợp theo phòng ban.',
+        message: 'Không thể kết nối máy chủ để lấy dữ liệu thống kê cho khoảng thời gian này. Vui lòng thử lại sau.',
       };
     }
 
-    // 1. Lấy danh sách phòng ban thực tế từ GET /api/departments/statistics
+    // 3. Fallback tính toán nội bộ cho 'today' nếu API tổng hợp tạm thời không khả dụng:
+    // Lấy danh sách phòng ban thực tế từ GET /api/departments/statistics
     const deptStatsRes = await departmentService.getDepartmentStatistics();
     let departments = [];
     if (Array.isArray(deptStatsRes?.departments)) {
