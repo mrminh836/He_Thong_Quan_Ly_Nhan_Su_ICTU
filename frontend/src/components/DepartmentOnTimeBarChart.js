@@ -54,15 +54,15 @@ export function generateBarChartSvg(items = []) {
   }
 
   const svgWidth = 620;
-  const svgHeight = 280;
+  const svgHeight = 310;
   const marginLeft = 50;
   const marginRight = 20;
   const marginTop = 30;
-  const marginBottom = 65;
+  const marginBottom = 85;
 
   const plotWidth = svgWidth - marginLeft - marginRight; // 550
-  const plotHeight = svgHeight - marginTop - marginBottom; // 185
-  const baselineY = marginTop + plotHeight; // 215
+  const plotHeight = svgHeight - marginTop - marginBottom; // 195
+  const baselineY = marginTop + plotHeight; // 225
 
   // 1. Sinh các đường lưới ngang và nhãn trục Y (0%, 25%, 50%, 75%, 100%)
   const ySteps = [
@@ -105,9 +105,13 @@ export function generateBarChartSvg(items = []) {
     .map((item, idx) => {
       const centerX = marginLeft + idx * colStep + colStep / 2;
       const barX = centerX - barWidth / 2;
-      const shortName = (item.departmentName || 'Phòng ban')
-        .replace(/^Phòng\s+/i, '')
-        .trim();
+      const rawDeptName = item.departmentName || 'Phòng ban';
+      const cleanName = rawDeptName.replace(/^Phòng\s+/i, '').trim();
+      const maxChars = 17;
+      const displayLabel = cleanName.length > maxChars
+        ? `${cleanName.slice(0, maxChars - 2)}…`
+        : cleanName;
+      const labelY = baselineY + 16;
 
       if (item.hasData && typeof item.onTimeRate === 'number') {
         const rate = Math.min(100, Math.max(0, item.onTimeRate));
@@ -128,7 +132,7 @@ export function generateBarChartSvg(items = []) {
             <rect
               class="dept-bar-rect"
               data-col-idx="${idx}"
-              data-dept-name="${escapeHtml(item.departmentName)}"
+              data-dept-name="${escapeHtml(rawDeptName)}"
               data-dept-code="${escapeHtml(item.departmentCode || '')}"
               data-rate="${rate}"
               data-ontime="${item.onTimeCount}"
@@ -154,13 +158,16 @@ export function generateBarChartSvg(items = []) {
             <text
               class="dept-bar-axis-lbl"
               x="${centerX.toFixed(1)}"
-              y="${(baselineY + 16).toFixed(1)}"
+              y="${labelY.toFixed(1)}"
               text-anchor="end"
-              transform="rotate(-30, ${centerX.toFixed(1)}, ${(baselineY + 16).toFixed(1)})"
+              transform="rotate(-30, ${centerX.toFixed(1)}, ${labelY.toFixed(1)})"
               font-size="11"
               font-weight="600"
               fill="#475569"
-            >${escapeHtml(shortName)}</text>
+            >
+              <title>${escapeHtml(rawDeptName)}</title>
+              ${escapeHtml(displayLabel)}
+            </text>
           </g>
         `;
       }
@@ -172,7 +179,7 @@ export function generateBarChartSvg(items = []) {
           <rect
             class="dept-bar-rect dept-bar-empty-rect"
             data-col-idx="${idx}"
-            data-dept-name="${escapeHtml(item.departmentName)}"
+            data-dept-name="${escapeHtml(rawDeptName)}"
             data-dept-code="${escapeHtml(item.departmentCode || '')}"
             data-rate="null"
             data-ontime="0"
@@ -198,13 +205,16 @@ export function generateBarChartSvg(items = []) {
           <text
             class="dept-bar-axis-lbl"
             x="${centerX.toFixed(1)}"
-            y="${(baselineY + 16).toFixed(1)}"
+            y="${labelY.toFixed(1)}"
             text-anchor="end"
-            transform="rotate(-30, ${centerX.toFixed(1)}, ${(baselineY + 16).toFixed(1)})"
+            transform="rotate(-30, ${centerX.toFixed(1)}, ${labelY.toFixed(1)})"
             font-size="11"
             font-weight="500"
             fill="#64748b"
-          >${escapeHtml(shortName)}</text>
+          >
+            <title>${escapeHtml(rawDeptName)}</title>
+            ${escapeHtml(displayLabel)}
+          </text>
         </g>
       `;
     })
@@ -252,7 +262,7 @@ export function updateDepartmentOnTimeBarChart(bodyEl, { items = [], totalCheckI
     return;
   }
 
-  // Toàn bộ các phòng ban đều chưa có lượt check-in nào trong ngày
+  // Toàn bộ các phòng ban đều chưa có lượt check-in nào trong khoảng thời gian đã chọn
   if (totalCheckIns === 0) {
     bodyEl.innerHTML = `
       <div class="dept-chart-empty-box">
@@ -260,7 +270,7 @@ export function updateDepartmentOnTimeBarChart(bodyEl, { items = [], totalCheckI
           <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
         </svg>
         <span style="font-weight: 600; color: #475569;">Chưa có lượt chấm công nào được ghi nhận</span>
-        <span style="font-size: 12px; color: #94a3b8;">Hôm nay chưa có nhân viên nào check-in vào ca. Biểu đồ sẽ tự động hiển thị khi có dữ liệu chấm công.</span>
+        <span style="font-size: 12px; color: #94a3b8;">Không có dữ liệu chấm công hợp lệ trong khoảng thời gian này. Biểu đồ sẽ tự động hiển thị khi có dữ liệu check-in.</span>
       </div>
     `;
     return;

@@ -18,4 +18,16 @@ router.get(
   dashboardController.getStats
 );
 
+/**
+ * GET /api/dashboard/department-ontime
+ * Thống kê tỷ lệ chấm công đúng giờ theo phòng ban ('today' | '7days' | 'month')
+ * Phân quyền: ADMIN và HR_MANAGER
+ */
+router.get(
+  '/department-ontime',
+  authenticateToken,
+  requireRole(ROLES.ADMIN, ROLES.HR_MANAGER),
+  dashboardController.getDepartmentOnTimeRates
+);
+
 export default router;

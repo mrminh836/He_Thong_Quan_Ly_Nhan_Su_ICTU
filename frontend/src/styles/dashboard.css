@@ -465,12 +465,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: visible;
 }
 
 .dept-barchart-svg {
   width: 100%;
   height: auto;
-  max-height: 280px;
+  max-height: 310px;
   overflow: visible;
 }
 
@@ -491,8 +492,8 @@
 }
 
 .dept-bar-axis-lbl {
-  pointer-events: none;
   user-select: none;
+  cursor: pointer;
 }
 
 .dept-barchart-tooltip {

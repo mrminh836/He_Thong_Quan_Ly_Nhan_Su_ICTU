@@ -28,6 +28,25 @@ export async function getStats(req, res, next) {
   }
 }
 
+/**
+ * GET /api/dashboard/department-ontime
+ * Thống kê tỷ lệ chấm công đúng giờ theo phòng ban theo khoảng thời gian ('today' | '7days' | 'month')
+ */
+export async function getDepartmentOnTimeRates(req, res, next) {
+  try {
+    const range = req.query.range || req.query.filter || 'today';
+    const result = await dashboardService.getDepartmentOnTimeStats(range);
+
+    return successResponse(res, {
+      message: 'Lấy dữ liệu tỷ lệ chấm công đúng giờ theo phòng ban thành công',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export default {
   getStats,
+  getDepartmentOnTimeRates,
 };

@@ -84,9 +84,59 @@ export async function getDashboardStats(date) {
   };
 }
 
+/**
+ * Thống kê tỷ lệ chấm công đúng giờ theo từng phòng ban trong khoảng ngày [startDate, endDate]
+ * @param {string} startDate - Ngày bắt đầu YYYY-MM-DD
+ * @param {string} endDate - Ngày kết thúc YYYY-MM-DD
+ * @returns {Promise<Array<{ departmentId: number, departmentName: string, departmentCode: string, totalEmployees: number, totalCheckIns: number, onTimeCount: number, lateCount: number, onTimeRate: number|null, hasData: boolean }>>}
+ */
+export async function getDepartmentOnTimeRates(startDate, endDate) {
+  const sql = `
+    SELECT 
+      d.department_id,
+      d.department_name,
+      d.department_code,
+      COUNT(DISTINCT e.employee_id) AS total_employees,
+      COUNT(a.attendance_id) AS total_checkins,
+      SUM(CASE WHEN a.attendance_status IN ('OnTime', 'EarlyLeave') THEN 1 ELSE 0 END) AS on_time_count,
+      SUM(CASE WHEN a.attendance_status = 'Late' THEN 1 ELSE 0 END) AS late_count
+    FROM \`departments\` d
+    LEFT JOIN \`employees\` e ON d.department_id = e.department_id AND e.employment_status = 'Active'
+    LEFT JOIN \`attendances\` a ON e.employee_id = a.employee_id 
+      AND a.attendance_date BETWEEN ? AND ? 
+      AND a.check_in IS NOT NULL
+    WHERE d.is_active = 1
+    GROUP BY d.department_id, d.department_name, d.department_code
+    ORDER BY d.department_id ASC
+  `;
+
+  const rows = await query(sql, [startDate, endDate]);
+  return rows.map((row) => {
+    const totalCheckIns = Number(row.total_checkins || 0);
+    const onTimeCount = Number(row.on_time_count || 0);
+    const lateCount = Number(row.late_count || 0);
+    const onTimeRate = totalCheckIns > 0
+      ? Number(((onTimeCount / totalCheckIns) * 100).toFixed(1))
+      : null;
+
+    return {
+      departmentId: Number(row.department_id),
+      departmentName: row.department_name,
+      departmentCode: row.department_code,
+      totalEmployees: Number(row.total_employees || 0),
+      totalCheckIns,
+      onTimeCount,
+      lateCount,
+      onTimeRate,
+      hasData: totalCheckIns > 0,
+    };
+  });
+}
+
 export default {
   countActiveEmployees,
   countActiveDepartments,
   countPresentEmployees,
   getDashboardStats,
+  getDepartmentOnTimeRates,
 };

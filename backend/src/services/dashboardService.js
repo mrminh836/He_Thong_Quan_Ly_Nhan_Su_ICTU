@@ -69,6 +69,61 @@ export async function getDashboardStats(options = {}) {
   };
 }
 
+/**
+ * Thống kê tỷ lệ chấm công đúng giờ theo từng phòng ban theo khoảng thời gian ('today' | '7days' | 'month')
+ * @param {string} [range='today']
+ * @returns {Promise<{ filter: string, startDate: string, endDate: string, totalCheckIns: number, totalOnTime: number, averageRate: number, items: Array }>}
+ */
+export async function getDepartmentOnTimeStats(range = 'today') {
+  const timeInfo = getVietnamAttendanceInfo();
+  const today = timeInfo.workDate;
+
+  let startDate = today;
+  let endDate = today;
+
+  if (range === '7days') {
+    const [y, m, d] = today.split('-').map(Number);
+    const dateObj = new Date(Date.UTC(y, m - 1, d));
+    dateObj.setUTCDate(dateObj.getUTCDate() - 6);
+    const pastYear = dateObj.getUTCFullYear();
+    const pastMonth = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+    const pastDay = String(dateObj.getUTCDate()).padStart(2, '0');
+    startDate = `${pastYear}-${pastMonth}-${pastDay}`;
+    endDate = today;
+  } else if (range === 'month') {
+    const [y, m] = today.split('-');
+    startDate = `${y}-${m}-01`;
+    endDate = today;
+  } else {
+    startDate = today;
+    endDate = today;
+  }
+
+  const items = await dashboardRepository.getDepartmentOnTimeRates(startDate, endDate);
+
+  let totalCheckIns = 0;
+  let totalOnTime = 0;
+  items.forEach((item) => {
+    totalCheckIns += item.totalCheckIns;
+    totalOnTime += item.onTimeCount;
+  });
+
+  const averageRate = totalCheckIns > 0
+    ? Number(((totalOnTime / totalCheckIns) * 100).toFixed(1))
+    : 0;
+
+  return {
+    filter: range,
+    startDate,
+    endDate,
+    totalCheckIns,
+    totalOnTime,
+    averageRate,
+    items,
+  };
+}
+
 export default {
   getDashboardStats,
+  getDepartmentOnTimeStats,
 };
