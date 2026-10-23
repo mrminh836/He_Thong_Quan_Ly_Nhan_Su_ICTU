@@ -8,6 +8,7 @@
 #   - phpMyAdmin: 8084 (tránh đụng cổng 8080/8082)
 #   - Grafana:  3001 (tránh đụng cổng 3000)
 #   - Loki:     3100 (Log Aggregation & HTTP API)
+#   - Alertmanager: 9093 (Cảnh báo hạ tầng & ứng dụng)
 # ==============================================================================
 
 services:
@@ -299,6 +300,7 @@ services:
       - "--web.console.templates=/usr/share/prometheus/consoles"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
     ports:
       # Bind 127.0.0.1 trên Host phục vụ truy cập dashboard nội bộ
       - "127.0.0.1:9090:9090"
@@ -397,6 +399,34 @@ services:
     networks:
       - monitoring
 
+  # ----------------------------------------------------------------------------
+  # SERVICE 13: Prometheus Alertmanager (alertmanager)
+  # Quản lý, gom cụm và định tuyến cảnh báo hạ tầng & ứng dụng (port 9093)
+  # ----------------------------------------------------------------------------
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    ports:
+      # Bind 127.0.0.1:9093 trên Host phục vụ truy cập dashboard nội bộ (Least Privilege)
+      - "127.0.0.1:${ALERTMANAGER_PORT:-9093}:9093"
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:9093/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      monitoring:
+        aliases:
+          - alertmanager
+
 # ------------------------------------------------------------------------------
 # VOLUMES & NETWORKS
 # ------------------------------------------------------------------------------
@@ -407,6 +437,8 @@ volumes:
     name: hrm_ictu_grafana_data
   loki-data:
     name: hrm_ictu_loki_data
+  alertmanager-data:
+    name: hrm_ictu_alertmanager_data
 
 networks:
   app-network:
