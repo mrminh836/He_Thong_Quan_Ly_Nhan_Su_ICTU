@@ -343,11 +343,14 @@ Theo [docs/SPRINT_3_BACKLOG.md](file:///d:/QLNS_QLTKPM/docs/SPRINT_3_BACKLOG.md)
 
 ---
 
-## 👥 8. THÀNH VIÊN DỰ ÁN
+## 👤 8. THÔNG TIN SINH VIÊN THỰC HIỆN
 
-- **Nhóm sinh viên K23** — Học phần Triển khai và Quản trị Hệ thống Phần mềm (TKQT HTPM).
-- **Đề tài:** Đề 10 - Hệ thống Quản lý Nhân sự (HRM).
+- **Sinh viên thực hiện:** Đỗ Quang Minh
+- **Lớp:** K23 - Công nghệ Thông tin
+- **Học phần:** Triển khai và Quản trị Hệ thống Phần mềm (TKQT HTPM)
+- **Đề tài:** Đề 10 - Hệ thống Quản lý Nhân sự (HRM - ICTU)
+- **Hình thức thực hiện:** Độc lập (Cá nhân tự chủ áp dụng mô hình Personal Scrum & GitFlow)
 - **Khoa Công nghệ Thông tin — Trường Đại học Công nghệ Thông tin & Truyền thông (ICTU).**
 
 ---
-*Bản quyền tài liệu thuộc về Nhóm Phát triển Đề tài 10 (HRM - ICTU) | Tháng 10/2026.*
+*Bản quyền tài liệu thuộc về Đỗ Quang Minh — Đề tài 10 (HRM - ICTU) | Tháng 10/2026.*
