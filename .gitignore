@@ -28,6 +28,8 @@ build/
 *.sql.bak
 dump.sql
 *.sql.gz
+*.sql.gz.sha256
+backups/
 mysql_data/
 */mysql_data/
 
