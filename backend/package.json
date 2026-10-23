@@ -39,6 +39,7 @@
     "test:qa:monitoring:realtime": "node tests/qaPrometheusGrafanaAudit.test.js",
     "test:e2e:sprint2": "node tests/e2eSprint2Integration.test.js",
     "test:e2e:https": "node tests/e2eHttpsIntegration.test.js",
+    "test:e2e:multi-tier": "node tests/qaE2EMultiTierBusinessFlow.test.js",
     "migrate": "node src/scripts/migrate.js up",
     "migrate:rollback": "node src/scripts/migrate.js rollback",
     "migrate:status": "node src/scripts/migrate.js status",
