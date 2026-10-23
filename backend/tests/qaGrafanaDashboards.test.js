@@ -25,7 +25,7 @@
 import http from 'http';
 
 const GRAFANA_HOST = '127.0.0.1';
-const GRAFANA_PORT = 3000;
+const GRAFANA_PORT = Number(process.env.GRAFANA_PORT) || 3001;
 const AUTH_HEADER = 'Basic ' + Buffer.from('admin:Admin@Pass2026').toString('base64');
 
 function grafanaGet(path) {

@@ -37,7 +37,7 @@
 import http from 'http';
 
 const PROMETHEUS_URL = 'http://127.0.0.1:9090';
-const GRAFANA_URL = 'http://127.0.0.1:3000';
+const GRAFANA_URL = process.env.GRAFANA_URL || 'http://127.0.0.1:3001';
 const BACKEND_URL = 'http://127.0.0.1:3005';
 const GRAFANA_AUTH = 'Basic ' + Buffer.from('admin:Admin@Pass2026').toString('base64');
 

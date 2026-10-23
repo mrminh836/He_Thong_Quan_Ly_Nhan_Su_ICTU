@@ -23,16 +23,16 @@ import { hashPassword } from '../src/utils/password.js';
 
 const BACKEND_URL = 'http://127.0.0.1:3005';
 const PROMETHEUS_URL = 'http://127.0.0.1:9090';
-const GRAFANA_URL = 'http://127.0.0.1:3000';
+const GRAFANA_URL = process.env.GRAFANA_URL || 'http://127.0.0.1:3001';
 const GRAFANA_AUTH = 'Basic ' + Buffer.from('admin:Admin@Pass2026').toString('base64');
 
 async function resetEmp1Password() {
   try {
     const conn = await mysql.createConnection({
       host: '127.0.0.1',
-      port: 3308,
+      port: Number(process.env.DB_PORT || 3309),
       user: 'root',
-      password: 'RootPassword@2026',
+      password: process.env.DB_ROOT_PASSWORD || 'RootPassword@2026',
       database: 'hrm_db'
     });
     const hash = await hashPassword('Emp@123');

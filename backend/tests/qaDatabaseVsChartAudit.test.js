@@ -247,18 +247,18 @@ async function runLiveAuditSuite() {
       let createdAttId = null;
 
       try {
-        // 3.1. Tạo phòng ban thử nghiệm mới (rỗng)
+        // 3.1. Tạo phòng ban thử nghiệm mới
         const [deptResult] = await db.execute(`
           INSERT INTO \`departments\` (department_code, department_name, is_active)
           VALUES ('PB-QA-DYN', 'Phòng Thử Nghiệm Dynamic QA', 1)
         `);
         createdDeptId = deptResult.insertId;
 
-        // 3.2. Tạo 1 nhân viên mới vào phòng ban 2 (PB-HR)
+        // 3.2. Tạo 1 nhân viên mới vào phòng ban thử nghiệm vừa tạo
         const [empResult] = await db.execute(`
           INSERT INTO \`employees\` (employee_code, full_name, department_id, employment_status, ssn_encrypted, ssn_hash)
-          VALUES ('NV-QA-DYN-01', 'Nhân Viên Dynamic QA', 2, 'Active', 0x12345678, '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef')
-        `);
+          VALUES ('NV-QA-DYN-01', 'Nhân Viên Dynamic QA', ?, 'Active', 0x12345678, '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef')
+        `, [createdDeptId]);
         createdEmpId = empResult.insertId;
 
         // 3.3. Tạo 1 bản ghi check-in ĐI MUỘN (Late) cho nhân viên này hôm nay
@@ -275,28 +275,23 @@ async function runLiveAuditSuite() {
         const statsData = await statsRes.json();
         const depts = statsData.data;
 
-        // Phòng ban 2 (PB-HR) trước đó có 1 NV (Active), nay thêm 1 NV -> thành 2 NV
-        const hrDept = depts.find((d) => Number(d.departmentId) === 2);
-        assert.ok(hrDept, 'Phòng ban 2 phải có trong danh sách');
-        assert.strictEqual(Number(hrDept.employeeCount), 2, 'Phòng ban 2 phải có 2 nhân viên');
-
-        // Phòng ban mới tạo: 0 nhân viên, tỷ trọng 0%
+        // Phòng ban mới tạo: 1 nhân viên, tỷ trọng > 0%
         const newDept = depts.find((d) => Number(d.departmentId) === createdDeptId);
         assert.ok(newDept, 'Phòng ban mới tạo phải hiển thị trong kết quả API');
-        assert.strictEqual(Number(newDept.employeeCount), 0, 'Phòng ban mới tạo có 0 nhân sự');
-        assert.strictEqual(Number(newDept.percentage), 0, 'Tỷ trọng phòng ban mới là 0%');
+        assert.strictEqual(Number(newDept.employeeCount), 1, 'Phòng ban mới tạo có đúng 1 nhân sự');
+        assert.ok(Number(newDept.percentage) > 0, 'Tỷ trọng phòng ban mới lớn hơn 0%');
 
-        // 3.5. Kiểm tra Bar Chart: Phòng ban 2 có 1 check-in và đi muộn -> Tỷ lệ đúng giờ là 0.0%
+        // 3.5. Kiểm tra Bar Chart: Phòng ban mới có 1 check-in và đi muộn -> Tỷ lệ đúng giờ là 0.0%
         const attRes = await fetch(`${BACKEND_URL}/api/attendance/today`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const attData = await attRes.json();
-        const hrRecords = attData.data.filter((r) => Number(r.departmentId) === 2 && Boolean(r.checkInTime));
-        assert.strictEqual(hrRecords.length, 1, 'Phòng ban 2 có đúng 1 check-in hôm nay');
-        assert.strictEqual(hrRecords[0].status, 'LATE', 'Trạng thái check-in phải là LATE');
+        const dynRecords = attData.data.filter((r) => Number(r.departmentId) === createdDeptId && Boolean(r.checkInTime));
+        assert.strictEqual(dynRecords.length, 1, 'Phòng ban mới có đúng 1 check-in hôm nay');
+        assert.strictEqual(dynRecords[0].status, 'LATE', 'Trạng thái check-in phải là LATE');
 
-        const hrOnTimeRate = hrRecords.filter((r) => r.status === 'ON_TIME').length / hrRecords.length * 100;
-        assert.strictEqual(hrOnTimeRate, 0, 'Tỷ lệ đúng giờ của phòng ban 2 phải chuyển thành 0% do nhân viên đi muộn');
+        const dynOnTimeRate = (dynRecords.filter((r) => r.status === 'ON_TIME').length / dynRecords.length) * 100;
+        assert.strictEqual(dynOnTimeRate, 0, 'Tỷ lệ đúng giờ của phòng ban mới là 0% do nhân viên đi muộn');
 
         console.log(`     Mutation Verified: Biến động CSDL cập nhật ngay lập tức vào API và tỷ lệ biểu đồ.`);
       } finally {

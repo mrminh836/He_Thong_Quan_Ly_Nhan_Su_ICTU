@@ -4,8 +4,10 @@
  */
 
 export const BASE_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-  'http://localhost:3005/api';
+  (typeof window !== 'undefined' && window.location.protocol === 'https:')
+    ? '/api'
+    : ((typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+      'http://localhost:3005/api');
 
 /**
  * Trích xuất tên file an toàn từ HTTP header Content-Disposition

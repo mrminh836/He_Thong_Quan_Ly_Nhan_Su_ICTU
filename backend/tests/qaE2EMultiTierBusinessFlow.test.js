@@ -184,7 +184,11 @@ async function runTestSuite() {
     });
 
     await test('Hạ tầng', 'Loki Centralized Logging (Port 3100) -> 200 OK Ready', async () => {
-      const res = await httpRequest(`${LOKI_URL}/ready`);
+      let res = await httpRequest(`${LOKI_URL}/ready`);
+      for (let attempt = 1; attempt <= 3 && res.statusCode !== 200; attempt++) {
+        await new Promise((r) => setTimeout(r, 600));
+        res = await httpRequest(`${LOKI_URL}/ready`);
+      }
       assert.strictEqual(res.statusCode, 200);
       assert.strictEqual(res.text.trim(), 'ready');
     });

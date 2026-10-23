@@ -67,7 +67,7 @@ async function runAsyncTest(testName, testFn) {
 
 // Helper sinh JWT token kiểm thử hợp lệ
 function generateTestToken(payload) {
-  return jwt.sign(payload, env.JWT_SECRET || 'ICTU_HRM_JWT_SECRET_KEY_2026_SUPER_SECURE', {
+  return jwt.sign(payload, env.jwtSecret || env.JWT_SECRET || 'ICTU_HRM_JWT_SECRET_KEY_2026_SUPER_SECURE', {
     expiresIn: '1h',
   });
 }
@@ -352,7 +352,7 @@ await runAsyncTest('Kịch bản 9.3: JWT bị sai chữ ký hoặc giải mạo
 await runAsyncTest('Kịch bản 9.4: JWT đã hết hạn sử dụng -> Trả về lỗi 401 (TOKEN_EXPIRED)', async () => {
   const expiredToken = jwt.sign(
     { sub: 1, username: 'admin', role: 'Admin' },
-    env.JWT_SECRET || 'ICTU_HRM_JWT_SECRET_KEY_2026_SUPER_SECURE',
+    env.jwtSecret || env.JWT_SECRET || 'ICTU_HRM_JWT_SECRET_KEY_2026_SUPER_SECURE',
     { expiresIn: '-1s' }
   );
 

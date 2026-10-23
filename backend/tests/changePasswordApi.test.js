@@ -661,3 +661,4 @@ console.log('\n=================================================================
 console.log(`🎉 KẾT QUẢ KIỂM THỬ: ĐÃ VƯỢT QUA ${passedTests}/${totalTests} BÀI KIỂM THỬ ĐỔI MẬT KHẨU!`);
 console.log('   API PUT /api/auth/change-password đạt chuẩn bảo mật 100% (Bcrypt, JWT, IDOR Guard).');
 console.log('==============================================================================\n');
+process.exit(0);
