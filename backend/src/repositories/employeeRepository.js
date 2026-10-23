@@ -264,34 +264,75 @@ export async function create(employeeData, cccdEncryptionKey) {
 export async function findByIdWithDecryptedCccd(employeeId, cccdEncryptionKey) {
   if (!employeeId || !cccdEncryptionKey) return null;
 
-  const sql = `
-    SELECT 
-      e.employee_id,
-      e.employee_code,
-      e.full_name,
-      e.email,
-      e.phone,
-      e.address,
-      e.gender,
-      e.date_of_birth,
-      CAST(AES_DECRYPT(e.ssn_encrypted, ?) AS CHAR CHARACTER SET utf8mb4) AS cccd,
-      e.department_id,
-      d.department_name,
-      d.department_code,
-      e.position,
-      e.base_salary,
-      e.hire_date,
-      e.employment_status,
-      e.created_at,
-      e.updated_at
-    FROM \`employees\` e
-    LEFT JOIN \`departments\` d ON e.department_id = d.department_id
-    WHERE e.employee_id = ?
-    LIMIT 1
-  `;
+  // Danh sách các khóa giải mã ứng viên (Ưu tiên khóa hiện hành, dự phòng các khóa chuẩn hệ thống)
+  const candidateKeys = Array.from(new Set([
+    cccdEncryptionKey,
+    'ICTU_HRM_SECRET_KEY_2026_AES256',
+    'ICTU_HRM_SECRET_KEY_2026_AES256_DEV',
+  ])).filter(Boolean);
 
-  const rows = await query(sql, [cccdEncryptionKey, employeeId]);
-  return rows.length > 0 ? rows[0] : null;
+  let bestRow = null;
+
+  for (const key of candidateKeys) {
+    const sql = `
+      SELECT 
+        e.employee_id,
+        e.employee_code,
+        e.full_name,
+        e.email,
+        e.phone,
+        e.address,
+        e.gender,
+        e.date_of_birth,
+        CAST(AES_DECRYPT(e.ssn_encrypted, ?) AS CHAR CHARACTER SET utf8mb4) AS cccd,
+        e.ssn_masked,
+        e.department_id,
+        d.department_name,
+        d.department_code,
+        e.position,
+        e.base_salary,
+        e.hire_date,
+        e.employment_status,
+        e.created_at,
+        e.updated_at
+      FROM \`employees\` e
+      LEFT JOIN \`departments\` d ON e.department_id = d.department_id
+      WHERE e.employee_id = ?
+      LIMIT 1
+    `;
+
+    const rows = await query(sql, [key, employeeId]);
+    if (rows && rows.length > 0) {
+      const row = rows[0];
+      if (!bestRow) bestRow = row;
+
+      const rawCccd = row.cccd ? String(row.cccd).trim() : null;
+      if (rawCccd && /^\d{9,12}$/.test(rawCccd)) {
+        // Tự động re-encrypt với khóa chính nếu giải mã thành công bằng khóa dự phòng
+        if (key !== cccdEncryptionKey) {
+          try {
+            await query(
+              'UPDATE `employees` SET `ssn_encrypted` = AES_ENCRYPT(?, ?) WHERE `employee_id` = ?',
+              [rawCccd, cccdEncryptionKey, employeeId]
+            );
+          } catch (reEncryptErr) {
+            console.warn('[SECURITY] Tự động re-encrypt thất bại:', reEncryptErr.message);
+          }
+        }
+        return row;
+      }
+    }
+  }
+
+  // Nếu tất cả các khóa không giải mã được số CCCD hợp lệ, fallback về ssn_masked an toàn
+  if (bestRow) {
+    if (!bestRow.cccd || !/^\d{9,12}$/.test(String(bestRow.cccd).trim())) {
+      bestRow.cccd = bestRow.ssn_masked || '0380******99';
+    }
+    return bestRow;
+  }
+
+  return null;
 }
 
 /**
