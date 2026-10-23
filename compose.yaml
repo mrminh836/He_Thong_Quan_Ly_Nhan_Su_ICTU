@@ -378,6 +378,25 @@ services:
         aliases:
           - loki
 
+  # ----------------------------------------------------------------------------
+  # SERVICE 12: Promtail Docker Log Collector (promtail)
+  # Đọc log stdout/stderr từ Docker socket và đẩy về Grafana Loki
+  # ----------------------------------------------------------------------------
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    restart: unless-stopped
+    command:
+      - -config.file=/etc/promtail/promtail-config.yml
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    depends_on:
+      - loki
+    networks:
+      - monitoring
+
 # ------------------------------------------------------------------------------
 # VOLUMES & NETWORKS
 # ------------------------------------------------------------------------------

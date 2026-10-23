@@ -1,0 +1,44 @@
+# ==============================================================================
+# PROMTAIL CONFIGURATION - HRM ICTU DOCKER LOG SCRAPING
+# Thu thập log từ Docker socket (/var/run/docker.sock) và gửi về Loki
+# ==============================================================================
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: info
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      # Lấy tên container gốc (bỏ dấu gạch chéo đầu tiên)
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'container_name'
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'container'
+      # Chuẩn hóa nhãn container cho các truy vấn LogQL chuẩn
+      - source_labels: ['container']
+        regex: 'hrm-ictu-backend'
+        target_label: 'container'
+        replacement: 'hrm-app'
+      - source_labels: ['container']
+        regex: 'hrm-nginx'
+        target_label: 'container'
+        replacement: 'nginx'
+      # Gán nhãn compose service
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        target_label: 'service'
+      # Bỏ qua container promtail để tránh vòng lặp log
+      - source_labels: ['container_name']
+        regex: 'promtail'
+        action: drop
