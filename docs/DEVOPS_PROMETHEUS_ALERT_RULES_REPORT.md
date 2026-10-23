@@ -10,12 +10,10 @@
 
 | STT | File / Đường dẫn | Hành động | Mục đích |
 | :--- | :--- | :--- | :--- |
-| 1 | `monitoring/prometheus/rules/alerts.yml` | **Tạo mới** | Lưu trữ toàn bộ 6 alert rules chuẩn hóa của hệ thống HRM (HighCPUUsage, HighRAMUsage, MySQLTooManyConnections, InstanceDown, HRMApplicationDown, MySQLExporterDown). |
-| 2 | `rules/alerts.yml` | **Tạo mới** | Bản đồng bộ tại thư mục gốc `rules/` theo đặc tả nghiệm thu repository. |
-| 3 | `prometheus/alert.rules.yml` | **Cập nhật** | Đồng bộ toàn bộ nội dung alert rules tương đương để bảo đảm backward compatibility. |
-| 4 | `prometheus/prometheus.yml` | **Cập nhật** | Chỉnh sửa `rule_files` trỏ chính xác về `/etc/prometheus/rules/alerts.yml`. |
-| 5 | `compose.yaml` | **Cập nhật** | Mount bind volume `./monitoring/prometheus/rules/alerts.yml:/etc/prometheus/rules/alerts.yml:ro` vào container `hrm-prometheus`. |
-| 6 | `docs/DEVOPS_PROMETHEUS_ALERT_RULES_REPORT.md` | **Tạo mới** | Báo cáo chi tiết khảo sát, cú pháp PromQL, kết quả `promtool` và kiểm thử API. |
+| 1 | `rules/alerts.yml` | **Chuẩn hóa duy nhất** | Nguồn chân lý duy nhất (Single Source of Truth) lưu trữ toàn bộ 6 alert rules chuẩn hóa của hệ thống HRM (HighCPUUsage, HighRAMUsage, MySQLTooManyConnections, InstanceDown, HRMApplicationDown, MySQLExporterDown). |
+| 2 | `prometheus/prometheus.yml` | **Cập nhật** | Chỉnh sửa `rule_files` trỏ chính xác về `/etc/prometheus/rules/alerts.yml`. |
+| 3 | `compose.yaml` | **Cập nhật** | Mount bind volume `./rules/alerts.yml:/etc/prometheus/rules/alerts.yml:ro` vào container `hrm-prometheus`. |
+| 4 | `docs/DEVOPS_PROMETHEUS_ALERT_RULES_REPORT.md` | **Tạo mới** | Báo cáo chi tiết khảo sát, cú pháp PromQL, kết quả `promtool` và kiểm thử API. |
 
 ---
 
